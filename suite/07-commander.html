@@ -41,7 +41,7 @@ a{color:#7ee2ff}
 <div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button><button id="rokWalk" class="secondary">Walk me through</button><button id="rokIntro" class="secondary">▶ Play intro</button><button id="rokAuto" class="secondary">Auto-master this song</button><button id="rokRhyme" class="secondary">🎤 Rhyme it</button></div>
 <label style="font-size:12px">Ollama in Termux (optional, on your phone only)</label>
 <input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
-<input id="rokModel" placeholder="Model, e.g. llama3.1" value="llama3.1">
+<input id="rokModel" placeholder="Model, e.g. qwen2.5:0.5b" value="qwen2.5:0.5b">
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
 </div>
 <script>
@@ -221,14 +221,24 @@ document.getElementById('player').addEventListener('play', function(){ praimeEqE
     if(q.indexOf('walk')>=0 || q.indexOf('how do i use')>=0 || q.indexOf('what does this')>=0){ say(walk()); return; }
     var cmd=doCommand(q); if(cmd){ say(cmd); return; }
     var kb=kbAnswer(q); 
-    // Try Ollama first for text advice, if configured, but never fake it
+    // Rokdabus wired to Optimus: on Daryl's personal phone, Ollama at
+    // 127.0.0.1:11434 serves qwen2.5:0.5b (the model actually installed);
+    // try that first, then llama3.1, never fake an answer. Genre-aware:
+    // the prompt is adapted to the genre in the question / current page.
     var url=(document.getElementById('rokOllama')||{}).value||'http://127.0.0.1:11434';
-    var model=(document.getElementById('rokModel')||{}).value||'llama3.1';
-    try{
-      var res=await fetch(url.replace(/\/$/,'')+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model,prompt:'You are Rokdabus Prhyme, the rhyming studio guide for PrAIme Productions. Answer helpfully, with music-theory best practices, in plain language. User: '+raw,stream:false})});
-      if(res.ok){ var data=await res.json(); if(data && data.response){ say('From Ollama ('+model+'): '+data.response); return; } }
-      // Ollama not reachable or no response: fall through to local knowledge
-    }catch(e){ /* fall through */ }
+    var model=(document.getElementById('rokModel')||{}).value||'qwen2.5:0.5b';
+    if(window.PraimeRokdabus){
+      var oll=await window.PraimeRokdabus.askOllama(raw, url, model);
+      if(oll){ say('From Optimus / Ollama ('+oll.model+', '+oll.genre+'): '+oll.response); return; }
+      // Ollama not reachable: fall through to genre advice / local knowledge
+      var g=window.PraimeRokdabus.detectGenre(raw);
+      if(g && g!=='HipHop'){ say(window.PraimeRokdabus.genreAdvice(g)+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer. On Daryl\'s phone, Optimus is Rokdabus; vault, autonomous tapping, self-rewrite and Tor are Termux-only and are not in this app.)'); return; }
+    } else {
+      try{
+        var res=await fetch(url.replace(/\/$/,'')+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model,prompt:'You are Rokdabus Prhyme, the rhyming studio guide for PrAIme Productions. Answer helpfully, with music-theory best practices, in plain language. User: '+raw,stream:false})});
+        if(res.ok){ var data=await res.json(); if(data && data.response){ say('From Ollama ('+model+'): '+data.response); return; } }
+      }catch(e){ /* fall through */ }
+    }
     if(kb){ say(kb+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer.)'); return; }
     say('I can help with PrAIme and music theory: try "walk me through", "what is LUFS?", "what is compression?", "auto master" on the DAW page, or "go to lyrics". If Ollama is running in Termux, set its URL and model above and ask again — otherwise I answer from my built-in knowledge.');
   }
@@ -301,4 +311,5 @@ document.addEventListener('click', function(e){
 </script>
 <script src="real-sounds.js"></script>
 <script src="rokdabus-tips.js"></script>
-<script src="rokdabus-roleplay.js"></script></body></html>
+<script src="rokdabus-roleplay.js"></script><script src="rokdabus-optimus.js"></script>
+</body></html>
