@@ -38,6 +38,8 @@ a{color:#7ee2ff}
 <button id="checkServer">Check live server / count</button>
 <label>Your email (for a live server claim — the token is bound to this email)</label><input id="serverEmail" placeholder="you@example.com">
 <button id="claimServer">Claim via live server</button>
+<label>Verification code (sent to your email — 6 digits, expires in 15 minutes)</label><input id="verifyCode" placeholder="123456">
+<button id="verifyCodeBtn">Verify code &amp; get token</button>
 <div class="status" id="serverOut">Live server: this page on praimeproductions.onrender.com. Tap Check server / count first.</div>
 <p style="font-size:12px;color:#9ca3af">Server tokens look like PRAIME-F-001-&lt;32 hex random&gt;-&lt;32 hex signature&gt;. The plain token is shown once — copy it now, it is not stored in plain text anywhere.</p></div>
 
@@ -273,8 +275,16 @@ document.getElementById('checkServer').onclick=async function(){
 document.getElementById('claimServer').onclick=async function(){
   var email=document.getElementById('serverEmail').value.trim(); if(!email){ document.getElementById('serverOut').textContent='Enter your email first — the token is bound to it.'; return; }
   try{ var d=await postJson('/api/token/claim', {email:email});
-    if(d.ok){ document.getElementById('serverOut').textContent='LIVE SERVER TOKEN — COPY IT NOW, it is shown once and only its hash is stored on the server:\n'+d.token+'\nFounder #'+d.number+' · Claimed: '+d.claimed+' / 100 · This token only verifies with the email you just used.'; }
+    if(d.ok && d.pending){ document.getElementById('serverOut').textContent='Verification code sent to '+email+' — enter the 6-digit code below (expires in 15 minutes). No token is issued until the code matches.'; }
     else document.getElementById('serverOut').textContent='Server claim failed: '+(d.error||'unknown error'); }
+  catch(e){ document.getElementById('serverOut').textContent='Live server not reachable. Check your connection, then try again.'; }
+};
+document.getElementById('verifyCodeBtn').onclick=async function(){
+  var email=document.getElementById('serverEmail').value.trim(); var code=document.getElementById('verifyCode').value.trim();
+  if(!email || !code){ document.getElementById('serverOut').textContent='Enter your email and the 6-digit code first.'; return; }
+  try{ var d=await postJson('/api/token/verify-code', {email:email, code:code});
+    if(d.ok){ document.getElementById('serverOut').textContent='LIVE SERVER TOKEN — COPY IT NOW, it is shown once and only its hash is stored on the server:\n'+d.token+'\nFounder #'+d.number+' · Claimed: '+d.claimed+' / 100 · This token only verifies with the email you just used.'; }
+    else document.getElementById('serverOut').textContent='Code verification failed: '+(d.error||'unknown error'); }
   catch(e){ document.getElementById('serverOut').textContent='Live server not reachable. Check your connection, then try again.'; }
 };
 document.getElementById('claimLocal').onclick=async function(){
