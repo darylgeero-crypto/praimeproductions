@@ -25,6 +25,7 @@
 
   // DYNAMICALLY CURVED ACROSS ALL 54 GENRES (+ Break Beat = 55):
   // Not trap/lofi/house binary. Each genre gets its own curve: swing, drum density, bass style, melody voice, hat pattern.
+  // All five fields are consumed in render(): swing (swingOff), density (hat gain), bassStyle (bass length/gain), melodyVoice (melPrefix), hat (hatHit pattern).
   // Derived from genre family, with explicit overrides for signature genres. BPM already comes from GENRE_BPM.
   function genreCurve(genre){
     var g=genre||'HipHop';
@@ -148,7 +149,9 @@
             var vel=0.75+Math.random()*0.25;
             if(step%4===0) play(kick, t, 0.70*vel);
             if(step===4||step===12) play(snare, t, 0.55*vel);
-            if(step%2===0) play(hat, t, 0.20*vel*density);
+            var hatPat = curve.hat||'straight';
+            var hatHit = hatPat==='offbeat' ? (step%4===2) : hatPat==='triplet' ? (step%2===0 || step%4===3) : (step%2===0);
+            if(hatHit) play(hat, t, 0.20*vel*density);
             if(b===bars-1 && step>=12) play(hat, t, 0.35*vel); // fill
             if(b%4===3 && step===15) play(hat, t+beatDur/8, 0.3*vel); // 6: triplet/roll variation every 4th bar
           }
@@ -159,11 +162,15 @@
             var barRoot=[1,0.89,1.12,0.94][b%4];
             var bassLine=[barRoot, barRoot, barRoot*1.5, barRoot*2]; // root, root, 5th, octave
             var bgain = isHook ? 0.75 : 0.60;
+            var bassLen = beatDur*0.9, bassGainMul = 1;
+            if(curve.bassStyle==='slide'){ bassLen = beatDur*1.4; } // Trap/Drill slide: longer, gliding feel
+            if(curve.bassStyle==='warm'){ bassGainMul = 0.85; bassLen = beatDur*1.1; } // warm: softer, rounder
+            if(curve.bassStyle==='drive'){ bassGainMul = 1.1; bassLen = beatDur*0.7; } // drive: punchy, short
             if(isIntro){
-              play(bassBuf, barStart, 0.55, barRoot, beatDur*0.9);
+              play(bassBuf, barStart, 0.55*bassGainMul, barRoot, bassLen);
             } else {
-              for(var bb=0; bb<4; bb++){ play(bassBuf, barStart+bb*beatDur, bgain, bassLine[bb], beatDur*0.9); }
-              if(isHook) play(bassBuf, barStart+beatDur*2, 0.75, barRoot*1.5, beatDur*0.9);
+              for(var bb=0; bb<4; bb++){ play(bassBuf, barStart+bb*beatDur, bgain*bassGainMul, bassLine[bb], bassLen); }
+              if(isHook) play(bassBuf, barStart+beatDur*2, 0.75*bassGainMul, barRoot*1.5, bassLen);
             }
           }
           // Melody: real piano bank notes, one per beat, varied by section
