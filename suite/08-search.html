@@ -46,6 +46,7 @@ const catalog=[
 ];
 function search(){ const q=document.getElementById('q').value.toLowerCase().trim(); const res=catalog.filter(c=>(c.name+' '+c.tags).toLowerCase().includes(q)); const div=document.getElementById('results'); div.innerHTML=res.length?res.map(c=>'<div class="card"><b>'+c.name+'</b> — '+c.type+' — <a href="'+c.link+'">Open</a></div>').join(''):'<p>No local results. Try: master, beat, video, lyrics.</p>'; document.getElementById('out').textContent=res.length+' result(s) for "'+q+'" in local catalog. External platform search is not included — it would need API keys.'; }
 document.getElementById('go').onclick=search; document.getElementById('q').onkeydown=e=>{ if(e.key==='Enter') search(); };
+let searchTimer=null; document.getElementById('q').addEventListener('input',()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(search,250); });
 search();
 
 // ---- Rokdabus Prhyme widget ----
