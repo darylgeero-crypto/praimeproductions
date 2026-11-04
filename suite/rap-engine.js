@@ -203,11 +203,22 @@
       ["chocolate", "rock a bit"],
       ["elephant", "relevant"]
     ];
+    // Varied line templates (2026-11-04): one sentence pair per couplet,
+    // rotated so a generation never repeats the same two sentences.
+    // The rhyme target stays the last word/phrase of each line, so the
+    // rhyme guarantee below is unchanged.
+    var TEMPLATES = [
+      ["When the bass drops down and I secure the {a},", "Every single bar is shining bright and {b}."],
+      ["I put my heart in the {a},", "And I keep rising through the {b}."],
+      ["No turning back, I'm chasing the {a},", "Every step I take is leading to the {b}."],
+      ["I built this sound around the {a},", "Now the whole room echoes with the {b}."]
+    ];
     for(var i=0;i<4;i++){
+      var tpl = TEMPLATES[i % TEMPLATES.length];
       if(i === 1){
         var scheme = MULTI_SCHEMES[Math.floor(Math.random() * MULTI_SCHEMES.length)];
-        lines.push("When the bass drops down and I secure the " + scheme[0] + ",");
-        lines.push("Every single bar is shining bright and " + scheme[1] + ".");
+        lines.push(tpl[0].replace("{a}", scheme[0]));
+        lines.push(tpl[1].replace("{b}", scheme[1]));
         continue;
       }
       var wordA = null, wordB = null, tries = 0, self = this;
@@ -234,8 +245,8 @@
         // Last-resort known rhyming pair, so a couplet is never left unrhyme
         wordA = {word:"night", key:"AY-T"}; wordB = {word:"light", key:"AY-T"};
       }
-      lines.push("When the bass drops down and I secure the " + wordA.word + ",");
-      lines.push("Every single bar is shining bright and " + wordB.word + ".");
+      lines.push(tpl[0].replace("{a}", wordA.word));
+      lines.push(tpl[1].replace("{b}", wordB.word));
     }
     return lines;
   };
