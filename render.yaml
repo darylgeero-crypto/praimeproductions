@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: praime-productions
+    env: node
+    buildCommand: ""
+    startCommand: node render-server.js
+    plan: free

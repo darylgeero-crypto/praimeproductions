@@ -1,0 +1,8 @@
+{
+  "name": "praime-productions",
+  "version": "1.0.0",
+  "description": "PrAIme Productions suite — static pages served by Node on Render",
+  "main": "render-server.js",
+  "scripts": { "start": "node render-server.js" },
+  "engines": { "node": ">=18" }
+}
