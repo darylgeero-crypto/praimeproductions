@@ -25,13 +25,16 @@ a{color:#7ee2ff}
 <label>Aspect</label><select id="aspect"><option value="16:9">16:9 — 1280×720</option><option value="9:16">9:16 — 720×1280</option><option value="1:1">1:1 — 720×720</option></select>
 <label>Record frame rate</label><select id="vidFps"><option value="30" selected>30 fps — standard</option><option value="24">24 fps — cinematic</option><option value="60">60 fps — smooth motion</option></select>
 <label>Watermark / handle (optional — drawn on the canvas, so it is in the recorded video)</label><input id="watermark" placeholder="e.g. @yourhandle">
-<label>Video type</label><select id="videoType"><option value="lyric">Lyric — bars + title words</option><option value="selfie">Selfie — photo/camera full-bleed</option><option value="performance">Performance — stage lights + particles</option><option value="waveform">Waveform — audio waveform line</option><option value="collage">Collage — tiled photo / colour tiles</option><option value="minimal">Minimal — title + thin line only</option></select>
+<label>Video type</label><select id="videoType"><option value="lyric">Lyric — bars + title words</option><option value="selfie">Selfie — photo/camera full-bleed</option><option value="performance">Performance — stage lights + particles</option><option value="waveform">Waveform — audio waveform line</option><option value="collage">Collage — tiled photo / colour tiles</option><option value="minimal">Minimal — title + thin line only</option><option value="sweet" selected>Sweet — instant audio-reactive rings, bars &amp; bursts</option></select>
+<label>Graphics intensity</label><input type="range" id="gfxIntensity" min="0.5" max="2" step="0.1" value="1">
+<p style="font-size:12px;color:#9ca3af">⚡ Near-zero latency graphics: the visuals read your song straight from the browser's AnalyserNode every animation frame — no upload, no server round-trip — so bars, rings and bursts react within a frame of the sound. Smoothing is set low (0.12) on purpose, so it does not lag behind the beat. Not literally zero milliseconds — nothing on a screen is — but frame-level, on-device.</p>
 <label>Transition</label><select id="transition"><option value="cut">Cut — no transition</option><option value="fade">Fade in</option><option value="slide">Slide in</option><option value="wipe">Wipe in</option></select>
 <label>Fingerprint prompt — words that change the palette, particles and shapes (deterministic, no AI: the words are hashed, the same words always give the same look)</label><input id="fingerprint" placeholder="e.g. midnight city neon rain">
 <label><input type="checkbox" id="titleCard" checked style="width:auto"> Show title card for the first 3 seconds</label>
 <label><input type="checkbox" id="outroCard" checked style="width:auto"> Show outro card for 2.5 seconds when the song ends</label>
 <label>Grading — brightness</label><input type="range" id="bright" min="0.5" max="1.5" step="0.05" value="1">
 <label>Grading — contrast</label><input type="range" id="contrast" min="0.5" max="1.5" step="0.05" value="1">
+<label>Grading — colour preset</label><select id="grade"><option value="">Normal — no colour grade</option><option value="sepia(0.35) saturate(1.3)">Warm Vintage — sepia + rich colour</option><option value="saturate(1.8) hue-rotate(20deg)">Cyberpunk Neon — vivid + shifted hue</option><option value="grayscale(1)">Noir Monolith — black &amp; white</option></select>
 <button id="photoBtn">🖼 Choose photo</button><input type="file" id="photoInput" accept="image/*" style="display:none">
 <button id="camStart">📷 Start camera</button><button id="camSnap" class="secondary">📸 Snapshot to canvas</button><button id="camStop" class="secondary">■ Stop camera</button><button id="clearPhoto" class="secondary">Clear photo / snapshot</button>
 <video id="camPreview" autoplay playsinline muted style="display:none;margin-top:12px"></video>
@@ -57,7 +60,14 @@ function setBus(o){ const b=Object.assign(getBus(),o); localStorage.setItem('pra
 function showBus(el){ const b=getBus(); if(el) el.textContent='Prompt: '+(b.prompt||'—')+' | Genre: '+(b.genre||'—')+' | BPM: '+(b.bpm||'—')+' | Key: '+(b.key||'—')+' | Profile: '+(b.profile||'Daryl'); }
 
 let ctx=null,decoded=null,src=null,analyser=null,raf=null,rec=null,chunks=[],streamDest=null,recording=false;
-let videoType='lyric', photoImg=null, camStream=null, camFrame=null, fpSeed=0, particles=[], transStart=0, playStart=0, outroUntil=0;
+let videoType='sweet', photoImg=null, camStream=null, camFrame=null, fpSeed=0, particles=[], transStart=0, playStart=0, outroUntil=0;
+let prevBass=0, lastBeat=0, beatPulse=0, bursts=[];
+function audioMetrics(d){
+  if(!d) return {bass:0, mid:0, high:0, energy:0};
+  function avg(a,b){ var s=0,n=0; for(var i=a;i<b&&i<d.length;i++){ s+=d[i]/255; n++; } return n?s/n:0; }
+  var bass=avg(0,8), mid=avg(8,48), high=avg(48,96), energy=avg(0,96);
+  return {bass:bass, mid:mid, high:high, energy:energy};
+}
 function hashWords(s){ let x=2166136261; for(let i=0;i<s.length;i++){ x^=s.charCodeAt(i); x=Math.imul(x,16777619); } return x>>>0; }
 function mulberry(seed){ let a=seed>>>0; return function(){ a|=0; a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
 function regenParticles(){ const r=mulberry(fpSeed||1); particles=[]; for(let i=0;i<40;i++) particles.push({x:r(),y:r(),rad:2+r()*6,sp:0.2+r()*0.8,ph:r()*6.28}); }
@@ -69,7 +79,8 @@ function draw(){
   const base=style==='warm'?['#ff8800','#ff2255']:style==='cool'?['#00ffcc','#0066ff']:['#00f3ff','#f72585'];
   const fp=fpPalette(); const cols=fp||base;
   const bright=parseFloat(document.getElementById('bright').value||1), contrast=parseFloat(document.getElementById('contrast').value||1);
-  try{ g.filter='brightness('+bright+') contrast('+contrast+')'; }catch(e){}
+  const grade=(document.getElementById('grade')||{}).value||'';
+  try{ g.filter='brightness('+bright+') contrast('+contrast+')'+(grade?' '+grade:''); }catch(e){}
   const now=performance.now();
   // Transition (first 800 ms after play/type change)
   let alpha=1, tx=0, wipeW=c.width;
@@ -85,22 +96,60 @@ function draw(){
     if(bgImg){ const tw=c.width/3, th=c.height/3; for(let i=0;i<3;i++) for(let j=0;j<3;j++){ g.save(); g.beginPath(); g.rect(i*tw,j*th,tw,th); g.clip(); drawCover(bgImg,c,g); g.restore(); g.strokeStyle='rgba(255,255,255,0.35)'; g.strokeRect(i*tw,j*th,tw,th); } }
     else { for(let i=0;i<3;i++) for(let j=0;j<3;j++){ g.fillStyle=cols[(i*3+j)%cols.length]; g.globalAlpha=0.35; g.fillRect(i*tw0(c.width),j*th0(c.height),c.width/3,c.height/3); g.globalAlpha=1; } }
   }
+  // ---- Sweet, near-zero-latency audio-reactive graphics ----
+  // One analyser read per frame, low smoothing, so the picture moves
+  // with the sound, not a beat behind it. Beat = bass rising fast.
+  let metrics={bass:0,mid:0,high:0,energy:0}, d=null;
+  const intensity=parseFloat((document.getElementById('gfxIntensity')||{}).value||1);
   if(analyser){
-    const d=new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d);
+    d=new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d);
+    metrics=audioMetrics(d);
+    beatPulse*=0.92;
+    if(metrics.bass>0.55 && metrics.bass>prevBass+0.15 && now-lastBeat>250){
+      lastBeat=now; beatPulse=1;
+      for(let i=0;i<14;i++) bursts.push({a:Math.random()*6.283, r:10, sp:4+Math.random()*8, life:1});
+    }
+    prevBass=metrics.bass;
+    // Bass glow behind everything — the whole canvas breathes with the kick.
+    if(metrics.bass>0.05){ g.fillStyle=cols[0]; g.globalAlpha=metrics.bass*0.12*intensity; g.fillRect(0,0,c.width,c.height); g.globalAlpha=1; }
     if(type==='waveform'){
       const td=new Uint8Array(analyser.fftSize); analyser.getByteTimeDomainData(td);
-      g.strokeStyle=cols[0]; g.lineWidth=4; g.beginPath();
+      g.strokeStyle=cols[0]; g.lineWidth=4+beatPulse*4; g.beginPath();
       for(let i=0;i<td.length;i++){ const x=i/td.length*c.width, y=(td[i]/255)*c.height; if(i===0) g.moveTo(x,y); else g.lineTo(x,y); }
       g.stroke();
     } else if(type==='minimal'){
-      const v=d[10]/255; g.fillStyle=cols[0]; g.fillRect(0,c.height/2-3,c.width*v,6);
+      const v=d[10]/255; g.fillStyle=cols[0]; g.fillRect(0,c.height/2-3,c.width*v*(1+beatPulse*0.5),6);
+    } else if(type==='sweet'){
+      // Circular bars + pulsing core + beat bursts, centred, mirrored.
+      const cx=c.width/2, cy=c.height/2, baseR=Math.min(c.width,c.height)*0.18;
+      const coreR=baseR*(0.8+metrics.bass*0.6*intensity+beatPulse*0.35);
+      const grd=g.createRadialGradient(cx,cy,0,cx,cy,coreR*2);
+      grd.addColorStop(0,cols[0]); grd.addColorStop(1,'rgba(7,9,14,0)');
+      g.fillStyle=grd; g.globalAlpha=0.9; g.beginPath(); g.arc(cx,cy,coreR*2,0,6.283); g.fill(); g.globalAlpha=1;
+      g.strokeStyle=cols[1]; g.lineWidth=3+beatPulse*3; g.beginPath(); g.arc(cx,cy,coreR,0,6.283); g.stroke();
+      g.strokeStyle=cols[0]; g.lineWidth=2; g.beginPath(); g.arc(cx,cy,coreR*(1.4+beatPulse*0.3),0,6.283); g.stroke();
+      const n=64;
+      for(let i=0;i<n;i++){
+        const a=(i/n)*6.283, v=d[Math.floor(i/n*d.length)]/255;
+        const len=v*c.height*0.35*intensity+beatPulse*18;
+        const x1=cx+Math.cos(a)*(coreR+8), y1=cy+Math.sin(a)*(coreR+8);
+        const x2=cx+Math.cos(a)*(coreR+8+len), y2=cy+Math.sin(a)*(coreR+8+len);
+        g.strokeStyle=cols[i%2]; g.lineWidth=5; g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+      }
+      // Beat bursts: rings flying out from the core on every detected beat.
+      bursts=bursts.filter(function(b){ return b.life>0; });
+      for(const b of bursts){
+        b.r+=b.sp*(1+metrics.energy*2); b.life-=0.03;
+        g.strokeStyle=cols[0]; g.globalAlpha=Math.max(0,b.life); g.lineWidth=3;
+        g.beginPath(); g.arc(cx+Math.cos(b.a)*b.r, cy+Math.sin(b.a)*b.r, 6+b.life*10, 0, 6.283); g.stroke(); g.globalAlpha=1;
+      }
     } else {
-      const n=48,w=c.width/n; for(let i=0;i<n;i++){ const v=d[i]/255, ht=v*c.height*0.6; g.fillStyle=cols[i%2]; g.fillRect(i*w+2,c.height-ht,w-4,ht); }
+      const n=48,w=c.width/n; for(let i=0;i<n;i++){ const v=d[i]/255, ht=v*c.height*0.6*intensity*(1+beatPulse*0.5); g.fillStyle=cols[i%2]; g.fillRect(i*w+2,c.height-ht,w-4,ht); }
     }
   }
   if(type==='performance'){
-    const t=now/1000;
-    for(const pt of particles){ const x=((pt.x+ t*0.02*pt.sp)%1)*c.width, y=((pt.y+Math.sin(t+pt.ph)*0.02)%1+1)%1*c.height; g.fillStyle=cols[0]; g.globalAlpha=0.7; g.beginPath(); const shape=fpSeed%3; if(shape===1){ g.moveTo(x,y-pt.rad); g.lineTo(x-pt.rad,y+pt.rad); g.lineTo(x+pt.rad,y+pt.rad); g.closePath(); g.fill(); } else if(shape===2){ g.fillRect(x-pt.rad,y-pt.rad,pt.rad*2,pt.rad*2); } else { g.arc(x,y,pt.rad,0,6.283); g.fill(); } g.globalAlpha=1; }
+    const t=now/1000, speed=1+metrics.energy*3;
+    for(const pt of particles){ const x=((pt.x+ t*0.02*pt.sp*speed)%1)*c.width, y=((pt.y+Math.sin(t+pt.ph)*0.02)%1+1)%1*c.height; g.fillStyle=cols[0]; g.globalAlpha=0.7; g.beginPath(); const shape=fpSeed%3; const rad=pt.rad*(1+metrics.bass*0.8+beatPulse*0.5); if(shape===1){ g.moveTo(x,y-rad); g.lineTo(x-rad,y+rad); g.lineTo(x+rad,y+rad); g.closePath(); g.fill(); } else if(shape===2){ g.fillRect(x-rad,y-rad,rad*2,rad*2); } else { g.arc(x,y,rad,0,6.283); g.fill(); } g.globalAlpha=1; }
   }
   if(type==='lyric'){
     const words=(document.getElementById('title').value||'').split(/\s+/).filter(Boolean);
@@ -139,7 +188,7 @@ regenParticles();
 
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume(); decoded=await ctx.decodeAudioData(await f.arrayBuffer()); setBus({prompt:document.getElementById('title').value}); document.getElementById('fileInfo').textContent=f.name+' — '+decoded.duration.toFixed(1)+'s'; document.getElementById('preview').disabled=false; document.getElementById('record').disabled=false; draw(); };
-function start(forRec){ playStart=performance.now(); transStart=performance.now(); outroUntil=0; if(src) try{src.stop();}catch(e){} src=ctx.createBufferSource(); src.buffer=decoded; const inp=ctx.createGain(); src.connect(inp); analyser=ctx.createAnalyser(); analyser.fftSize=256; inp.connect(analyser); analyser.connect(ctx.destination); streamDest=ctx.createMediaStreamDestination(); analyser.connect(streamDest); src.start(); draw(); src.onended=()=>{ if(document.getElementById('outroCard').checked){ outroUntil=performance.now()+2500; setTimeout(()=>{ if(recording) stopRec(); },2500); } else if(recording) stopRec(); }; if(forRec){ chunks=[]; const c=document.getElementById('canvas'); const stream=new MediaStream([...c.captureStream(parseInt((document.getElementById('vidFps')||{}).value||30,10)).getVideoTracks(),...streamDest.stream.getAudioTracks()]); rec=new MediaRecorder(stream,{mimeType:'video/webm'}); rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);}; rec.onstop=()=>{ const blob=new Blob(chunks,{type:'video/webm'}); const url=URL.createObjectURL(blob); const v=document.getElementById('outVideo'); v.src=url; v.style.display='block'; const a=document.createElement('a'); a.href=url; a.download='praime-video.webm'; a.click(); document.getElementById('out').textContent='Video downloaded: praime-video.webm ('+Math.round(blob.size/1024)+' KB), recorded in real time.'; }; rec.start(); recording=true; document.getElementById('out').textContent='Recording video in real time…'; } }
+function start(forRec){ playStart=performance.now(); transStart=performance.now(); outroUntil=0; if(src) try{src.stop();}catch(e){} src=ctx.createBufferSource(); src.buffer=decoded; const inp=ctx.createGain(); src.connect(inp); analyser=ctx.createAnalyser(); analyser.fftSize=256; analyser.smoothingTimeConstant=0.12; inp.connect(analyser); analyser.connect(ctx.destination); streamDest=ctx.createMediaStreamDestination(); analyser.connect(streamDest); src.start(); draw(); src.onended=()=>{ if(document.getElementById('outroCard').checked){ outroUntil=performance.now()+2500; setTimeout(()=>{ if(recording) stopRec(); },2500); } else if(recording) stopRec(); }; if(forRec){ chunks=[]; const c=document.getElementById('canvas'); const stream=new MediaStream([...c.captureStream(parseInt((document.getElementById('vidFps')||{}).value||30,10)).getVideoTracks(),...streamDest.stream.getAudioTracks()]); rec=new MediaRecorder(stream,{mimeType:'video/webm'}); rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);}; rec.onstop=()=>{ const blob=new Blob(chunks,{type:'video/webm'}); const url=URL.createObjectURL(blob); const v=document.getElementById('outVideo'); v.src=url; v.style.display='block'; const a=document.createElement('a'); a.href=url; a.download='praime-video.webm'; a.click(); document.getElementById('out').textContent='Video downloaded: praime-video.webm ('+Math.round(blob.size/1024)+' KB), recorded in real time.'; }; rec.start(); recording=true; document.getElementById('out').textContent='Recording video in real time…'; } }
 function stopRec(){ if(!recording) return; recording=false; try{rec.stop();}catch(e){} if(src) try{src.stop();}catch(e){} document.getElementById('stop').disabled=true; document.getElementById('record').disabled=false; }
 document.getElementById('preview').onclick=()=>start(false);
 document.getElementById('record').onclick=()=>{ start(true); document.getElementById('record').disabled=true; document.getElementById('stop').disabled=false; };
