@@ -1,0 +1,12 @@
+{
+  "name": "PrAIme Productions",
+  "short_name": "PrAIme",
+  "description": "PrAIme Productions — Rokdabus Prhyme, mascot of PrAIme Productions, rhyming octopus AI-powered DJ.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#07090e",
+  "theme_color": "#00f3ff",
+  "icons": [
+    {"src": "rokdabus.jpg", "sizes": "512x512", "type": "image/jpeg", "purpose": "any"}
+  ]
+}

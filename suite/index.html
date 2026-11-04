@@ -1,0 +1,319 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PrAIme — Universal Hub</title><style>body{font-family:'Inter',system-ui,sans-serif;background:#07090e;color:#f3f4f6;margin:0}
+header{position:sticky;top:0;z-index:40;background:rgba(15,20,32,.75);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.1)}
+.hi{max-width:900px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);display:flex;align-items:center;justify-content:center;font-size:22px}
+.grad{background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(0,243,255,.1);color:#00f3ff;border:1px solid rgba(0,243,255,.3);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+nav a{color:#e8eef4;text-decoration:none;font-size:13px;margin-right:10px}
+main{max-width:900px;margin:0 auto;padding:24px 20px 40px}
+.card{background:rgba(15,20,32,.75);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:20px;margin:16px 0}
+button{padding:11px 18px;border-radius:12px;border:0;background:linear-gradient(135deg,#00f3ff,#9d4edd);color:#fff;font-weight:700;margin:4px 6px 4px 0;cursor:pointer}
+button:disabled{opacity:.4} button.secondary{background:#1e293b}
+input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:#07090e;color:#fff;box-sizing:border-box;margin:6px 0}
+input[type=range]{padding:0} label{font-weight:600;display:block;margin-top:10px}
+.status{background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;white-space:pre-wrap}
+small{color:#9ca3af} canvas,video{width:100%;background:#07090e;border-radius:14px;border:1px solid rgba(255,255,255,.1)}
+a{color:#7ee2ff}
+
+#rokBtn{position:fixed;right:16px;bottom:16px;z-index:9999;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);color:#fff;font-size:28px;border:2px solid #fff;cursor:pointer;box-shadow:0 0 20px rgba(157,78,221,.6)}
+#rokPanel{position:fixed;right:16px;bottom:92px;z-index:9999;width:min(360px,92vw);max-height:70vh;overflow:auto;background:rgba(15,20,32,.97);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:14px;display:none}
+#rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
+#rokPanel input{margin-top:8px}
+
+
+#introStage{width:320px;max-width:92vw;margin:10px auto}
+#oldPlayer,#djSetup{transition:opacity .6s}
+#oldPlayer.glow{filter:drop-shadow(0 0 22px #00f3ff) drop-shadow(0 0 38px #f72585)}
+.spinDisc{animation:spin 4s linear infinite;transform-box:fill-box;transform-origin:center}
+.spinFast{animation-duration:.45s !important}
+.djDisc{animation:spin 1.2s linear infinite;transform-box:fill-box;transform-origin:center}
+.tentacle{animation:wiggle .8s ease-in-out infinite;transform-box:fill-box;transform-origin:top center}
+@keyframes wiggle{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.led{animation:blink .6s infinite alternate}
+@keyframes blink{from{opacity:.2}to{opacity:1}}
+#introGate{position:fixed;inset:0;z-index:10000;background:#07090d;color:#e8f4f1;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;transition:opacity .55s,visibility .55s}
+#introGate{position:fixed;inset:0;z-index:10000;background:#07090d;color:#e8f4f1;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;transition:opacity .55s,visibility .55s}
+#introGate.gone{opacity:0;visibility:hidden;pointer-events:none}
+.gate-in{max-width:640px;padding:40px 20px;text-align:center}
+.disc{width:160px;height:160px;margin:20px auto;border-radius:50%;background:radial-gradient(circle at 50% 50%, #9d4edd 0 20%, #07090e 21% 45%, #00f3ff 46% 48%, #07090e 49%);animation:spin 4s linear infinite;box-shadow:0 0 30px rgba(0,243,255,.4)}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header>
+<div id="introGate" role="dialog" aria-modal="true" aria-label="PrAIme Productions intro">
+<div class="gate-in">
+<div style="font-size:12px;letter-spacing:.15em;color:#9ca3af">OFFLINE-FIRST MUSIC STUDIO</div>
+<div id="introStage">
+<div id="oldPlayer"><svg viewBox="0 0 300 220" width="100%" role="img" aria-label="Old record player">
+<defs><linearGradient id="wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a0522d"/><stop offset="1" stop-color="#5d2f16"/></linearGradient></defs>
+<rect x="15" y="130" width="270" height="70" rx="12" fill="url(#wood)" stroke="#2b1608" stroke-width="2"/>
+<rect x="30" y="145" width="90" height="40" rx="6" fill="#1a0f08" opacity=".6"/>
+<circle cx="70" cy="165" r="10" fill="#00f3ff"/><circle cx="95" cy="165" r="4" fill="#f72585"/>
+<g id="oldPlatter" class="spinDisc">
+<circle cx="175" cy="95" r="72" fill="#111"/>
+<circle cx="175" cy="95" r="58" fill="none" stroke="#333" stroke-width="1"/><circle cx="175" cy="95" r="45" fill="none" stroke="#333" stroke-width="1"/><circle cx="175" cy="95" r="32" fill="none" stroke="#333" stroke-width="1"/>
+<circle cx="175" cy="95" r="22" fill="#00f3ff"/><circle cx="175" cy="95" r="7" fill="#07090e"/>
+</g>
+<line x1="255" y1="30" x2="215" y2="80" stroke="#c0c0c0" stroke-width="6" stroke-linecap="round"/>
+<circle cx="258" cy="28" r="12" fill="#c0c0c0"/>
+<path d="M245 35 L285 10 L285 60 L245 55 Z" fill="#d4a017" opacity=".9"/>
+<text x="150" y="215" fill="#9ca3af" font-size="11" text-anchor="middle">OLD RECORD PLAYER</text>
+</svg></div>
+<div id="djSetup" style="display:none"><svg viewBox="0 0 320 230" width="100%" role="img" aria-label="Two turntables with Rokdabus spinning the mix">
+<g><circle cx="70" cy="170" r="52" fill="#111" stroke="#00f3ff" stroke-width="2"/><g class="djDisc"><circle cx="70" cy="170" r="38" fill="none" stroke="#333"/><circle cx="70" cy="170" r="16" fill="#f72585"/><circle cx="70" cy="170" r="5" fill="#07090e"/></g><rect x="18" y="118" width="104" height="104" rx="10" fill="none" stroke="#333"/></g>
+<g><circle cx="250" cy="170" r="52" fill="#111" stroke="#9d4edd" stroke-width="2"/><g class="djDisc"><circle cx="250" cy="170" r="38" fill="none" stroke="#333"/><circle cx="250" cy="170" r="16" fill="#00f3ff"/><circle cx="250" cy="170" r="5" fill="#07090e"/></g><rect x="198" y="118" width="104" height="104" rx="10" fill="none" stroke="#333"/></g>
+<rect x="130" y="125" width="60" height="95" rx="8" fill="#0f1420" stroke="#333"/>
+<circle class="led" cx="142" cy="140" r="4" fill="#00f3ff"/><circle class="led" cx="158" cy="140" r="4" fill="#f72585"/><circle class="led" cx="174" cy="140" r="4" fill="#ffc531"/>
+<rect x="145" y="170" width="30" height="6" rx="3" fill="#9d4edd"/>
+<g id="rokIntroOcto">
+<ellipse cx="160" cy="75" rx="42" ry="36" fill="#ff4d8d"/>
+<circle cx="146" cy="68" r="8" fill="#fff"/><circle cx="146" cy="68" r="4" fill="#111"/>
+<circle cx="174" cy="68" r="8" fill="#fff"/><circle cx="174" cy="68" r="4" fill="#111"/>
+<path d="M145 88 Q160 96 175 88" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round"/>
+<path class="tentacle" d="M130 105 Q110 135 85 165" fill="none" stroke="#1fd6c1" stroke-width="7" stroke-linecap="round"/>
+<path class="tentacle" d="M190 105 Q210 135 235 165" fill="none" stroke="#1fd6c1" stroke-width="7" stroke-linecap="round"/>
+<path class="tentacle" d="M115 108 Q100 140 95 165" fill="none" stroke="#ff4d8d" stroke-width="6" stroke-linecap="round"/>
+<path class="tentacle" d="M205 108 Q220 140 225 165" fill="none" stroke="#ff4d8d" stroke-width="6" stroke-linecap="round"/>
+<path class="tentacle" d="M140 110 Q135 145 130 165" fill="none" stroke="#ffc531" stroke-width="6" stroke-linecap="round"/>
+<path class="tentacle" d="M180 110 Q185 145 190 165" fill="none" stroke="#ffc531" stroke-width="6" stroke-linecap="round"/>
+<path class="tentacle" d="M150 110 Q150 145 150 165" fill="none" stroke="#1fd6c1" stroke-width="6" stroke-linecap="round"/>
+<path class="tentacle" d="M170 110 Q170 145 170 165" fill="none" stroke="#ff4d8d" stroke-width="6" stroke-linecap="round"/>
+</g>
+<text x="160" y="18" fill="#e8f4f1" font-size="13" text-anchor="middle">ROK DABUS ON THE DECKS</text>
+</svg></div>
+</div>
+<h1 style="font-size:2rem">Pr<span class="grad">AI</span>me™ Productions</h1>
+<div class="card" style="text-align:center">
+  <img src="rokdabus.jpg" alt="Rokdabus Prhyme — Mascot of PrAIme Productions" style="width:100%;max-width:640px;border-radius:20px;border:2px solid #00f3ff">
+  <h2 style="margin:8px 0 4px">Rokdabus Prhyme</h2>
+  <p style="color:#9ca3af;margin:0">Mascot of PrAIme Productions — the rhyming octopus, AI-powered DJ, and your studio guide.</p>
+</div>
+
+<p id="gateIntroText">First, an old record player. It starts glowing, spins real fast, and transforms into two turntables — with Rokdabus spinning the mix on them. Then the studio opens.</p>
+<p style="font-size:13px;color:#9ca3af">Press Enter and the intro finishes out loud, and Rokdabus — the animated, talking AI producer — is ready to help you create: tap the octopus button and talk to him like a voice assistant, and he answers with ideas, best practices and next steps. Sound on for the full intro.</p>
+<button id="gateEnter">▶ ENTER THE STUDIO</button>
+<button id="gateSilent" class="secondary">Enter without sound</button>
+<button id="gatePlayIntro" class="secondary">▶ Play intro voice-over only</button>
+<p id="gateStatus" style="font-size:12px;color:#9ca3af"></p>
+</div>
+</div>
+<main><h1>Universal Hub</h1><button id="replayIntro">▶ Replay intro</button><p><span class="badge">Separate page 1 of 10</span></p><div class="card"><h2>Shared state bus — actually saved</h2><p>This hub does not just show an alert. It saves your prompt, genre, BPM, key and profile to localStorage, so the other separate pages can read the same bus when you open them.</p>
+<label>Prompt</label><input id="prompt" placeholder="Dark boom bap beat with heavy 808s and raw horns...">
+<label>Genre</label><select id="genre"><option>Boom Bap</option><option>Trap</option><option>Lo-Fi</option><option>Rave</option><option>R&amp;B</option><option>Drill</option></select>
+<label>BPM</label><input type="number" id="bpm" value="90">
+<label>Key</label><input id="key" value="C Minor">
+<label>Profile / user name</label><input id="profile" value="Daryl">
+<button id="save">Save bus &amp; go to DAW</button><button id="saveOnly" class="secondary">Save bus only</button>
+<div class="status" id="busOut"></div></div>
+<div class="card"><h2>All pages</h2><p>Open each category as its own page: DAW &amp; Master, Freestyle Prompter, Lyrics &amp; Vocals, Video, File Converter, File Commander, Universal Search, Beat Store, Ads &amp; Marketing. Pages share the bus above via localStorage, and each page's main feature works locally in the browser.</p></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
+<div id="rokPanel">
+<div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
+<div style="font-size:12px;color:#9ca3af">Rhyming studio guide for PrAIme Productions. Text or voice prompts. I explain every feature, walk you through creation end to end, and in the DAW I can auto-select mastering levels from real song analysis.</div>
+<div id="rokLog">Welcome to the suite, where the rhythms stay tight — we master all the audio and rock through the night! Ask me: "what does this page do?", "walk me through", "auto master", "what is LUFS?", "go to lyrics", "set BPM to 120".</div>
+<input id="rokInput" placeholder="Ask Rokdabus, or give a command...">
+<div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button><button id="rokWalk" class="secondary">Walk me through</button><button id="rokIntro" class="secondary">▶ Play intro</button><button id="rokAuto" class="secondary">Auto-master this song</button><button id="rokRhyme" class="secondary">🎤 Rhyme it</button></div>
+<label style="font-size:12px">Ollama in Termux (optional, on your phone only)</label>
+<input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
+<input id="rokModel" placeholder="Model, e.g. llama3.1" value="llama3.1">
+<div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
+</div>
+<script>
+function getBus(){ try{ return JSON.parse(localStorage.getItem('praime_bus')||'{}'); }catch(e){ return {}; } }
+function setBus(o){ const b=Object.assign(getBus(),o); localStorage.setItem('praime_bus',JSON.stringify(b)); return b; }
+function showBus(el){ const b=getBus(); if(el) el.textContent='Prompt: '+(b.prompt||'—')+' | Genre: '+(b.genre||'—')+' | BPM: '+(b.bpm||'—')+' | Key: '+(b.key||'—')+' | Profile: '+(b.profile||'Daryl'); }
+
+const b=getBus(); document.getElementById('prompt').value=b.prompt||''; document.getElementById('genre').value=b.genre||'Boom Bap'; document.getElementById('bpm').value=b.bpm||90; document.getElementById('key').value=b.key||'C Minor'; document.getElementById('profile').value=b.profile||'Daryl'; showBus(document.getElementById('busOut'));
+function save(){ const nb=setBus({prompt:document.getElementById('prompt').value,genre:document.getElementById('genre').value,bpm:document.getElementById('bpm').value,key:document.getElementById('key').value,profile:document.getElementById('profile').value}); showBus(document.getElementById('busOut')); return nb; }
+document.getElementById('saveOnly').onclick=save;
+document.getElementById('save').onclick=()=>{ save(); location.href='02-daw-master.html'; };
+
+// ---- Rokdabus Prhyme widget ----
+(function(){
+  var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
+  if(!btn||!panel) return;
+  btn.onclick=function(){ panel.style.display = panel.style.display==='block' ? 'none' : 'block'; };
+  function say(t){ var rhymes=['Rokdabus in the mix, making beats that stick and tricks that click.','Eight tentacles on the decks, dropping rhythms you will not forget.','PrAIme in the place, let the bass and the rhythm set the pace.','I master every track, I never fall behind, I keep the sound refined.','From the Hub to the stage, I turn the page and set the gauge.']; var out=t; if(!/\.$/.test(out)) out+='.'; out+=' '+rhymes[Math.abs(t.length)%rhymes.length]; log.textContent += '\n\nRokdabus: '+out; log.scrollTop=log.scrollHeight; try{ if(window.speechSynthesis){ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(out); u.rate=1; u.pitch=1; window.speechSynthesis.speak(u); } }catch(e){} }
+  function userSay(t){ log.textContent += '\n\nYou: '+t; log.scrollTop=log.scrollHeight; }
+  var KB=[
+    ['1950s', '1950s hit DNA (style, not lyrics): rock & roll and early R&B — 12-bar blues form, backbeat, simple I-IV-V chords, 120-160 BPM for rockers, 70-90 for ballads, sax/guitar lead, call-and-response vocals. Learn from the structure and feel, do not copy melodies or lyrics.'],
+    ['1960s', '1960s hit DNA: Motown (punchy bass, tambourine, call-and-response, 100-120 BPM), British Invasion (guitar bands, verse-chorus, 120-140 BPM), soul (horn sections, gospel vocals). Song form is usually verse-chorus-bridge, under 3 minutes.'],
+    ['1970s', '1970s hit DNA: funk (syncopated bass, 16th-note hats, 100-120 BPM), disco (four-on-the-floor, 115-125 BPM, strings), soft rock (acoustic, 70-90 BPM), early hip-hop breakbeats (drum breaks looped). Study groove and arrangement, not sampled audio without clearance.'],
+    ['1980s', '1980s hit DNA: synth-pop (analog synths, gated drums, 110-130 BPM), arena rock (big choruses, 120-140 BPM), early rap (drum machine, 90-110 BPM). Hook is usually in the first 15 seconds, chorus repeats the title.'],
+    ['1990s', '1990s hit DNA: grunge (loud-quiet dynamics), West Coast/East Coast hip-hop (90-100 BPM, boom bap or G-funk synths), R&B (smooth vocals, 60-90 BPM), Eurodance (130-140 BPM). Verse-chorus form, strong hook, clear vocal on top.'],
+    ['2000s', '2000s hit DNA: pop-R&B (Timbaland-style syncopation, 90-110 BPM), crunk/snap (120-140 BPM, chants), indie rock (guitar-driven, 120-140 BPM). Short intros, chorus within 45 seconds.'],
+    ['2010s', '2010s hit DNA: trap (140 BPM, hi-hat rolls, 808 slides), EDM pop (128 BPM, drop chorus), lo-fi (70-85 BPM, jazzy chords, vinyl feel). Streaming changed structure: short intros, hook early, songs under 3:30.'],
+    ['2020s', '2020s hit DNA: drill (140-150 BPM, sliding 808, dark minor keys), Afrobeats (100-115 BPM, log drum / shaker grooves), hyperpop (fast, distorted, 140-160 BPM). Short-form video drives the hook — the first 3 seconds are the single.'],
+    ['hit dna', 'Hit DNA means style traits — tempo, chord form, drum pattern, song structure, instrumentation — learned from chart history in general, not copied melodies, lyrics or recordings. If you want to use an actual hit recording or lyric, you need a license. This suite never copies a hit song, it only uses its general style recipe.'],
+    ['top ten', 'Top-ten lists: this suite does not claim a verified top-10 artists / top-10 songs per genre per artist list back to the 1950s, because that list would be thousands of songs and would need a licensed chart database to be accurate. What it does have is era + genre style DNA (ask Rokdabus about 1950s, 1970s, 1990s, trap, drill, etc.) and your own taste profile, which is what actually personalises your beats.'],
+    ['spotify', 'Mastering for Spotify / YouTube: aim around -14 LUFS integrated, true peak -1 dBTP. Spotify will turn louder songs down, so crushing to -8 LUFS does not make you louder on Spotify — it just loses dynamics.'],
+    ['apple', 'Mastering for Apple Music: Apple normalizes to around -16 LUFS. Aim -14 to -16 LUFS, true peak -1 dBTP, and check that your limiter does not create inter-sample peaks above 0 dBTP.'],
+    ['lufs', 'LUFS is loudness over time. For streaming, aim around -14 LUFS integrated, with a true peak ceiling of -1 dB. Louder is not always better — if you crush dynamics, the song feels flat.'],
+    ['true peak', 'True peak (dBTP) measures peaks between samples, not just sample peaks. A file can read -0.1 dB sample peak and still clip at +1 dBTP after conversion to MP3/AAC. That is why the limiter here is set to -1 dB.'],
+    ['dither', 'Dither: when you go from 24-bit to 16-bit, add a tiny amount of noise (dither) to avoid quantization distortion on quiet fades. Do not dither twice, and do not dither if you are staying at the same bit depth.'],
+    ['gain staging', 'Mixing gain staging: leave headroom at every stage. Aim for tracks peaking around -12 to -6 dBFS before the master bus, and the mix bus peaking around -6 dBFS before mastering. If everything is at 0 dB, every plugin after it is already clipping.'],
+    ['mix vocal', 'Mixing vocals: high-pass around 80-100 Hz to remove rumble, cut mud around 200-400 Hz if needed, presence around 3-5 kHz for clarity, air above 10 kHz sparingly. Compress gently (2-3:1) for consistency, then use a de-esser around 5-8 kHz if sibilance is harsh. Keep the vocal on top of the beat, not buried in it.'],
+    ['mix drums', 'Mixing drums: kick needs low-end weight (50-100 Hz) and click (2-4 kHz). Snare needs body (200 Hz) and crack (2-5 kHz). Hi-hats live above 8 kHz — keep them quieter than you think, they cut through easily. Sidechain or arrange kick and 808 so they do not fight at the same moment.'],
+    ['mix bass', 'Mixing bass / 808: keep bass mostly mono below 150 Hz. A sine 808 needs a little harmonic content (saturation) to be heard on phone speakers, otherwise it disappears on small speakers. Check bass in mono.'],
+    ['mix 808', 'Mixing bass / 808: keep bass mostly mono below 150 Hz. A sine 808 needs a little harmonic content (saturation) to be heard on phone speakers, otherwise it disappears on small speakers. Check bass in mono.'],
+    ['panning', 'Mixing panning: keep kick, snare, bass and lead vocal centred. Pan hats, pads, ad-libs and effects wider for space, but check in mono — if something disappears in mono, it is out of phase or too wide.'],
+    ['reverb', 'Mixing reverb: reverb creates space, but too much washes a mix out. Use short reverb for drums, longer for pads/vocals, and high-pass the reverb itself around 200 Hz so it does not muddy the low end. Send, do not insert, reverb on many tracks so they share the same space.'],
+    ['delay', 'Mixing delay: delay adds rhythm and space. Sync delay time to BPM (e.g. dotted eighth), keep feedback low, and filter the delayed signal so it sits behind the dry vocal instead of fighting it.'],
+    ['automation', 'Mixing automation: automate volume, filter and effects over time. A static mix feels flat — lift the hook by 1-2 dB, drop the verse, automate a filter opening into a chorus. Automation is often what makes a professional mix feel alive.'],
+    ['reference', 'Mixing / mastering reference: compare your mix to a professionally released track in the same genre, at matched loudness (turn the reference down to your level, do not just turn yours up). Check low end, vocal clarity and stereo width, not just loudness.'],
+    ['mono', 'Mono compatibility: check your mix in mono regularly. Bass, kick and vocal must survive in mono. If a synth or vocal disappears in mono, it is too wide or phase-cancelled.'],
+    ['compress', 'Compression controls dynamics: threshold is where it starts working, ratio is how hard it squeezes, attack lets transients through (30 ms is a good start), release lets it breathe (200 ms here). Use gentle compression for glue, not for loudness alone. Multiband compression lets you control low, mid and high dynamics separately — useful when only the bass is pumping.'],
+    ['multiband', 'Multiband mastering: split into low, mid and high bands and compress each separately. Low band controls bass pumping, mid band controls vocal/body, high band controls harshness/air. Use it to fix one range without crushing the whole song. This suite uses a single-band compressor plus EQ as a simpler, safer version — true multiband is a next step if you need it.'],
+    ['eq', 'EQ first, fix problems before you boost. High-pass at 30 Hz removes rumble you cannot hear but that eats headroom. Cut mud around 200-400 Hz, tame harshness around 2-5 kHz, add air above 10 kHz only if the song needs it. In mixing, subtractive EQ (cutting) usually sounds cleaner than boosting everything.'],
+    ['bpm', 'BPM is beats per minute. Boom Bap often sits around 90 BPM, Trap around 140, Lo-Fi around 85, Drill around 140-150, Rave around 140, R&B around 60-80. The prompter and beat preview both read BPM from the Hub bus, so set it once in the Hub.'],
+    ['key', 'Key tells you which notes fit. C Minor is a common starting key here. Chord ideas that fit C Minor include Cmin7, Fmin9, G7alt and AbMaj7 — those are the synth pads used in the Master Edition. In general, stay in key for the main melody, and use borrowed chords sparingly for tension.'],
+    ['chord', 'Chord progressions: start simple — i-VI-III-VII in minor, or I-V-vi-IV in major, are used in countless songs because they work. Voice-leading matters: move each note as little as possible between chords, and keep the bass moving in a clear pattern.'],
+    ['808', 'An 808 is a deep, sine-based bass. Keep bass mostly mono, leave headroom for it, and do not let the kick and 808 fight at the same time — sidechain or arrangement choices help more than just turning both up.'],
+    ['saturat', 'Saturation adds harmonics and perceived warmth and loudness. A little tanh saturation glues a mix; too much makes it harsh and noisy. Tape saturation is gentler than hard clipping.'],
+    ['stereo', 'Stereo width: widen highs a little, keep bass mono. Mid/Side processing lets you EQ the centre (vocal, kick, bass) separately from the sides (pads, effects). If a mix sounds wide on headphones but thin on a phone speaker, the low end is probably too wide or out of phase.'],
+    ['limiter', 'Limiting is the last step: a brickwall limiter with a high ratio and fast attack catches peaks and lets you raise overall loudness to the -1 dB ceiling. Do not use the limiter to fix a bad mix — if you need more than 3-4 dB of limiting gain reduction, go back to the mix.'],
+    ['clipping', 'Clipping: digital clipping above 0 dBFS sounds harsh and is not fixable after export. Analog-style soft clipping / saturation can sound musical, but hard digital clipping on the master is almost always a mistake. Keep true peak below -1 dB.'],
+    ['dynamic range', 'Dynamic range is the difference between loud and quiet parts. A crest factor (peak minus RMS) around 8-14 dB is typical for dynamic music; below 6 dB often sounds squashed. Auto-master in the DAW measures crest and adjusts accordingly.'],
+    ['boom bap', 'Boom Bap mixing/mastering: around 90 BPM, dusty drums, warm bass, clear vocal on top. Keep drums punchy, do not over-compress, leave swing in the groove, and master to around -12 to -14 LUFS so it stays dynamic.'],
+    ['trap', 'Trap mixing/mastering: around 140 BPM, heavy 808, crisp hi-hats (often with rolls), snare/clap on beat 3. Keep 808 mono and controlled, hats bright but not harsh, and master louder than Boom Bap if needed — around -9 to -12 LUFS is common, but watch true peak.'],
+    ['drill', 'Drill mixing/mastering: around 140-150 BPM, sliding 808s, dark melodies, snare with swing. Keep the 808 slide clear, do not let reverb wash out the drums, and keep the vocal dark and upfront.'],
+    ['lo-fi', 'Lo-Fi mixing/mastering: around 70-90 BPM, warm, soft drums, vinyl crackle, mellow chords. Do not over-compress — dynamics and warmth are the sound. Master gentler, around -14 LUFS, and keep highs soft, not bright.'],
+    ['rave', 'Rave mixing/mastering: around 140 BPM, driving kick, bright synths, big energy. Keep kick punchy and centred, sidechain pads to the kick for pump, and master loud but clean — watch for harsh highs above 8 kHz.'],
+    ['export', 'Export rule in this suite: live and download must use the same chain. In the DAW, Render & Download runs the whole song offline through the same EQ, compressor, saturation and limiter you heard live, so the file matches the live sound.'],
+    ['video', 'Video generation help: choose a song, set a clear title, pick a style that matches the genre (Cyberpunk for Trap/Rave, Warm for R&B/Lo-Fi, Cool for Boom Bap), pick aspect — 16:9 for YouTube, 9:16 for TikTok/Reels, 1:1 for Instagram feed — preview the canvas, then record in real time to WebM. Recording is real-time, not faster than real-time. I can set title, style and aspect for you, and start/stop recording, from the Video page.'],
+    ['vid', 'Video generation help: choose a song, set a clear title, pick a style that matches the genre (Cyberpunk for Trap/Rave, Warm for R&B/Lo-Fi, Cool for Boom Bap), pick aspect — 16:9 for YouTube, 9:16 for TikTok/Reels, 1:1 for Instagram feed — preview the canvas, then record in real time to WebM. Recording is real-time, not faster than real-time. I can set title, style and aspect for you, and start/stop recording, from the Video page.'],
+    ['lyric', 'Lyrics tip: write the hook first, keep lines singable, and use the Freestyle Prompter at your song BPM to find words that fit the rhythm before you commit them.'],
+    ['master', 'Mastering order used here: high-pass, corrective EQ, tonal EQ, compressor for glue, saturation for warmth, limiter for ceiling. Auto-master measures your song first, then picks levels — it does not guess from the song title.']
+  ];
+  function kbAnswer(q){
+    for(var i=0;i<KB.length;i++){ if(q.indexOf(KB[i][0])>=0) return KB[i][1]; }
+    return null;
+  }
+  function walk(){
+    var p=location.pathname.split('/').pop();
+    var map={
+      'index.html':'Walkthrough: 1) Set prompt, genre, BPM and key here in the Hub and save the bus. 2) Go to DAW, load a song, press Auto-master, listen live. 3) Render and download the WAV. 4) Add lyrics in Lyrics, then make a Video from the same song. 5) Use Converter, Commander, Search, Beat Store and Ads only for those specific jobs.',
+      '02-daw-master.html':'This page: 1) Choose a song file (in Chrome, not a preview, if the picker is blocked). 2) Press Auto-master or set EQ/compressor yourself. 3) Play live and watch the real visualizer. 4) Render and download — the download uses the same chain, so it should sound like live.',
+      '03-freestyle.html':'This page: set BPM, start the prompter, rap to each word, use Add to Lyrics to save words you like. The metronome clicks at the same BPM.',
+      '04-lyrics-vocals.html':'This page: write or load lyrics, save them, download them as TXT. For vocals, record with your microphone, play it back, and download it. That is a real recording, not a simulated take.',
+      '05-video.html':'This page: choose a song, set title and style and aspect, preview the canvas, then record. Recording is real-time, so stay on the page until the song ends or you stop it.',
+      '06-converter.html':'This page: choose an audio file, read its duration, channels and sample rate, then convert it to a real WAV or download its info as JSON.',
+      '07-commander.html':'This page: add files, filter by name, play, download or delete them, and download a manifest JSON of the library.',
+      '08-search.html':'This page: search the local PrAIme catalog. It does not search Spotify or SoundCloud — those need API keys, and I will not fake their results.',
+      '09-beat-store.html':'This page: preview real synth beats, add them to the cart, check the total. PayPal checkout needs a real merchant ID — until then, download the order JSON.',
+      '10-ads.html':'This page: enter track, audience and hook, generate ad copy and a 1080x1080 card, download both. Posting to Meta Ads needs a Meta account and token.'
+    };
+    return map[p] || 'Walkthrough: start in the Hub, set your bus, then go to DAW to master, Lyrics to write, Video to visualize, and Export/Converter to share. Each page explains itself at the top.';
+  }
+  function doCommand(q){ if(q.indexOf('play intro')>=0){ var rib=document.getElementById('rokIntro'); if(rib) rib.click(); return 'Playing the PrAIme Productions intro.'; }
+    // Navigation
+    var nav=[['daw','02-daw-master.html'],['master','02-daw-master.html'],['freestyle','03-freestyle.html'],['lyric','04-lyrics-vocals.html'],['vocal','04-lyrics-vocals.html'],['video','05-video.html'],['convert','06-converter.html'],['commander','07-commander.html'],['library','07-commander.html'],['search','08-search.html'],['beat store','09-beat-store.html'],['store','09-beat-store.html'],['ads','10-ads.html'],['hub','index.html']];
+    for(var i=0;i<nav.length;i++){ if(q.indexOf('go to '+nav[i][0])>=0 || q.indexOf('open '+nav[i][0])>=0){ location.href=nav[i][1]; return 'Opening '+nav[i][0]+' for you.'; } }
+    // BPM
+    var m=q.match(/bpm[^0-9]*([0-9]{2,3})/); if(m){ var bpm=m[1]; try{ localStorage.setItem('praime_bus', JSON.stringify(Object.assign(JSON.parse(localStorage.getItem('praime_bus')||'{}'),{bpm:bpm}))); }catch(e){} var el=document.getElementById('bpm'); if(el) el.value=bpm; return 'BPM set to '+bpm+' in the bus'+(el?' and on this page':'')+'.'; }
+
+    // Video generation assistance
+    if(q.indexOf('video title')>=0 || q.indexOf('set title')>=0){ var tm=q.replace(/.*title[^a-z0-9]*/,''); var ti=document.getElementById('title')||document.getElementById('titleInput'); if(ti){ ti.value=q.replace(/.*title\s*(to\s*)?/,'').trim(); return 'Video title set to "'+ti.value+'".'; } return 'Video title can only be set on the Video page.'; }
+    if(q.indexOf('video style')>=0 || q.indexOf('set style')>=0){ var st=document.getElementById('style'); if(st){ if(q.indexOf('warm')>=0) st.value='warm'; else if(q.indexOf('cool')>=0) st.value='cool'; else st.value='cyber'; return 'Video style set to '+st.value+'.'; } return 'Video style can only be set on the Video page.'; }
+    if(q.indexOf('video aspect')>=0 || q.indexOf('set aspect')>=0){ var as=document.getElementById('aspect'); if(as){ if(q.indexOf('9:16')>=0 || q.indexOf('vertical')>=0 || q.indexOf('tiktok')>=0) as.value='9:16'; else if(q.indexOf('1:1')>=0 || q.indexOf('square')>=0) as.value='1:1'; else as.value='16:9'; if(typeof setAspect==='function') setAspect(); return 'Video aspect set to '+as.value+'.'; } return 'Video aspect can only be set on the Video page.'; }
+    if(q.indexOf('make video')>=0 || q.indexOf('record video')>=0){ var rb=document.getElementById('record'); if(rb && !rb.disabled){ rb.click(); return 'Starting video recording — stay on the Video page until it finishes.'; } return 'Video recording needs a song loaded on the Video page first.'; }
+    if(q.indexOf('preview video')>=0){ var pb=document.getElementById('preview'); if(pb && !pb.disabled){ pb.click(); return 'Previewing video.'; } return 'Video preview needs a song loaded on the Video page first.'; }
+    if(q.indexOf('video help')>=0 || q.indexOf('help with video')>=0){ return 'Video help: 1) Load a song on the Video page. 2) Set title, style and aspect — I can do those by voice/text. 3) Preview, then Record. It records in real time to WebM, so a long song takes its full length.'; }
+    // Buttons by text
+    function clickBtn(words){ var bs=document.querySelectorAll('button'); for(var i=0;i<bs.length;i++){ var t=(bs[i].textContent||'').toLowerCase(); var ok=true; for(var j=0;j<words.length;j++){ if(t.indexOf(words[j])<0) ok=false; } if(ok && !bs[i].disabled){ bs[i].click(); return true; } } return false; }
+    if(q.indexOf('auto master')>=0 || q.indexOf('auto-master')>=0 || q.indexOf('optimal')>=0){ if(typeof window.praimeAutoMaster==='function'){ window.praimeAutoMaster(); return 'Running auto-master on the loaded song — see the DAW status for the measured levels and why they were chosen.'; } return 'Auto-master only works on the DAW page with a song loaded. Go to DAW, load a song, then say "auto master" again.'; }
+    if(q.indexOf('play')>=0 && clickBtn(['play'])) return 'Playing.';
+    if(q.indexOf('stop')>=0 && clickBtn(['stop'])) return 'Stopped.';
+    if(q.indexOf('render')>=0 && clickBtn(['render'])) return 'Rendering and downloading.';
+    if(q.indexOf('record')>=0 && clickBtn(['record'])) return 'Recording started — allow microphone access if asked.';
+    if(q.indexOf('save lyric')>=0 && clickBtn(['save'])) return 'Lyrics saved.';
+    return null;
+  }
+  async function ask(raw){
+    var q=(raw||'').toLowerCase().trim(); if(!q) return;
+    userSay(raw);
+    if(q.indexOf('walk')>=0 || q.indexOf('how do i use')>=0 || q.indexOf('what does this')>=0){ say(walk()); return; }
+    var cmd=doCommand(q); if(cmd){ say(cmd); return; }
+    var kb=kbAnswer(q); 
+    // Try Ollama first for text advice, if configured, but never fake it
+    var url=(document.getElementById('rokOllama')||{}).value||'http://127.0.0.1:11434';
+    var model=(document.getElementById('rokModel')||{}).value||'llama3.1';
+    try{
+      var res=await fetch(url.replace(/\/$/,'')+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model,prompt:'You are Rokdabus Prhyme, the rhyming studio guide for PrAIme Productions. Answer helpfully, with music-theory best practices, in plain language. User: '+raw,stream:false})});
+      if(res.ok){ var data=await res.json(); if(data && data.response){ say('From Ollama ('+model+'): '+data.response); return; } }
+      // Ollama not reachable or no response: fall through to local knowledge
+    }catch(e){ /* fall through */ }
+    if(kb){ say(kb+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer.)'); return; }
+    say('I can help with PrAIme and music theory: try "walk me through", "what is LUFS?", "what is compression?", "auto master" on the DAW page, or "go to lyrics". If Ollama is running in Termux, set its URL and model above and ask again — otherwise I answer from my built-in knowledge.');
+  }
+  document.getElementById('rokSend').onclick=function(){ var inp=document.getElementById('rokInput'); ask(inp.value); inp.value=''; };
+  document.getElementById('rokInput').onkeydown=function(e){ if(e.key==='Enter'){ ask(e.target.value); e.target.value=''; } };
+  document.getElementById('rokWalk').onclick=function(){ say(walk()); };
+  var ri=document.getElementById('rokIntro'); if(ri) ri.onclick=function(){ if(typeof window.praimePlayIntro==='function'){ window.praimePlayIntro(); say('Playing the PrAIme Productions intro — Prime sung high, Productions dropped low.'); } };
+  document.getElementById('rokAuto').onclick=function(){ ask('auto master'); }; document.getElementById('rokRhyme').onclick=function(){ say('I am Rokdabus Prhyme, the octopus on time, eight tentacles on the decks, dropping beats that shine. I master every track, I never fall behind, PrAIme in the place, let the rhythm unwind.'); };
+  var voiceBtn=document.getElementById('rokVoice');
+  voiceBtn.onclick=function(){
+    var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){ say('Voice prompts need Chrome on Android with SpeechRecognition. In this browser it is not available, so use text prompts here instead.'); return; }
+    var rec=new SR(); rec.lang='en-US'; rec.onresult=function(ev){ var t=ev.results[0][0].transcript; document.getElementById('rokInput').value=t; ask(t); }; rec.onerror=function(ev){ say('Voice prompt failed: '+(ev.error||'unknown error')+'. Try text instead.'); }; rec.start(); say('Listening… speak now.');
+  };
+  // Expose for DAW auto-master to report back
+  window.rokdabusSay=say;
+})();
+
+function praimeSpeakChain(text, pitch, rate, onend){
+  if(!('speechSynthesis' in window)) { if(onend) onend(); return false; }
+  try{ var u=new SpeechSynthesisUtterance(text); u.pitch=pitch||1; u.rate=rate||1; if(onend) u.onend=onend; window.speechSynthesis.speak(u); return true; }catch(e){ if(onend) onend(); return false; }
+}
+window.praimePlayIntro = function(onDone){
+  try{ window.speechSynthesis.cancel(); }catch(e){}
+  var welcome="Welcome to Prime Productions. I am Rock Day Bus. I help you create. Tap the octopus button and just speak to me, like a voice assistant: I'll build beats, draft lyrics, share best practices, and answer any question out loud.";
+  praimeSpeakChain('Prime', 1.6, 0.95, function(){
+    praimeSpeakChain('Productions', 0.55, 0.85, function(){
+      praimeSpeakChain(welcome, 1, 1, function(){ if(onDone) onDone(); });
+    });
+  });
+  var s=document.getElementById('gateStatus'); if(s) s.textContent='Intro playing out loud…';
+  return true;
+};
+
+var introTimers=[];
+function startIntroVisual(){ try{ introTimers.forEach(function(t){clearTimeout(t);}); }catch(e){} introTimers=[]; var oldP=document.getElementById('oldPlayer'), dj=document.getElementById('djSetup'), st=document.getElementById('gateStatus'); if(!oldP||!dj) return; oldP.style.display='block'; oldP.classList.remove('glow'); dj.style.display='none'; var disc=document.getElementById('oldPlatter'); if(disc) disc.classList.remove('spinFast'); if(st) st.textContent='The old record player is warming up…'; introTimers.push(setTimeout(function(){ oldP.classList.add('glow'); if(st) st.textContent='It is glowing and spinning up…'; }, 800)); introTimers.push(setTimeout(function(){ if(disc) disc.classList.add('spinFast'); if(st) st.textContent='Spinning real fast…'; }, 1800)); introTimers.push(setTimeout(function(){ oldP.style.display='none'; dj.style.display='block'; if(st) st.textContent='Rock Day Bus is on the decks, spinning the mix…'; }, 3200)); }
+window.startIntroVisual=startIntroVisual;
+document.getElementById('gateEnter').onclick=function(){ startIntroVisual(); window.praimePlayIntro(function(){ document.getElementById('introGate').classList.add('gone'); }); };
+document.getElementById('gateSilent').onclick=function(){ try{ window.speechSynthesis.cancel(); }catch(e){} document.getElementById('introGate').classList.add('gone'); };
+document.getElementById('gatePlayIntro').onclick=function(){ startIntroVisual(); window.praimePlayIntro(); };
+var rp=document.getElementById('replayIntro'); if(rp) rp.onclick=function(){ var g=document.getElementById('introGate'); if(g) g.classList.remove('gone'); startIntroVisual(); window.praimePlayIntro(function(){ if(g) g.classList.add('gone'); }); };
+</script>
+</main><script>
+// PrAIme floating music notes — background, randomly generated, 1.5s float + dissolve
+(function(){
+  var reduced=false; try{ reduced=!!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
+  if(reduced) return;
+  var st=document.createElement('style'); st.textContent="#noteLayer{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden} .float-note{position:absolute;pointer-events:none;line-height:1;animation:noteFloat 1.5s ease-out forwards} @keyframes noteFloat{0%{transform:translate(0,0) rotate(0deg);opacity:0}12%{opacity:.9}25%{transform:translate(18px,-45px) rotate(8deg)}50%{transform:translate(-14px,-90px) rotate(-10deg);opacity:.9}75%{transform:translate(16px,-135px) rotate(12deg);opacity:.7}100%{transform:translate(-8px,-180px) rotate(-8deg);opacity:0}} main{position:relative;z-index:1}";
+  document.head.appendChild(st);
+  var layer=document.createElement('div'); layer.id='noteLayer'; document.body.appendChild(layer);
+  var notes=['♪','♫','♬','♩','𝄞']; var colors=['#00f3ff','#9d4edd','#f72585','#ffc531','#7df0e2'];
+  function spawn(){ var s=document.createElement('span'); s.className='float-note'; s.textContent=notes[Math.floor(Math.random()*notes.length)]; var zone=Math.floor(Math.random()*3); if(zone===0){ s.style.top='90px'; s.style.left=(35+Math.random()*30)+'vw'; } else if(zone===1){ s.style.top='50vh'; s.style.left=(35+Math.random()*30)+'vw'; } else { s.style.bottom='-30px'; s.style.left=(Math.random()*100)+'vw'; } s.style.fontSize=(16+Math.floor(Math.random()*22))+'px'; s.style.color=colors[Math.floor(Math.random()*colors.length)]; layer.appendChild(s); setTimeout(function(){ if(s.parentNode) s.parentNode.removeChild(s); },1600); }
+  for(let i=0;i<4;i++) setTimeout(spawn, i*300);
+  setInterval(spawn, 500);
+})();
+</script>
+<script>
+// Fix for opening via My Files content:// links (Samsung): relative links break under content://,
+// because each file gets its own content URI and Chrome cannot resolve the next file.
+// If this page was opened via content://, redirect any internal .html link to the real
+// file:// location on this phone, so the Hub -> DAW and every other nav link works.
+// Once you land on a file:// page, normal relative links work again.
+document.addEventListener('click', function(e){
+  try{
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if(!a) return;
+    var href = a.getAttribute('href');
+    if(!href || href.indexOf('http')===0 || href.indexOf('#')===0 || href.indexOf('mailto:')===0) return;
+    if(location.protocol==='content:' && href.indexOf('.html')>=0){
+      e.preventDefault();
+      var file = href.split('/').pop().split('#')[0].split('?')[0];
+      location.href = 'file:///storage/emulated/0/Download/Praime%20PRODUCTIONSNEMIC/suite/' + file;
+    }
+  }catch(err){}
+}, true);
+</script>
+</body></html>

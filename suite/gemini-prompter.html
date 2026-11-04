@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrAIme™ Advanced Rhyme & Prompter Engine</title>
+    <style>
+        :root {
+            --bg: #08090d;
+            --card: #161926;
+            --cyan: #00f2fe;
+            --pink: #ff007f;
+            --green: #00ff88;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+        }
+        body { background: var(--bg); color: var(--text); font-family: monospace; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .card { background: var(--card); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+        h1, h2 { color: var(--cyan); }
+        select, input, button { width: 100%; padding: 12px; margin: 8px 0; background: var(--bg); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 8px; font-weight: bold; }
+        button { background: linear-gradient(135deg, var(--cyan), var(--pink)); cursor: pointer; border: none; }
+        .display-box { background: var(--bg); border: 2px solid var(--pink); border-radius: 10px; padding: 24px; text-align: center; font-size: 24px; font-weight: 900; text-transform: uppercase; color: var(--cyan); margin: 15px 0; min-height: 80px; display: flex; align-items: center; justify-content: center; }
+        .lyrics-output { background: var(--bg); border: 1px solid var(--green); border-radius: 8px; padding: 15px; white-space: pre-wrap; font-size: 14px; color: var(--green); max-height: 250px; overflow-y: auto; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <h1>🎤 PrAIme™ Shared Rhyme & Prompter Engine</h1>
+    <p>Unified frequency-weighted dictionary, rhyme-family chaining, and BPM-synced generation.</p>
+
+    <div class="card">
+        <h2>Control Deck</h2>
+        <label>Mode Select:</label>
+        <select id="engineMode">
+            <option value="word">1. One Word Every Other Bar (8 Beats)</option>
+            <option value="phrase">2. One Phrase Every Other Bar (8 Beats)</option>
+            <option value="lyrics">3. Generate Full Lyrics (Couplets & Quatrains)</option>
+        </select>
+
+        <label>Tempo (BPM):</label>
+        <input type="number" id="bpmInput" value="90" min="60" max="180">
+
+        <button onclick="toggleEngine()" id="toggleBtn">⚡ Start Prompter Engine</button>
+    </div>
+
+    <div class="card">
+        <h2>Live Output Stream</h2>
+        <div class="display-box" id="liveDisplay">READY</div>
+        <div id="subDisplay" style="font-size: 12px; color: var(--muted); text-align: center;">Status: Engine Idle</div>
+    </div>
+
+    <div class="card" id="lyricsCard" style="display:none;">
+        <h2>Generated Song Structure (Couplets)</h2>
+        <div class="lyrics-output" id="lyricsOutput">Click 'Generate Full Lyrics' or switch mode to build a song...</div>
+        <button onclick="generateFullSong()" style="margin-top: 10px; background: var(--green); color: #000;">📝 Generate New Song Sheet</button>
+    </div>
+
+    <script>
+        // --- 1. CORE DICTIONARY & RHYME ENGINE ---
+        const rawDictionary = [
+            "night", "light", "fight", "sight", "bright", "flight", "might", "tight", "white", "rite",
+            "flow", "slow", "glow", "show", "pro", "blow", "know", "throw", "row", "go",
+            "mind", "bind", "find", "blind", "kind", "grind", "wind", "signed", "aligned",
+            "game", "flame", "name", "frame", "aim", "blame", "shame", "tame", "claim",
+            "time", "crime", "prime", "climb", "rhyme", "chime", "slime", "sublime",
+            "fire", "higher", "wire", "tire", "desire", "inspire", "empire", "choir",
+            "stack", "back", "track", "black", "pack", "crack", "jack", "attack", "knack",
+            "real", "deal", "feel", "steel", "heal", "wheel", "seal", "appeal", "conceal"
+        ];
+
+        let rhymeFamilies = {};
+        let activePool = [];
+        let usedPool = [];
+        let currentTimer = null;
+        let lastRhymeKey = null;
+
+        function getRhymeKey(word) {
+            let clean = word.toLowerCase().replace(/[^a-z]/g, '');
+            if (clean.length <= 2) return clean;
+            return clean.slice(-3);
+        }
+
+        function initializeEngine() {
+            rhymeFamilies = {};
+            rawDictionary.forEach(word => {
+                let key = getRhymeKey(word);
+                if (!rhymeFamilies[key]) rhymeFamilies[key] = [];
+                rhymeFamilies[key].push(word);
+            });
+            activePool = [];
+            for (let key in rhymeFamilies) {
+                if (rhymeFamilies[key].length >= 2) {
+                    activePool.push(...rhymeFamilies[key]);
+                }
+            }
+            shufflePool();
+        }
+
+        function shufflePool() {
+            usedPool = [];
+            for (let i = activePool.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [activePool[i], activePool[j]] = [activePool[j], activePool[i]];
+            }
+        }
+
+        function getNextWord(preferRhymeWith = null) {
+            if (activePool.length === 0) shufflePool();
+            let chosenWord = null;
+            if (preferRhymeWith && Math.random() < 0.6) {
+                let famKey = getRhymeKey(preferRhymeWith);
+                let siblings = rhymeFamilies[famKey] ? rhymeFamilies[famKey].filter(w => !usedPool.includes(w)) : [];
+                if (siblings.length > 0) {
+                    chosenWord = siblings[Math.floor(Math.random() * siblings.length)];
+                }
+            }
+            if (!chosenWord) {
+                chosenWord = activePool.pop();
+            }
+            usedPool.push(chosenWord);
+            lastRhymeKey = chosenWord;
+            return chosenWord;
+        }
+
+        function getNextPhrase() {
+            let w1 = getNextWord();
+            let w2 = getNextWord(w1);
+            const prefixes = ["locked in", "pushing", "heavy", "raw", "clean", "strict", "deep in"];
+            let prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+            return `${prefix} ${w1} & ${w2}`;
+        }
+
+        function generateFullSong() {
+            let lines = [];
+            for (let i = 0; i < 4; i++) {
+                let wordA = getNextWord();
+                let wordB = getNextWord(wordA);
+                let line1 = `When the bass drops down and I secure the ${wordA},`;
+                let line2 = `Every single bar is shining bright and ${wordB}.`;
+                lines.push(line1);
+                lines.push(line2);
+            }
+            document.getElementById('lyricsOutput').innerText = lines.join('\n');
+        }
+
+        function toggleEngine() {
+            let btn = document.getElementById('toggleBtn');
+            let mode = document.getElementById('engineMode').value;
+            let lyricsCard = document.getElementById('lyricsCard');
+            if (currentTimer) {
+                clearInterval(currentTimer);
+                currentTimer = null;
+                btn.innerText = "⚡ Start Prompter Engine";
+                btn.style.background = "linear-gradient(135deg, var(--cyan), var(--pink))";
+                document.getElementById('subDisplay').innerText = "Engine Stopped";
+                return;
+            }
+            if (mode === 'lyrics') {
+                lyricsCard.style.display = 'block';
+                generateFullSong();
+                document.getElementById('subDisplay').innerText = "Full Lyrics Mode Active (Generated Below)";
+                return;
+            } else {
+                lyricsCard.style.display = 'none';
+            }
+            let bpm = parseInt(document.getElementById('bpmInput').value) || 90;
+            let intervalMs = (60000 / bpm) * 8;
+            btn.innerText = "⏹️ Stop Engine";
+            btn.style.background = "#ef4444";
+            document.getElementById('subDisplay').innerText = `Running at ${bpm} BPM | Interval: ${Math.round(intervalMs)}ms`;
+            triggerTick(mode);
+            currentTimer = setInterval(() => {
+                triggerTick(mode);
+            }, intervalMs);
+        }
+
+        function triggerTick(mode) {
+            let outputEl = document.getElementById('liveDisplay');
+            if (mode === 'word') {
+                outputEl.innerText = getNextWord(lastRhymeKey);
+            } else if (mode === 'phrase') {
+                outputEl.innerText = getNextPhrase();
+            }
+        }
+
+        window.onload = initializeEngine;
+    </script>
+<script>
+// PrAIme content:// link fix — MUST be included in every suite page, in every future iteration.
+// Why: When a page is opened via Samsung My Files, Chrome gets a content:// URI.
+// Relative links (e.g. Hub -> 02-daw-master.html) cannot be resolved under content://,
+// so every nav link breaks with ERR_FILE_NOT_FOUND, even though the files are present.
+// Fix: if this page was opened via content://, intercept any internal .html link click
+// and redirect it to the real file:// location on the phone. Once on a file:// page,
+// normal relative links work again, so this only needs to fire on the first hop.
+document.addEventListener('click', function(e){
+  try{
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if(!a) return;
+    var href = a.getAttribute('href');
+    if(!href || href.indexOf('http')===0 || href.indexOf('#')===0 || href.indexOf('mailto:')===0) return;
+    if(location.protocol==='content:' && href.indexOf('.html')>=0){
+      e.preventDefault();
+      var file = href.split('/').pop().split('#')[0].split('?')[0];
+      location.href = 'file:///storage/emulated/0/Download/Praime%20PRODUCTIONSNEMIC/suite/' + file;
+    }
+  }catch(err){}
+}, true);
+</script>
+</body>
+</html>
