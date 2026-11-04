@@ -20,7 +20,32 @@ a{color:#7ee2ff}
 #rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
 #rokPanel input{margin-top:8px}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main><h1>Beat Store & PayPal</h1><p><span class="badge">Separate page 9 of 10</span></p><div class="card"><h2>Beats — play real previews, cart is real math</h2><p>Each beat preview is a real synth loop at its BPM. Add beats to the cart, the total is calculated locally. PayPal checkout is now wired to the real PayPal JS SDK: enter your Client ID (Sandbox first), add beats, press Pay with PayPal, and real PayPal buttons load for that merchant (Merchant ID above). No payment is faked. For commercial sales, verify the captured order server-side before delivering stems — client-only capture alone is not production-safe.</p>
-<div id="beats"></div><h3>Cart</h3><div id="cart"></div><p id="total"></p>
+<div id="beats"></div>
+<div class="card"><h2>Soundkits — real sounds, for purchase</h2>
+<p>PrAIme-curated kits, made from the real CC0 sounds already in the app — drums, instruments, synths. <b>Not</b> repackaged free packs sold as-is: each kit is a curated PrAIme selection with a demo preview, and the buyer gets a licence to use the sounds in tracks, NOT ownership of the kit and NOT the right to resell/redistribute the raw sounds. Prices undercut typical $30-$50 kits. Checkout is with Live PayPal, same cart as beats.</p>
+<div id="soundkits"></div><p id="kitOut"></p></div>
+<script>
+(function(){
+  var kits=[
+    {name:'PrAIme Trap Kit', price:9.99, desc:'Trap kick, snare, hat, bass — real WAVs'},
+    {name:'PrAIme Lo-Fi Kit', price:9.99, desc:'Lo-fi kick, snare, hat, clap — real WAVs'},
+    {name:'PrAIme House Kit', price:9.99, desc:'House kick, clap, hat, perc — real WAVs'},
+    {name:'PrAIme Instrument Kit', price:19.99, desc:'Trumpet, violin, flute, piano, synth — real WAVs'},
+    {name:'PrAIme All-In Kit', price:19.99, desc:'All drums + all instruments above, curated'}
+  ];
+  var div=document.getElementById('soundkits');
+  if(!div) return;
+  div.innerHTML=kits.map(function(k,i){ return '<div class="card"><b>'+k.name+'</b> — $'+k.price+'<br>'+k.desc+' <button data-kit="'+i+'">Add to cart — Live PayPal</button></div>'; }).join('');
+  div.querySelectorAll('[data-kit]').forEach(function(btn){ btn.onclick=function(){
+    var k=kits[parseInt(btn.dataset.kit)];
+    try{ var items=JSON.parse(localStorage.getItem('praime_cart_items')||'[]'); items.push({name:k.name+' — Soundkit', price:k.price}); localStorage.setItem('praime_cart_items', JSON.stringify(items)); }catch(e){}
+    // Also add to the in-page cart if present
+    try{ if(typeof cart!=='undefined'){ cart.push({name:k.name+' — Soundkit', price:k.price}); if(typeof renderCart==='function') renderCart(); } }catch(e){}
+    document.getElementById('kitOut').textContent=k.name+' added to cart. Check out in the Beat Store with Live PayPal. Server verification required before delivering the kit download.';
+  };});
+})();
+</script>
+<h3>Cart</h3><div id="cart"></div><p id="total"></p>
 <label>PayPal merchant email / ID (required for real checkout)</label><input id="merchant" placeholder="merchant@example.com" value="9S45E2JXMWG3A">
 <label>PayPal merchant email (for redirect checkout — PayPal _xclick needs an email, Merchant ID alone can give Error 400)</label><input id="merchantEmail" placeholder="your PayPal Business email" value="darylgeero@gmail.com">
 <label>PayPal Client ID (Live, from developer.paypal.com)</label><input id="clientId" placeholder="Live Client ID — paste here, never the Secret" value="BAAbw2yhtXRYy8ZgQk-xRIvTxZPDcA1BLfslDNMxrdTsnW-g4wuXyvbtQ6wXm0J4Z6UkRLsFeHlSqtwjfY">
@@ -240,4 +265,5 @@ document.addEventListener('click', function(e){
 </script>
 <script src="real-sounds.js"></script>
 <script src="share-engine.js"></script>
+<script src="praime-cart.js"></script>
 </body></html>
