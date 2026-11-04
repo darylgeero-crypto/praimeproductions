@@ -50,7 +50,7 @@ a{color:#7ee2ff}
 <label>PayPal merchant email / ID (required for real checkout)</label><input id="merchant" placeholder="merchant@example.com" value="9S45E2JXMWG3A">
 <label>PayPal merchant email (for redirect checkout — PayPal _xclick needs an email, Merchant ID alone can give Error 400)</label><input id="merchantEmail" placeholder="your PayPal Business email" value="darylgeero@gmail.com">
 <label>PayPal Client ID (Live, from developer.paypal.com)</label><input id="clientId" placeholder="Live Client ID — paste here, never the Secret" value="BAAbw2yhtXRYy8ZgQk-xRIvTxZPDcA1BLfslDNMxrdTsnW-g4wuXyvbtQ6wXm0J4Z6UkRLsFeHlSqtwjfY">
-<button id="checkout" disabled>Pay with PayPal (requires merchant ID above)</button><button id="order" class="secondary">Download order .JSON</button><button id="stopPreview" class="secondary">⏹ Stop preview</button><div id="paypalButtons" style="margin-top:12px"></div><button id="ppFallback" class="secondary" style="display:none">Pay with PayPal (redirect — no SDK needed)</button>
+<button id="checkout" disabled>Pay with PayPal (add a beat to cart first)</button><button id="order" class="secondary">Download order .JSON</button><button id="stopPreview" class="secondary">⏹ Stop preview</button><div id="paypalButtons" style="margin-top:12px"></div><button id="ppFallback" class="secondary" style="display:none">Pay with PayPal (redirect — no SDK needed)</button>
 <div class="status" id="out"></div></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
@@ -263,6 +263,7 @@ document.addEventListener('click', function(e){
     }
   }catch(err){}
 }, true);
+document.getElementById('stopPreview').onclick=()=>{ if(timer) clearInterval(timer); timer=null; try{ if(ctx) ctx.suspend(); }catch(e){} document.getElementById('out').textContent='Preview stopped.'; };
 </script>
 <script src="real-sounds.js"></script>
 <script src="share-engine.js"></script>

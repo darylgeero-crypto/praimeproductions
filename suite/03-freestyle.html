@@ -49,6 +49,7 @@ let timer=null,metroOn=false,metroTimer=null,ctx=null,curPrompt='';
 function engine(){ return window.praimeRapEngine; }
 function showPrompt(){ var mode=document.getElementById('promptMode').value; var e=engine(); if(!e){ document.getElementById('word').textContent='Engine loading…'; return; } if(mode==='word'){ curPrompt=e.wordMode(); } else if(mode==='phrase'){ curPrompt=e.phraseMode(); } else { var lines=e.lyricsMode(); curPrompt=lines.join('\n'); document.getElementById('word').textContent=curPrompt; document.getElementById('timer').textContent='Full lyrics generated — 8 lines, rhyming couplets, no repeats inside the song (except hook).'; return; } document.getElementById('word').textContent=curPrompt; }
 function show(){ showPrompt(); }
+document.getElementById('promptMode').onchange=()=>{ var m=document.getElementById('promptMode').value; document.getElementById('timer').textContent='Mode: '+m+' — tap Start to run in '+m+' mode.'; if(timer){ clearInterval(timer); timer=null; } };
 document.getElementById('start').onclick=()=>{ if(timer) return; const bpm=parseFloat(document.getElementById('bpm').value||90); setBus({bpm:bpm}); const mode=document.getElementById('promptMode').value; const beats=(mode==='lyrics')?16:8; const ms=Math.max(1000,(60/bpm)*1000*beats); showPrompt(); if(mode==='lyrics'){ document.getElementById('timer').textContent='Full lyrics mode: new song every '+beats+' beats ('+Math.round(ms)+' ms at '+bpm+' BPM).'; } else { timer=setInterval(()=>{ showPrompt(); },ms); document.getElementById('timer').textContent='Mode: '+mode+' — new prompt every other bar ('+beats+' beats, '+Math.round(ms)+' ms at '+bpm+' BPM). No repeats until the dictionary pool is exhausted.'; } };
 document.getElementById('stop').onclick=()=>{ if(timer) clearInterval(timer); timer=null; };
 document.getElementById('add').onclick=()=>{ if(!curPrompt) showPrompt(); const b=getBus(); const cur=b.lyrics||''; setBus({lyrics:(cur?cur+'\n':'')+curPrompt}); document.getElementById('out').textContent='Added to Lyrics bus. Open Lyrics page to see it.'; };
@@ -238,4 +239,5 @@ document.addEventListener('click', function(e){
   }catch(err){}
 }, true);
 </script>
+<script src="real-sounds.js"></script>
 </body></html>
