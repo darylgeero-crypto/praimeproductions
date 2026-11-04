@@ -30,26 +30,25 @@ a{color:#7ee2ff}
 <p>Secure token generator for the first 100 signups. Each token is a free, all-access, lifetime pass. Transferring a token <b>revokes the old token and issues a new one</b> — a transfer never duplicates a pass.</p>
 
 <div class="card"><h2>How the guarantee works — read this first</h2>
-<p><b>With the server running (real guarantee):</b> the server in <code>token-server.js</code> is the single authority. It counts claims, rejects claim 101, signs every token with a secret only it knows, and revokes the old token on transfer. That is what makes the first-100 limit real across all users.</p>
-<p><b>Local mode only (tamper-evident, not a global guarantee):</b> the generator below uses Web Crypto and a hash-chained log in this browser, and stores only token hashes — never plain tokens. It will warn you if the chain is broken, but any browser copy can be reset or cleared, so local mode alone cannot guarantee a global first 100. Use local mode for testing, and the server for real signups.</p>
-<p><b>Keep safe:</b> the server secret and ledger file must never be published. If the ledger is deleted, the count resets. If the secret is shared, anyone can forge tokens.</p></div>
+<p><b>Server mode (real guarantee, live on Render):</b> the live PrAIme server is the single authority. It counts claims, rejects claim 101, signs every token with a secret kept only in Render env vars (never in code or git), binds each token to the claimant's email hash, and revokes the old token on transfer. A copied token alone does not verify — verify requires the owner's email, and a transferred token stops working. That is what makes the first-100 limit real across all users.</p>
+<p><b>Local mode is TEST ONLY, not a real pass:</b> the generator below uses Web Crypto and a hash-chained log in this browser. Any browser copy can be reset or cleared, so local tokens are not real Founder Tokens and do not count toward the 100. Use local mode for testing only, and the live server for real signups.</p>
+<p><b>Keep safe:</b> the server secret (TOKEN_SECRET in Render env) and ledger file must never be published. If the ledger is lost, the count resets — back it up regularly. If the secret is shared, anyone can forge tokens. If TOKEN_SECRET is not set in Render, the live server refuses to issue tokens rather than issuing unsigned ones.</p></div>
 
 <div class="card"><h2>Server mode — real enforcement</h2>
-<label>Server URL</label><input id="tokServerUrl" value="http://127.0.0.1:3000">
-<button id="checkServer">Check server / count</button>
-<label>Your name (for a server claim)</label><input id="serverName" placeholder="e.g. Daryl">
-<button id="claimServer">Claim via server</button>
-<div class="status" id="serverOut">Start the server first: from the praime-studio folder, run: node token-server.js — then tap Check server.</div>
+<button id="checkServer">Check live server / count</button>
+<label>Your email (for a live server claim — the token is bound to this email)</label><input id="serverEmail" placeholder="you@example.com">
+<button id="claimServer">Claim via live server</button>
+<div class="status" id="serverOut">Live server: this page on praimeproductions.onrender.com. Tap Check server / count first.</div>
 <p style="font-size:12px;color:#9ca3af">Server tokens look like PRAIME-F-001-&lt;32 hex random&gt;-&lt;32 hex signature&gt;. The plain token is shown once — copy it now, it is not stored in plain text anywhere.</p></div>
 
-<div class="card"><h2>Local secure mode — Web Crypto, hashes only</h2>
+<div class="card"><h2>Local mode — TEST ONLY, not a real Founder Token</h2>
 <button id="claimLocal">Claim locally (secure)</button>
 <div class="status" id="localOut"></div>
 <label>Verify a token</label><input id="verifyToken" placeholder="Paste a token, e.g. PRAIME-F-001-...">
 <button id="verifyBtn">Verify token</button>
 <div class="status" id="verifyOut"></div>
 <label>Transfer a token</label><input id="transferToken" placeholder="Paste the current token">
-<input id="transferTo" placeholder="New holder name">
+<input id="transferTo" placeholder="New holder email">
 <button id="doTransferLocal">Transfer token (old token revoked, new token issued)</button>
 <div class="status" id="transferOut"></div>
 <h3>Ledger (hashes only, plain tokens are never stored)</h3>
@@ -262,20 +261,21 @@ async function refreshChainNote(){
   var s=loadLocal(); document.getElementById('chainOut').textContent=await verifyChain(s);
 }
 showLedger(); refreshChainNote();
-function serverUrl(){ return (document.getElementById('tokServerUrl').value||'http://127.0.0.1:3000').replace(/\/$/,''); }
+function serverUrl(){ return ''; } // same-origin live server: /api/token/*
 async function postJson(path, body){
   var r=await fetch(serverUrl()+path, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body||{})});
   return await r.json();
 }
 document.getElementById('checkServer').onclick=async function(){
-  try{ var r=await fetch(serverUrl()+'/count'); var d=await r.json(); document.getElementById('serverOut').textContent='Server is running. Claimed: '+d.claimed+' / '+d.max+' · Remaining: '+d.remaining; }
-  catch(e){ document.getElementById('serverOut').textContent='Server not reachable at '+serverUrl()+'. Start it with: node token-server.js — or use local secure mode below for testing.'; }
+  try{ var d=await postJson('/api/token/status', {}); if(d.configured===false){ document.getElementById('serverOut').textContent='Live server is running, but Founder Tokens are NOT configured yet (TOKEN_SECRET not set in Render). No tokens will be issued until that secret is set — the server refuses unsigned claims.'; return; } document.getElementById('serverOut').textContent='LIVE SERVER — Claimed: '+d.claimed+' / 100 · Remaining: '+d.remaining+' · Active: '+d.active; }
+  catch(e){ document.getElementById('serverOut').textContent='Live server not reachable. Check your connection, then try again.'; }
 };
 document.getElementById('claimServer').onclick=async function(){
-  try{ var d=await postJson('/claim', {name:document.getElementById('serverName').value.trim()||undefined});
-    if(d.ok){ document.getElementById('serverOut').textContent='SERVER TOKEN — COPY IT NOW, it is shown once and not stored in plain text:\n'+d.token+'\nFounder #'+d.number+' — '+d.holder+' · Claimed: '+d.claimed+' / 100'; }
+  var email=document.getElementById('serverEmail').value.trim(); if(!email){ document.getElementById('serverOut').textContent='Enter your email first — the token is bound to it.'; return; }
+  try{ var d=await postJson('/api/token/claim', {email:email});
+    if(d.ok){ document.getElementById('serverOut').textContent='LIVE SERVER TOKEN — COPY IT NOW, it is shown once and only its hash is stored on the server:\n'+d.token+'\nFounder #'+d.number+' · Claimed: '+d.claimed+' / 100 · This token only verifies with the email you just used.'; }
     else document.getElementById('serverOut').textContent='Server claim failed: '+(d.error||'unknown error'); }
-  catch(e){ document.getElementById('serverOut').textContent='Server not reachable. Start node token-server.js, or use local secure mode below.'; }
+  catch(e){ document.getElementById('serverOut').textContent='Live server not reachable. Check your connection, then try again.'; }
 };
 document.getElementById('claimLocal').onclick=async function(){
   var s=loadLocal();
@@ -289,17 +289,17 @@ document.getElementById('claimLocal').onclick=async function(){
 document.getElementById('verifyBtn').onclick=async function(){
   var tok=document.getElementById('verifyToken').value.trim(); if(!tok){ document.getElementById('verifyOut').textContent='Paste a token first.'; return; }
   // Try server first, fall back to local hash check
-  try{ var d=await postJson('/verify', {token:tok}); if(d.valid){ document.getElementById('verifyOut').textContent='VALID (server): Founder #'+d.number+' — '+d.holder+' — issued '+d.issuedAt; return; } else { document.getElementById('verifyOut').textContent='Server says: '+(d.error||'not valid')+' — checking local hashes as well…'; } }catch(e){}
+  try{ var email=document.getElementById('serverEmail') ? document.getElementById('serverEmail').value.trim() : ''; var d=await postJson('/api/token/verify', {token:tok, email:email||undefined}); if(d.valid){ document.getElementById('verifyOut').textContent='VALID (live server): Founder #'+d.number+' — issued '+d.issuedAt+' (email-bound: a copied token with the wrong email does not verify)'; return; } else { document.getElementById('verifyOut').textContent='Server says: '+(d.error||'not valid')+' — checking local test hashes as well…'; } }catch(e){}
   var h=await sha256Hex(tok); var s=loadLocal(); var t=s.tokens.find(function(x){return x.tokenHash===h && x.active;});
   if(t) document.getElementById('verifyOut').textContent+='\nVALID (local): Founder #'+pad3(t.number)+' — '+t.holder;
   else document.getElementById('verifyOut').textContent+='\nNot valid locally either: revoked, transferred, or unknown in this browser.';
 };
 document.getElementById('doTransferLocal').onclick=async function(){
   var tok=document.getElementById('transferToken').value.trim(); var to=document.getElementById('transferTo').value.trim();
-  if(!tok || !to){ document.getElementById('transferOut').textContent='Paste the current token and give a new holder name.'; return; }
+  if(!tok || !to){ document.getElementById('transferOut').textContent='Paste the current token and give the new holder email.'; return; }
   // Try server transfer first
-  try{ var d=await postJson('/transfer', {token:tok, newHolder:to});
-    if(d.ok){ document.getElementById('transferOut').textContent='TRANSFERRED (server) — NEW TOKEN, COPY IT NOW (old token is revoked):\n'+d.token+'\nFounder #'+d.number+' — '+d.holder; return; }
+  try{ var d=await postJson('/api/token/transfer', {token:tok, email:(document.getElementById('serverEmail')?document.getElementById('serverEmail').value.trim():''), newEmail:to});
+    if(d.ok){ document.getElementById('transferOut').textContent='TRANSFERRED (live server) — NEW TOKEN, COPY IT NOW (old token is revoked and will no longer verify):\n'+d.token+'\nFounder #'+d.number; return; }
     // If server says invalid, still try local below; if server was reachable but token is local-only, local check will decide
     document.getElementById('transferOut').textContent='Server transfer: '+(d.error||'failed')+' — trying local transfer…\n';
   }catch(e){ document.getElementById('transferOut').textContent='Server not reachable — trying local transfer…\n'; }
@@ -351,4 +351,5 @@ document.addEventListener('click', function(e){
   setInterval(spawn, 500);
 })();
 </script>
+<script src="real-sounds.js"></script>
 </body></html>
