@@ -68,7 +68,7 @@ a{color:#7ee2ff}
 <input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
 <input id="rokModel" placeholder="Model, e.g. llama3.1" value="llama3.1">
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
-</div></main><script>
+</div><div class="card"><h2>Pay with Live PayPal</h2><p>Full Beat — MP3 lease — $9.99. Add to the Beat Store cart and check out with Live PayPal (same Live ID as the Beat Store, not Sandbox). Server verification is required before delivering the paid file — do not deliver on client capture alone.</p><button id="praimeAddCart">Add Full Beat — MP3 lease ($9.99) to Live PayPal cart</button><p id="praimeCartOut"></p></div><script>document.getElementById("praimeAddCart").onclick=function(){ PraimeCart.add("Full Beat — MP3 lease", 9.99); document.getElementById("praimeCartOut").textContent="Full Beat — MP3 lease added. Go to Beat Store to pay with Live PayPal."; };</script></main><script>
 function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
 function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 let GENRE_BPM = {"HipHop": 92, "Boom Bap": 90, "Trap": 140, "Drill": 140, "Grime": 140, "Phonk": 130, "Lo-Fi": 82, "R&B": 88, "Neo-Soul": 86, "Soul": 96, "Funk": 104, "G-Funk": 96, "Disco": 118, "Gospel": 100, "Worship": 76, "Pop": 112, "K-Pop": 108, "Rock": 120, "Metal": 150, "Metalcore": 140, "Punk": 160, "Emo": 110, "Indie": 116, "Shoegaze": 104, "Folk": 96, "Americana": 100, "Country": 104, "Bluegrass": 132, "Corridos": 132, "Jazz": 110, "Blues": 84, "Reggae": 72, "Dancehall": 100, "Soca": 128, "Afrobeats": 106, "Amapiano": 112, "Latin": 96, "Reggaeton": 88, "Dembow": 90, "Bollywood": 104, "EDM": 128, "House": 124, "Techno": 130, "Trance": 138, "Hardstyle": 155, "Drum & Bass": 174, "Dubstep": 140, "Future Bass": 150, "UK Garage": 132, "Jersey Club": 140, "Hyperpop": 150, "Synthwave": 100, "Ambient": 70, "Cinematic": 80};
@@ -320,4 +320,5 @@ document.addEventListener('click', function(e){
   <p style="color:#9ca3af;font-size:13px">This is Rokdabus, your studio guide — the same one on the app icon. When a beat plays, he is the one playing it.</p>
 </div>
 <script src="real-sounds.js"></script>
+<script src="praime-cart.js"></script>
 </body></html>

@@ -68,7 +68,7 @@ a{color:#7ee2ff}
 <input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
 <input id="rokModel" placeholder="Model, e.g. llama3.1" value="llama3.1">
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
-</div></main><svg id="rokTentacleLayer" xmlns="http://www.w3.org/2000/svg"></svg><script>
+</div><div class="card"><h2>Pay with Live PayPal</h2><p>Live DJ Mix — MP3 lease — $9.99. Add to the Beat Store cart and check out with Live PayPal (same Live ID as the Beat Store, not Sandbox). Server verification is required before delivering the paid file — do not deliver on client capture alone.</p><button id="praimeAddCart">Add Live DJ Mix — MP3 lease ($9.99) to Live PayPal cart</button><p id="praimeCartOut"></p></div><script>document.getElementById("praimeAddCart").onclick=function(){ PraimeCart.add("Live DJ Mix — MP3 lease", 9.99); document.getElementById("praimeCartOut").textContent="Live DJ Mix — MP3 lease added. Go to Beat Store to pay with Live PayPal."; };</script></main><svg id="rokTentacleLayer" xmlns="http://www.w3.org/2000/svg"></svg><script>
 let actx=null, master=null, analyser=null, gainA=null, gainB=null, bedGain=null, timer=null, step=0, bar=0, cycle=1, sectionIdx=0, mixOn=false, nextTime=0;
 let libBuffers=[], libNames=[], libIdx=0, libSrc=null, libGain=null, libTimer=null, bedTimer=null;
 function ctx(){ if(!actx){ actx=new (window.AudioContext||window.webkitAudioContext)(); master=actx.createGain(); master.gain.value=0.9; analyser=actx.createAnalyser(); analyser.fftSize=128; master.connect(analyser); analyser.connect(actx.destination); gainA=actx.createGain(); gainB=actx.createGain(); bedGain=actx.createGain(); bedGain.gain.value=1; gainA.connect(master); gainB.connect(master); bedGain.connect(master); } if(actx.state==='suspended') actx.resume(); return actx; }
@@ -291,4 +291,5 @@ document.addEventListener('click', function(e){
   <img src="rokdabus.jpg" alt="Rokdabus Prhyme playing the beats" style="width:100%;max-width:520px;border-radius:20px;border:2px solid #00f3ff">
   <p style="color:#9ca3af;font-size:13px">This is Rokdabus, your studio guide — the same one on the app icon. When a beat plays, he is the one playing it.</p>
 </div>
+<script src="praime-cart.js"></script>
 </body></html>

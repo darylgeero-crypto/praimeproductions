@@ -189,7 +189,7 @@ draw();
   window.rokdabusSay=say;
 })();
 </script>
-</main><script>
+<div class="card"><h2>Pay with Live PayPal</h2><p>Video Render — $1.99. Add to the Beat Store cart and check out with Live PayPal (same Live ID as the Beat Store, not Sandbox). Server verification is required before delivering the paid file — do not deliver on client capture alone.</p><button id="praimeAddCart">Add Video Render ($1.99) to Live PayPal cart</button><p id="praimeCartOut"></p></div><script>document.getElementById("praimeAddCart").onclick=function(){ PraimeCart.add("Video Render", 1.99); document.getElementById("praimeCartOut").textContent="Video Render added. Go to Beat Store to pay with Live PayPal."; };</script></main><script>
 // PrAIme floating music notes — background, randomly generated, 1.5s float + dissolve
 (function(){
   var reduced=false; try{ reduced=!!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
@@ -239,4 +239,5 @@ document.addEventListener('click', function(e){
   }catch(err){}
 }, true);
 </script>
+<script src="praime-cart.js"></script>
 </body></html>
