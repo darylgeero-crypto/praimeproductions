@@ -73,6 +73,16 @@ function makeToken(number, eHash){ const rand=crypto.randomBytes(16).toString('h
 function parseToken(tok){ const m=/^PRAIME-F-(\d{3})-([0-9a-f]{32})-([0-9a-f]{32})$/.exec(String(tok||'').trim()); if(!m) return null; return {number:parseInt(m[1],10), rand:m[2], sig:m[3]}; }
 const tokenRate = new Map();
 function tokenRateOk(ip, kind){ const key=ip+'|'+kind; const now=Date.now(); const arr=(tokenRate.get(key)||[]).filter(t=>now-t<3600000); if(arr.length >= (kind==='claim'?5:60)) return false; arr.push(now); tokenRate.set(key, arr); return true; }
+// ONE TOKEN PER IP, EVER + IP BLOCKS: the claim IP is hashed (never stored
+// plain) on the ledger entry. A second claim from the same IP is rejected
+// even if the first token was transferred away — one IP, one founder slot.
+// Repeated abusive attempts from one IP (10+ failed claims in an hour)
+// block that IP for 24 hours.
+function ipHash(ip){ return crypto.createHash('sha256').update(String(ip||'')).digest('hex'); }
+const tokenIpBlocks = new Map(); // ipHash -> {blockedUntil, fails:[timestamps]}
+function tokenIpBlocked(ip){ const b=tokenIpBlocks.get(ipHash(ip)); return !!(b && Date.now() < b.blockedUntil); }
+function tokenIpFail(ip){ const h=ipHash(ip); const now=Date.now(); const b=tokenIpBlocks.get(h)||{blockedUntil:0, fails:[]}; b.fails=b.fails.filter(t=>now-t<3600000); b.fails.push(now); if(b.fails.length>=10) b.blockedUntil=now+86400000; tokenIpBlocks.set(h,b); }
+function reqIp(req){ return req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : (req.socket.remoteAddress||''); }
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://praime-productions.onrender.com').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -236,17 +246,19 @@ const server = http.createServer(async (req, res) => {
     if (urlPath === '/api/token/status' && req.method === 'POST') { sendJson(res, 200, {ok:true, configured:TOKEN_SECRET_PERSISTENT, claimed:tokenLedger.nextNumber-1, remaining:Math.max(0, 100-(tokenLedger.nextNumber-1)), active:tokenLedger.tokens.filter(t=>t.active).length}); return; }
     if (urlPath === '/api/token/claim' && req.method === 'POST') {
       if (!TOKEN_SECRET_PERSISTENT) { sendJson(res, 503, {ok:false, error:'token_not_configured'}); return; }
-      const ip = req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : (req.socket.remoteAddress||'');
-      if (!tokenRateOk(ip,'claim')) { sendJson(res, 429, {ok:false, error:'rate_limited'}); return; }
+      const ip = reqIp(req);
+      if (tokenIpBlocked(ip)) { sendJson(res, 403, {ok:false, error:'ip_blocked'}); return; }
+      if (!tokenRateOk(ip,'claim')) { tokenIpFail(ip); sendJson(res, 429, {ok:false, error:'rate_limited'}); return; }
       let body; try { body = JSON.parse(await readBody(req, 2000)); } catch(e) { sendJson(res, 400, {ok:false, error:'bad_json'}); return; }
       const email = String(body.email||'').trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { sendJson(res, 400, {ok:false, error:'valid_email_required'}); return; }
       const eHash = emailHash(email);
-      if (tokenLedger.tokens.some(t=>t.emailHash===eHash && t.active)) { sendJson(res, 409, {ok:false, error:'email_already_claimed'}); return; }
+      if (tokenLedger.tokens.some(t=>t.emailHash===eHash && t.active)) { tokenIpFail(ip); sendJson(res, 409, {ok:false, error:'email_already_claimed'}); return; }
+      if (tokenLedger.tokens.some(t=>t.ipHash===ipHash(ip))) { tokenIpFail(ip); sendJson(res, 409, {ok:false, error:'ip_already_claimed'}); return; }
       if (tokenLedger.nextNumber > 100) { sendJson(res, 409, {ok:false, error:'all_100_claimed'}); return; }
       const number = tokenLedger.nextNumber++;
       const token = makeToken(number, eHash);
-      tokenLedger.tokens.push({number, emailHash:eHash, tokenHash:crypto.createHash('sha256').update(token).digest('hex'), active:true, issuedAt:new Date().toISOString()});
+      tokenLedger.tokens.push({number, emailHash:eHash, ipHash:ipHash(ip), tokenHash:crypto.createHash('sha256').update(token).digest('hex'), active:true, issuedAt:new Date().toISOString()});
       saveTokenLedger();
       sendJson(res, 200, {ok:true, token, number, claimed:tokenLedger.nextNumber-1, remaining:Math.max(0, 100-(tokenLedger.nextNumber-1))});
       return;
