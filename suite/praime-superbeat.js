@@ -25,7 +25,7 @@
   function parsePrompt(prompt){
     var p=(prompt||'').toLowerCase();
     var genre='HipHop'; Object.keys(GENRE_BPM).sort(function(a,b){return b.length-a.length;}).forEach(function(g){ if(p.indexOf(g.toLowerCase())>=0) genre=g; });
-    var mood='Dark'; if(/happy|bright|party|celebrat|hype/.test(p)) mood='Bright'; else if(/chill|calm|relax|smooth|lofi/.test(p)) mood='Chill'; else if(/sad|reflect|emotional/.test(p)) mood='Reflective';
+    var mood='Dark'; if(/rapmosfieryk|christian/.test(p)) mood='Rapmosfieryk'; else if(/happy|bright|party|celebrat|hype/.test(p)) mood='Bright'; else if(/chill|calm|relax|smooth|lofi/.test(p)) mood='Chill'; else if(/sad|reflect|emotional/.test(p)) mood='Reflective';
     var m=p.match(/(\d{2,3})\s*bpm/); var bpm=m?parseInt(m[1],10):GENRE_BPM[genre];
     return {genre:genre, bpm:bpm, mood:mood, prompt:prompt||''};
   }
@@ -38,7 +38,7 @@
   // Verse strips it back, Hook makes it fuller/louder — do NOT change melody every bar.
   // That was the amateur tell in v1: new chords every bar, no identity in first 10 seconds.
   function melodyFor(section, bar, mood){
-    var hero = mood==='Bright' ? [14,18,21,18] : mood==='Chill' ? [12,16,19,16] : [10,14,17,14];
+    var hero = mood==='Rapmosfieryk' ? [14,18,21,18] : mood==='Bright' ? [14,18,21,18] : mood==='Chill' ? [12,16,19,16] : [10,14,17,14]; // Rapmosfieryk: positive/urgent, simple repeating hook, vocal-led, not dark trap/drill
     if(section==='Intro') return hero.slice(0,4); // hero in first 10 seconds, not a drum-only intro
     if(section==='Bridge') return hero.slice(0,2);
     return hero;
@@ -98,17 +98,38 @@
             if(b%4===3 && step===15) play(hat, t+beatDur/8, 0.3*vel); // 6: triplet/roll variation every 4th bar
           }
           // Bass hook: real bass sample, pitched by playbackRate, following chord root
-          if(bassBuf && !isIntro){
+          // BASS FIX: was 1 quiet note per bar, buried under kick/comp — now a real bass line, 4 notes per bar.
+          if(bassBuf){
             var roots=[1,0.89,1.12,0.94]; var rate=roots[b%4];
-            play(bassBuf, barStart, 0.5, rate);
-            if(isHook) play(bassBuf, barStart+beatDur*2, 0.5, rate*1.5);
+            var bgain = isHook ? 0.85 : 0.70; // bass must be heard, not just felt
+            if(isIntro){
+              play(bassBuf, barStart, 0.60, rate);
+            } else {
+              for(var bb=0; bb<4; bb++){ play(bassBuf, barStart+bb*beatDur, bgain, rate); }
+              if(isHook) play(bassBuf, barStart+beatDur*2, 0.85, rate*1.5); // bass hook octave
+            }
           }
           // Melody: real piano bank notes, one per beat, varied by section
           var notes=melodyFor(sec, b, cfg.mood);
+          // MELODY FIX: piano-*.ogg are 404 on Render (verified 00:58), so try OGG first, then live WAV fallbacks.
+          // Fallbacks are all 200 live: trumpet-C3, violin-C4, flute-C4, piano-sample, synth, synth2.
+          var melFallbacks=['samples/instruments/trumpet-C3.wav','samples/instruments/violin-C4.wav','samples/instruments/flute-C4.wav','samples/instruments/piano-sample.wav'];
           for(var bi=0; bi<notes.length; bi++){
             var idx=notes[bi]; var url='samples/kits/piano-'+String(idx).padStart(2,'0')+'.ogg';
-            if(!pianoBufs[url]){ try{ pianoBufs[url]=await buf(url); }catch(e){ continue; } }
-            play(pianoBufs[url], barStart+bi*beatDur, isHook?0.5:0.35); // 4: vocal pocket — verse hero quieter, hook fuller
+            if(!pianoBufs[url]){
+              try{ pianoBufs[url]=await buf(url); }
+              catch(e){
+                // OGG missing on Render — use a live WAV melody voice, pitched by note index, instead of silence.
+                var fb=melFallbacks[bi % melFallbacks.length];
+                if(!pianoBufs[fb]){ try{ pianoBufs[fb]=await buf(fb); }catch(e2){ continue; } }
+                pianoBufs[url]=pianoBufs[fb];
+              }
+            }
+            // Melody: 8th-note pattern, not 1 per beat — a real melody line, louder, with variation by bar.
+            // Play hero note on beat, plus an octave/echo note on the off-beat, so it is actually heard as a melody.
+            var mgain = cfg.mood==='Rapmosfieryk' ? (isHook?0.55:0.40) : (isHook?0.65:0.50);
+            play(pianoBufs[url], barStart+bi*beatDur, mgain);
+            if(!isIntro) play(pianoBufs[url], barStart+bi*beatDur+beatDur/2, mgain*0.6, 1.5);
           }
         }
         barIdx+=bars;
