@@ -141,6 +141,7 @@ function priceFor(name) {
   if (n.includes('song master')) return 299;
   if (n.includes('vocal master')) return 199;
   if (n.includes('video render')) return 199;
+  if (n.includes('praime background')) return 499;
   if (n.includes('live dj mix') || n.includes('full beat')) return 999;
   if (n.includes('beat exclusive')) return 19900;
   if (n.includes('beat unlimited')) return 9999;
