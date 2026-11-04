@@ -1,0 +1,51 @@
+name: Build Android (debug proof)
+
+# Manual run only — no build on every push, so it never burns minutes by accident.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (suite/ is the source of truth)
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Capacitor Android project from suite/
+        run: |
+          # suite/ already in the repo checkout; copy it as the web app.
+          # Samples (221 MB of real-sound audio) are excluded for this
+          # first build proof — they need a separate delivery step
+          # (Play asset delivery / on-demand download), not a 200 MB+ APK.
+          mkdir -p www
+          rsync -a --exclude samples suite/ www/
+          printf '%s\n' '{' '  "appId": "com.praime.productions",' '  "appName": "PrAIme Productions",' '  "webDir": "www",' '  "server": { "androidScheme": "https" },' '  "android": { "allowMixedContent": true }' '}' > capacitor.config.json
+          npm install @capacitor/cli@8.6.0 @capacitor/core@8.6.0 @capacitor/android@8.6.0
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug APK (no signing, no secrets needed)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: praime-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
