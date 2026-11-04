@@ -41,6 +41,7 @@ a{color:#7ee2ff}
 <label>Release date</label><input id="relDate" type="date">
 <label>UPC (from your distributor — PrAIme does not generate one)</label><input id="relUpc" placeholder="e.g. 198012345678">
 <label>ISRC (from your distributor — PrAIme does not generate one)</label><input id="relIsrc" placeholder="e.g. USABC1234567">
+<label>ISWC (composition code, from your publisher / collection society — PrAIme does not generate one)</label><input id="relIswc" placeholder="e.g. T-123456789-0">
 <label>Label</label><input id="relLabel" placeholder="e.g. PrAIme Productions">
 <label>Writer split — one writer per line, e.g. "Rapmosfieryk — 100%"</label><textarea id="relWriters" rows="3" placeholder="Rapmosfieryk — 100%"></textarea>
 <button id="relGenerate">Generate release package</button><button id="relSheet" class="secondary">⬇ Release sheet (.txt)</button><button id="relCsv" class="secondary">⬇ Tracking codes (.csv)</button><button id="relJson" class="secondary">⬇ Manifest (.json)</button>
@@ -61,7 +62,7 @@ a{color:#7ee2ff}
 (function(){
   function v(id){ var el=document.getElementById(id); return el ? el.value.trim() : ''; }
   function meta(){
-    return { title:v('relTitle'), artist:v('relArtist'), genre:v('relGenre'), releaseDate:v('relDate'), upc:v('relUpc'), isrc:v('relIsrc'), label:v('relLabel'),
+    return { title:v('relTitle'), artist:v('relArtist'), genre:v('relGenre'), releaseDate:v('relDate'), upc:v('relUpc'), isrc:v('relIsrc'), iswc:v('relIswc'), label:v('relLabel'),
       writers:v('relWriters').split('\n').map(function(s){ return s.trim(); }).filter(Boolean) };
   }
   function valid(m, out){
@@ -69,16 +70,16 @@ a{color:#7ee2ff}
     return true;
   }
   function sheet(m){
-    var lines=['PrAIme Release Sheet','====================','Title: '+m.title,'Artist: '+m.artist,'Genre: '+(m.genre||'(not entered)'),'Release date: '+(m.releaseDate||'(not entered)'),'UPC: '+(m.upc||'(not entered — distributor to assign)'),'ISRC: '+(m.isrc||'(not entered — distributor to assign)'),'Label: '+(m.label||'(not entered)'),'','Writer split:'];
+    var lines=['PrAIme Release Sheet','====================','Title: '+m.title,'Artist: '+m.artist,'Genre: '+(m.genre||'(not entered)'),'Release date: '+(m.releaseDate||'(not entered)'),'UPC: '+(m.upc||'(not entered — distributor to assign)'),'ISRC: '+(m.isrc||'(not entered — distributor to assign)'),'ISWC: '+(m.iswc||'(not entered)'),'Label: '+(m.label||'(not entered)'),'','Writer split:'];
     if(m.writers.length){ m.writers.forEach(function(w){ lines.push('- '+w); }); } else { lines.push('(not entered)'); }
-    lines.push('','','NOTE: This sheet was prepared in the browser. PrAIme did NOT submit this release to any store or distributor, and did NOT generate the UPC/ISRC above. Submit the same details in your own distributor account.');
+    lines.push('','','NOTE: This sheet was prepared in the browser. PrAIme did NOT submit this release to any store or distributor, and did NOT generate the UPC/ISRC/ISWC above. Submit the same details in your own distributor account.');
     return lines.join('\n');
   }
   function csvCell(s){ s=String(s==null?'':s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
   function csv(m){
-    var rows=[['title','artist','genre','release_date','upc','isrc','label','writer_split']];
-    if(m.writers.length){ m.writers.forEach(function(w){ rows.push([m.title,m.artist,m.genre,m.releaseDate,m.upc,m.isrc,m.label,w]); }); }
-    else { rows.push([m.title,m.artist,m.genre,m.releaseDate,m.upc,m.isrc,m.label,'']); }
+    var rows=[['title','artist','genre','release_date','upc','isrc','iswc','label','writer_split']];
+    if(m.writers.length){ m.writers.forEach(function(w){ rows.push([m.title,m.artist,m.genre,m.releaseDate,m.upc,m.isrc,m.iswc,m.label,w]); }); }
+    else { rows.push([m.title,m.artist,m.genre,m.releaseDate,m.upc,m.isrc,m.iswc,m.label,'']); }
     return rows.map(function(r){ return r.map(csvCell).join(','); }).join('\n');
   }
   function download(name, text, type){
@@ -96,7 +97,7 @@ a{color:#7ee2ff}
   document.getElementById('relGenerate').onclick=generate;
   document.getElementById('relSheet').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-release-sheet.txt', sheet(m), 'text/plain'); };
   document.getElementById('relCsv').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-tracking-codes.csv', csv(m), 'text/csv'); };
-  document.getElementById('relJson').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-manifest.json', JSON.stringify({release:m, note:'Prepared in the browser by PrAIme. Not submitted to any store or distributor. UPC/ISRC are user-entered only; PrAIme does not generate them.'}, null, 2), 'application/json'); };
+  document.getElementById('relJson').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-manifest.json', JSON.stringify({release:m, note:'Prepared in the browser by PrAIme. Not submitted to any store or distributor. UPC/ISRC/ISWC are user-entered only; PrAIme does not generate them.'}, null, 2), 'application/json'); };
 })();
 </script><script>// ---- Rokdabus Prhyme widget ----
 (function(){
