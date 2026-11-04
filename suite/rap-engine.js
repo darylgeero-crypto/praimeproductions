@@ -147,20 +147,11 @@
     // a single-word rhyme cannot be found — e.g. orange -> four inch door hinge.
     var multi = this.getMultisyllabicPartner(base, exclude);
     if(multi) return multi;
-    // near rhyme: same vowel (before '-'), different terminal
-    var vowel = base.key.split('-')[0];
-    var near = [];
-    var self = this;
-    Object.keys(this.rhymeMap).forEach(function(k){
-      if(k.split('-')[0] === vowel && k !== base.key){
-        self.rhymeMap[k].forEach(function(w){ if(w.word !== base.word && !exclude[w.word]) near.push(w); });
-      }
-    });
-    if(near.length > 0){
-      var c2 = near[Math.floor(Math.random()*near.length)];
-      exclude[c2.word] = true; return c2;
-    }
-    var f = this.getNextWord(); exclude[f.word] = true; return f;
+    // No loose fallback: a word from a singleton family (e.g. meadow, shadow,
+    // silver, world) must NOT be paired with a random same-vowel word
+    // (meadow -> energy, shadow -> stack do not rhyme). Return null so
+    // lyricsMode can retry with a word that actually has a rhyme partner.
+    return null;
   };
   UnifiedRapEngine.prototype.wordMode = function(){ return this.getNextWord(this.lastWord).word.toUpperCase(); };
   // Multisyllabic mode: return a rhyming pair of phrases, e.g.
@@ -189,10 +180,60 @@
   };
   UnifiedRapEngine.prototype.lyricsMode = function(){
     // Gemini full song: 4 couplets, each couplet rhymes (wordA -> wordB rhyme partner)
+    // Retry rule: if wordA has no perfect or multisyllabic partner (singleton
+    // family), discard it and try another word — never pair it with a
+    // non-rhyming word just to fill the line.
     var lines = [];
+    // Multisyllabic rhyme schemes concocted 2026-11-03 — pairs that rhyme
+    // across 2+ syllables / words, not just a single end-word. Couplet 2
+    // of every generation uses one, so every lyrics generation contains
+    // at least one multisyllabic scheme. Loose groups (ready/energy/legacy)
+    // are deliberately left out of this list.
+    var MULTI_SCHEMES = [
+      ["prime time", "rhyme crime"],
+      ["higher power", "fire tower"],
+      ["power hour", "tower flower"],
+      ["true blue", "new crew"],
+      ["silver lining", "river climbing"],
+      ["banana", "bandana"],
+      ["beautiful", "dutiful"],
+      ["incredible", "credible"],
+      ["impossible", "unstoppable"],
+      ["orange", "four inch door hinge"],
+      ["chocolate", "rock a bit"],
+      ["elephant", "relevant"]
+    ];
     for(var i=0;i<4;i++){
-      var wordA = this.getNextWord();
-      var wordB = this.getRhymingPartner(wordA, {});
+      if(i === 1){
+        var scheme = MULTI_SCHEMES[Math.floor(Math.random() * MULTI_SCHEMES.length)];
+        lines.push("When the bass drops down and I secure the " + scheme[0] + ",");
+        lines.push("Every single bar is shining bright and " + scheme[1] + ".");
+        continue;
+      }
+      var wordA = null, wordB = null, tries = 0, self = this;
+      while(tries < 50){
+        wordA = this.getNextWord();
+        wordB = this.getRhymingPartner(wordA, {});
+        // Accept only a true rhyme: same rhyme key, OR a multi-word phrase
+        // partner (e.g. orange -> four inch door hinge, whose returned key
+        // is the base key). A single-word "multi" partner whose own pool
+        // key differs (legacy -> energy) is NOT a rhyme and is rejected.
+        var ok = false;
+        if(wordB){
+          if(wordB.word.indexOf(' ') >= 0) ok = true;
+          else {
+            var poolWord = null;
+            for(var pi = 0; pi < self.parsedPool.length; pi++){ if(self.parsedPool[pi].word === wordB.word){ poolWord = self.parsedPool[pi]; break; } }
+            if(poolWord && poolWord.key === wordA.key) ok = true;
+          }
+        }
+        if(ok) break;
+        wordB = null; tries++;
+      }
+      if(!wordB){
+        // Last-resort known rhyming pair, so a couplet is never left unrhyme
+        wordA = {word:"night", key:"AY-T"}; wordB = {word:"light", key:"AY-T"};
+      }
       lines.push("When the bass drops down and I secure the " + wordA.word + ",");
       lines.push("Every single bar is shining bright and " + wordB.word + ".");
     }
