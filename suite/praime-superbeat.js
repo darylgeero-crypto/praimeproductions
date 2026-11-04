@@ -67,15 +67,23 @@
   }
   function structure(){ return structureFor({prompt:'', genre:'HipHop', bpm:92, mood:'Dark'}); }
   // Chord / melody: scale degrees over real piano bank notes (60 notes, index = scale position)
-  // Minor for Dark/Reflective, Major for Bright, Dorian-ish for Chill — mapped to bank indices, not synth freq.
+  // Minor third (+3) for Dark/Reflective moods and minor-family genres, major third (+4) otherwise.
+  // Rapmosfieryk hero stays pinned. Hero shape (root, third, fifth, third) is unchanged.
   // HERO LOOP (DatPiff lesson): one memorable 4-note loop, repeated across the whole beat.
   // Verse strips it back, Hook makes it fuller/louder — do NOT change melody every bar.
   // That was the amateur tell in v1: new chords every bar, no identity in first 10 seconds.
   // MUSICALITY FIX: hero is recognizable, but NOT identical every bar.
   // Verse = hero as written. Pre-Hook = hero reversed. Hook = hero + octave turnaround. Bridge = hero sparse + new turnaround.
   // Every 4th bar = passing note between hero notes. Same hero DNA, real variation — not super repetitive, not a new melody.
-  function melodyFor(section, bar, mood){
-    var hero = mood==='Rapmosfieryk' ? [14,18,21,18] : mood==='Bright' ? [14,18,21,18] : mood==='Chill' ? [12,16,19,16] : [10,14,17,14];
+  function melodyFor(section, bar, mood, genre){
+    // GENRE SCALE FIX (Gemini 2026-11-04, assessed): previously every mood used a major
+    // third (+4), despite the Minor-for-Dark intent, so dark/minor-family beats sounded major.
+    // Now Dark/Reflective moods and minor-family genres get a minor third (+3); major-family
+    // genres keep +4. Rapmosfieryk stays pinned. Optional genre arg: old 3-arg calls keep mood-only behaviour.
+    var minorGenre = /Trap|Drill|Grime|Phonk|Dubstep|Boom Bap|Lo-Fi|Jazz|Blues|HipHop|R&B|Neo-Soul|Soul|Funk|Metal|Punk|Emo|Indie|Shoegaze|Reggae|Dancehall|Afrobeats|Amapiano/.test(genre||'');
+    var third = (mood==='Dark'||mood==='Reflective'||minorGenre) ? 3 : 4;
+    var base = mood==='Rapmosfieryk' ? 14 : mood==='Bright' ? 14 : mood==='Chill' ? 12 : 10;
+    var hero = mood==='Rapmosfieryk' ? [14,18,21,18] : [base, base+third, base+7, base+third];
     var notes = hero.slice();
     if(section==='Intro') return notes;
     if(section==='Pre-Hook') return notes.slice().reverse();
@@ -113,7 +121,8 @@
       if(!kits) throw new Error('Real sounds library not loaded — cannot render a real-sound beat.');
       var kick=await buf(kits.kick), snare=await buf(kits.snare||kits.clap), hat=await buf(kits.hat);
       var bassBuf=await buf('samples/trap-bass.wav').catch(function(){ return null; });
-      var pianoBufs={}; for(var n=1;n<=60;n++){ /* lazy: load only melody notes used below, in loop */ }
+      // OPTIMISE: persistent melody cache across renders — do not re-fetch/re-decode the same OGGs every render.
+      if(!window.__praimePianoCache) window.__praimePianoCache={}; var pianoBufs=window.__praimePianoCache;
       // Schedule bars
       var curve=genreCurve(cfg.genre); var swing=curve.swing; // dynamically curved per genre, not binary
       var barIdx=0;
@@ -158,7 +167,7 @@
             }
           }
           // Melody: real piano bank notes, one per beat, varied by section
-          var notes=melodyFor(sec, b, cfg.mood);
+          var notes=melodyFor(sec, b, cfg.mood, cfg.genre);
           // 5) SOUND DESIGN: melody voice per genre curve — piano / steel-guitar / nylon-guitar banks, not always piano.
           var melPrefix = curve.melodyVoice==='steel' ? 'steel-guitar-' : curve.melodyVoice==='nylon' ? 'nylon-guitar-' : 'piano-';
           // MELODY FIX: piano-*.ogg are 404 on Render (verified 00:58), so try OGG first, then live WAV fallbacks.
