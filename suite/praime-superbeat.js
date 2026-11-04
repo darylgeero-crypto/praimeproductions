@@ -22,6 +22,23 @@
 // 8 Length and repeatability: 84 bars, ~3:30-4:30 at genre BPM, loop memorable after one play.
 // 9 Identity: hero loop + genre kit + swing signature = recognizable beat, not generic presets.
   var GENRE_BPM = {"HipHop":92,"Boom Bap":90,"Trap":140,"Drill":140,"Grime":140,"Phonk":130,"Lo-Fi":82,"R&B":88,"Neo-Soul":86,"Soul":96,"Funk":104,"G-Funk":96,"Disco":118,"Gospel":100,"Worship":76,"Pop":112,"K-Pop":108,"Rock":120,"Metal":150,"Metalcore":140,"Punk":160,"Emo":110,"Indie":116,"Shoegaze":104,"Folk":96,"Americana":100,"Country":104,"Bluegrass":132,"Corridos":132,"Jazz":110,"Blues":84,"Reggae":72,"Dancehall":100,"Soca":128,"Afrobeats":106,"Amapiano":112,"Latin":96,"Reggaeton":88,"Dembow":90,"Bollywood":104,"EDM":128,"House":124,"Techno":130,"Trance":138,"Hardstyle":155,"Drum & Bass":174,"Dubstep":140,"Future Bass":150,"UK Garage":132,"Jersey Club":140,"Hyperpop":150,"Synthwave":100,"Ambient":70,"Cinematic":80,"Break Beat":130};
+
+  // DYNAMICALLY CURVED ACROSS ALL 54 GENRES (+ Break Beat = 55):
+  // Not trap/lofi/house binary. Each genre gets its own curve: swing, drum density, bass style, melody voice, hat pattern.
+  // Derived from genre family, with explicit overrides for signature genres. BPM already comes from GENRE_BPM.
+  function genreCurve(genre){
+    var g=genre||'HipHop';
+    var c={swing:0.08, density:0.85, bassStyle:'short', melodyVoice:'piano', hat:'straight'};
+    if(/Lo-Fi|Boom Bap|Jazz|Soul|Blues|Folk|Americana|Country|Bluegrass|Reggae|Ambient/.test(g)){ c.swing=0.14; c.density=0.70; c.bassStyle='warm'; c.melodyVoice='piano'; c.hat='swing'; }
+    if(/HipHop|G-Funk|Funk|Disco/.test(g)){ c.swing=0.12; c.density=0.85; c.bassStyle='short'; c.melodyVoice='piano'; c.hat='straight'; }
+    if(/Trap|Drill|Grime|Phonk|Dubstep|Future Bass|Hyperpop|Jersey Club/.test(g)){ c.swing=0.04; c.density=1.0; c.bassStyle='slide'; c.melodyVoice='steel'; c.hat='triplet'; }
+    if(/House|Techno|Trance|EDM|Hardstyle|Drum & Bass|UK Garage|Amapiano|Afrobeats|Dancehall|Soca|Latin|Reggaeton|Dembow|Bollywood|Corridos/.test(g)){ c.swing=0.06; c.density=0.95; c.bassStyle='drive'; c.melodyVoice='nylon'; c.hat='offbeat'; }
+    if(/Rock|Metal|Metalcore|Punk|Emo|Indie|Shoegaze/.test(g)){ c.swing=0.02; c.density=0.90; c.bassStyle='drive'; c.melodyVoice='steel'; c.hat='straight'; }
+    if(/R&B|Neo-Soul|Gospel|Worship|Pop|K-Pop|Cinematic|Synthwave/.test(g)){ c.swing=0.10; c.density=0.80; c.bassStyle='warm'; c.melodyVoice='piano'; c.hat='straight'; }
+    if(g==='Trap') c.swing=0.03; if(g==='Drill') c.swing=0.05; if(g==='Lo-Fi') c.swing=0.16; if(g==='Jazz') c.swing=0.15;
+    if(g==='Drum & Bass') c.density=1.0; if(g==='Ambient') c.density=0.55; if(g==='Reggae') c.swing=0.13;
+    return c;
+  }
   function parsePrompt(prompt){
     var p=(prompt||'').toLowerCase();
     var genre='HipHop'; Object.keys(GENRE_BPM).sort(function(a,b){return b.length-a.length;}).forEach(function(g){ if(p.indexOf(g.toLowerCase())>=0) genre=g; });
@@ -65,6 +82,7 @@
     structure: structure,
     melodyFor: melodyFor,
     GENRE_BPM: GENRE_BPM,
+    genreCurve: genreCurve,
     // Render a full beat in-browser using real samples, with humanisation + mastering chain.
     // Returns a Promise<Blob> (WAV). Caller must provide AudioContext; this is the in-app path.
     render: async function(ctx, prompt){
@@ -90,7 +108,7 @@
       var bassBuf=await buf('samples/trap-bass.wav').catch(function(){ return null; });
       var pianoBufs={}; for(var n=1;n<=60;n++){ /* lazy: load only melody notes used below, in loop */ }
       // Schedule bars
-      var swing = cfg.genre==='Lo-Fi'||cfg.genre==='HipHop'||cfg.genre==='Boom Bap' ? 0.12 : 0.06;
+      var curve=genreCurve(cfg.genre); var swing=curve.swing; // dynamically curved per genre, not binary
       var barIdx=0;
       function play(bufObj, when, gain, rate){
         if(!bufObj) return; var s=off.createBufferSource(); s.buffer=bufObj; if(rate) s.playbackRate.value=rate;
@@ -101,7 +119,7 @@
         for(var b=0;b<bars;b++){
           var barStart=(barIdx+b)*barDur;
           var isHook=sec.indexOf('Hook')>=0, isIntro=sec==='Intro', isOutro=sec==='Outro', isBridge=sec==='Bridge';
-          var density = isIntro||isOutro||isBridge ? 0.6 : isHook ? 1.0 : 0.85;
+          var density = (isIntro||isOutro||isBridge ? 0.6 : isHook ? 1.0 : curve.density); // genre curve density
           // Drums, 16 steps, with swing + jitter + velocity variation + fill on last bar of section
           for(var step=0; step<16; step++){
             var jitter=(Math.random()-0.5)*0.024; // +-12ms humanisation
