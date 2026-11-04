@@ -25,7 +25,29 @@ small{color:#9ca3af} a{color:#7ee2ff}
 <h1>Analytics — PrAIme Productions</h1>
 <p style="color:#9ca3af">Analytics on this page is private to each visitor: you see only your own entries, saved in this browser. Other visitors see only their own content's figures, never yours. Public catalogue prices and live server status are the only shared figures here — they are not personal analytics.</p>
 
-<div class="card"><h2>Private to you — by design</h2>
+<div class="card" id="musicStatsCard" style="display:none"><h2>My music stats — Rapmosfieryk</h2>
+<p>Your catalogue, as catalogued for PrAIme. Plays are manual — enter what each platform shows, saved in this browser only.</p>
+<p>SoundCloud (saviour-rap) — 26 tracks · SoundClick — 43 songs · ReverbNation — 38 songs · YouTube @rapmosfieryk2000 — 16 videos · Spotify — via DistroKid, subscription currently unpaid (parked) · Deezer — parked with DistroKid</p>
+<label>SoundCloud plays (total)</label><input id="musicSC" type="number" placeholder="0">
+<label>SoundClick plays (total)</label><input id="musicSClick" type="number" placeholder="0">
+<label>ReverbNation plays (total)</label><input id="musicRN" type="number" placeholder="0">
+<label>YouTube views (total)</label><input id="musicYT" type="number" placeholder="0">
+<label>Spotify streams (total)</label><input id="musicSP" type="number" placeholder="0">
+<button id="saveMusic">Save my music stats</button>
+<p id="musicTotals" class="status"></p></div>
+
+<div class="card" id="siteStatsCard" style="display:none"><h2>Site stats — owner view</h2>
+<p>Site-wide PrAIme figures, shown only in owner view on this device. Other visitors do not see this section.</p>
+<div class="grid">
+<div class="stat"><b>23</b><small>Suite pages (Hub + 22)</small></div>
+<div class="stat"><b>1,103</b><small>Real recorded sounds in the library</small></div>
+<div class="stat"><b>9</b><small>Soundkits in the Beat Store</small></div>
+<div class="stat"><b>6</b><small>Branded launch ads</small></div>
+<div class="stat"><b>6</b><small>TikTok videos published</small></div>
+<div class="stat"><b>21</b><small>Scheduled Instagram + X slots (Nov 9–23)</small></div>
+</div>
+<p><small>Sales and follower totals in the sections below are your own manual entries on this device, not a shared server total.</small></p></div>
+<div class="card"><p id="ownerStatus" class="status">Owner sections (my music stats and site stats) are hidden on this device unless the Hub profile saved on this device is Daryl or Rapmosfieryk. Your own content stats below are always visible to you, and only to you.</p></div>
 <p><b>You see only your own analytics here, and no one else sees yours.</b> Every number on this page (except public catalogue prices and live server status) is saved in <i>this browser only</i> (localStorage). There is no shared server analytics account, and PrAIme does not pull or publish another user's figures. If someone else opens this page on their device, they start empty and see only whatever <i>they</i> enter for <i>their own</i> content — never your ads, sales, or followers. Likewise, your figures here are never sent to PrAIme's server.</p></div>
 
 <div class="card"><h2>Live server health</h2>
@@ -73,6 +95,18 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 </div></main><script>
 function loadHealth(){ var el=document.getElementById('healthStatus'); el.textContent='Checking…'; fetch('https://praimeproductions.onrender.com/api/health').then(function(r){ return r.json(); }).then(function(j){ el.textContent='Live: ok='+j.ok+' · mode='+j.mode+' · PayPal configured='+j.paypal_configured+' · delivery secret persistent='+j.delivery_secret_persistent+' · verified orders in memory='+j.verified_orders_in_memory; }).catch(function(){ el.textContent='Health check could not be reached from this browser. Try again, or open https://praimeproductions.onrender.com/api/health directly.'; }); }
 document.getElementById('healthBtn').onclick=loadHealth; loadHealth();
+(function(){
+  var profile=''; try{ var bus=JSON.parse(localStorage.getItem('praime_bus')||'{}'); profile=(bus.profile||'').toLowerCase(); }catch(e){}
+  var isOwner=(profile==='daryl' || profile==='rapmosfieryk');
+  var music=document.getElementById('musicStatsCard'), site=document.getElementById('siteStatsCard'), st=document.getElementById('ownerStatus');
+  if(isOwner){ if(music) music.style.display='block'; if(site) site.style.display='block'; if(st) st.textContent='Owner view on: Hub profile on this device is '+profile+' — my music stats and site stats are shown here, only on this device.'; }
+  else { if(music) music.style.display='none'; if(site) site.style.display='none'; if(st) st.textContent='Owner sections hidden: the Hub profile saved on this device is not Daryl / Rapmosfieryk. Set your profile in the Hub to Daryl to see my music stats and site stats on this device. Your own content stats below are always visible to you, and only to you.'; }
+  // Music stats save/load, only meaningful in owner view, but keys stay local in any case
+  var mk=['musicSC','musicSClick','musicRN','musicYT','musicSP'];
+  mk.forEach(function(k){ var v=localStorage.getItem('praime_'+k); if(v!==null && document.getElementById(k)) document.getElementById(k).value=v; });
+  var sm=document.getElementById('saveMusic');
+  if(sm) sm.onclick=function(){ var tot=0; mk.forEach(function(k){ var el=document.getElementById(k); if(el){ localStorage.setItem('praime_'+k, el.value||'0'); tot+=parseInt(el.value||'0',10); } }); var mt=document.getElementById('musicTotals'); if(mt) mt.textContent='Total plays/streams entered (this device only): '+tot; };
+})();
 (function(){
   var ads=['Introducing','All-In Kit $49.99','Instrument Kit $29.99','Beats $9.99','Prime Your Music','Ultimate Mastering Suite'];
   var tbl=document.getElementById('adTable');
