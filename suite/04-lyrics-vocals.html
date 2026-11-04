@@ -26,6 +26,21 @@ a{color:#7ee2ff}
 <div class="card"><h2>Vocal recording — real microphone</h2><p>Press Record, allow microphone access, sing/rap, press Stop. The recording plays back here and downloads as a WebM audio file. It is not a fake "take recorded" alert.</p>
 <button id="rec">● Record vocal</button><button id="stopRec" disabled class="secondary">■ Stop &amp; download</button>
 <audio id="player" controls style="width:100%;margin-top:12px"></audio><div class="status" id="recOut"></div></div>
+<div class="card"><h2>Record vocals over a beat — takes on lanes</h2>
+<p>Restored from the original Full Beats Vocal Studio. Load a beat, press Play beat, then Record while it plays. <b>Wear headphones</b> — the beat must come through headphones only, or it will bleed through speakers into your mic take. The mic is recorded only (it is not played live through speakers), so there is no feedback loop.</p>
+<p style="font-size:12px;color:#9ca3af">How takes are stamped: each take records the beat time it started at, plus the section you picked and the bar it falls on (bar = beat time ÷ (60 ÷ BPM × 4 beats), starting at bar 1). Takes are mixed at their recorded start time, so a take recorded over the hook stays over the hook in the mix.</p>
+<button id="obBeatChoose">📁 Choose beat file</button><input type="file" id="obBeatFile" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg" style="display:none">
+<button id="obBeatPlay" disabled>▶ Play beat</button><button id="obBeatStop" disabled class="secondary">■ Stop beat</button>
+<audio id="obBeatAudio" style="width:100%;margin-top:12px" preload="auto"></audio><div class="status" id="obBeatInfo">No beat loaded yet.</div>
+<label>Section for the next take</label><select id="obSection"><option value="Auto">Auto — follow the beat</option><option value="Intro">Intro</option><option value="Verse">Verse</option><option value="Hook">Hook</option><option value="Bridge">Bridge</option><option value="Outro">Outro</option></select>
+<label>BPM (for bar stamps — taken from the Hub bus if set)</label><input id="obBpm" type="number" value="92" min="40" max="220">
+<button id="obRec">● Record take over beat</button><button id="obStopRec" disabled class="secondary">■ Stop take</button>
+<div class="status" id="obOut">Load a beat, press Play beat, then Record take over beat. Takes appear below, one lane each.</div>
+<h3>Takes</h3><div class="status" id="obList">No takes yet.</div>
+<p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). The beat itself is always in the mix at full volume.</p>
+<button id="obMix" disabled>⬇ Mix beat + takes &amp; download WAV</button><button id="obPlayMix" disabled class="secondary">▶ Play mix preview</button>
+<div class="status" id="obMixOut"></div>
+<p style="font-size:12px;color:#9ca3af">Honest limits: this mixes in the browser, offline, from the files you loaded — it does not auto-tune, time-stretch, or quantise takes, and it does not remove beat bleed if you recorded through speakers. A take that starts mid-beat is placed at that beat time in the mix; takes recorded in different sessions on this page are kept only until you leave or reload the page (they are not saved to the server).</p></div>
 <div class="card"><h2>Generate unique lyrics — never the same twice</h2>
 <p>Prompt-seeded, not fixed templates. Full 12's pad served the same lines every time for 3 genres — this checks every generation against your history and bumps the seed if an exact lyric was already generated.</p>
 <label>Prompt / theme</label><input id="genTheme" placeholder="e.g. dark drill, Edmonton nights, coming up">
@@ -212,6 +227,124 @@ function _mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imu
 document.getElementById('genLyricBtn').onclick=function(){ if(window.praimeRapEngine){ var linesS=window.praimeRapEngine.lyricsMode(); var hookLinesS=window.praimeRapEngine.lyricsMode(); var textS='[Verse]\n'+linesS.join('\n')+'\n\n[Hook]\n'+hookLinesS.slice(0,4).join('\n'); try{ var hhS=0; for(var ciS=0;ciS<textS.length;ciS++){ hhS=((hhS<<5)-hhS+textS.charCodeAt(ciS))|0; } var histS=[]; try{ histS=JSON.parse(localStorage.getItem('praime_lyrics_history')||'[]'); }catch(e){} if(histS.indexOf(hhS)>=0){ linesS=window.praimeRapEngine.lyricsMode(); textS='[Verse]\n'+linesS.join('\n'); } else { histS.push(hhS); try{ localStorage.setItem('praime_lyrics_history', JSON.stringify(histS.slice(-200))); }catch(e){} } }catch(e){} document.getElementById('genLyricOut').value=textS; document.getElementById('genLyricOut').scrollTop=0; return; } let theme=document.getElementById('genTheme').value||'coming up'; let seed=document.getElementById('genSeed').value?parseInt(document.getElementById('genSeed').value,10):_hashStr(theme+Date.now()); let ADJ=['dark','golden','broken','silent','electric','midnight','fearless','hungry','velvet','concrete','neon','sacred','restless','honest','savage','tender','burning','ancient','wild','brave','lonely','royal','urban','cosmic','hidden','steady','bright','shadow','silver','crimson']; let NOUN=['night','city','street','dream','heart','flame','river','ocean','sky','star','moon','rain','fire','crown','kingdom','desert','forest','mirror','bridge','tower','market','harbour','island','valley','horizon','dawn','memory','promise','secret','legend','song','rhythm','echo','thunder','ghost','hero','poet','dreamer','fighter','believer']; let VERB=['rise','fall','run','fly','climb','dance','sing','shout','whisper','fight','chase','build','break','carry','follow','lead','search','find','keep','return','remember','believe','dream','hope','pray','live','love','stand','reach','hold','ignite','shine','grow','soar','sail','march','leap','spin']; let RHY={ight:['night','light','fight','right','flight','bright'],ay:['day','way','play','stay','gray','bay'],ow:['flow','glow','know','show','low','slow'],een:['dream','scene','queen','mean','green','clean']}; let rng=_mulberry(seed); let pick=function(a){return a[Math.floor(rng()*a.length)];}; let famKeys=Object.keys(RHY); let fam=famKeys[Math.floor(rng()*famKeys.length)]; let rhy=RHY[fam]; let line=function(){ let t=Math.floor(rng()*5); if(t===0) return 'I '+pick(VERB)+' through the '+pick(NOUN)+' like a '+pick(ADJ)+' '+pick(NOUN); if(t===1) return 'From '+pick(NOUN)+' to the '+pick(NOUN)+', I '+pick(VERB)+' with my '+pick(ADJ)+' heart'; if(t===2) return 'Every '+pick(NOUN)+' taught me how to '+pick(VERB)+' when the '+pick(ADJ)+' night came'; if(t===3) return 'I carry the '+pick(NOUN)+' in my '+pick(ADJ)+' heart, I will not '+pick(VERB)+' again'; return 'The '+pick(ADJ)+' '+pick(NOUN)+' is calling, and I '+pick(VERB)+' toward the '+pick(NOUN); }; let out=[]; out.push('[Verse 1 — '+theme+']'); for(let i=0;i<8;i++) out.push(line()); out.push(''); out.push('[Hook]'); for(let i=0;i<4;i++) out.push('We rise through the '+pick(rhy)+' tonight'); out.push(''); out.push('[Verse 2]'); for(let i=0;i<8;i++) out.push(line()); let text=out.join('\n'); let hh=_hashStr(text); let hist=[]; try{ hist=JSON.parse(localStorage.getItem('praime_lyrics_history')||'[]'); }catch(e){} if(hist.indexOf(hh)>=0){ document.getElementById('genSeed').value=seed+1; document.getElementById('genLyricBtn').click(); return; } try{ hist.push(hh); localStorage.setItem('praime_lyrics_history', JSON.stringify(hist.slice(-200))); }catch(e){} document.getElementById('genLyricOut').value=text; document.getElementById('genLyricStatus').textContent='Generated, rhyme family -'+fam+' · checked against '+hist.length+' previous generations — no exact repeat · seed '+seed+'.'; };
 document.getElementById('genLyricSave').onclick=function(){ let t=document.getElementById('genLyricOut').value; if(!t) return; let ta=document.querySelector('textarea'); if(ta) ta.value=t; document.getElementById('genLyricStatus').textContent='Lyrics copied into the notepad area — save it there as usual.'; };
 
+// ---- Record vocals over a beat (restored Vocal Studio) ----
+let obBeat=null, obTakes=[], obRec=null, obChunks=[], obMixed=null, obTakeSeq=0;
+function obBpmVal(){ let v=parseFloat(document.getElementById('obBpm').value); return (v>0)?v:92; }
+function obStamp(startSec){ let secPerBar=(60/obBpmVal())*4; let bar=Math.floor(startSec/secPerBar)+1; let sec=document.getElementById('obSection').value; return sec+' · bar '+bar+' · '+startSec.toFixed(1)+'s into beat'; }
+function obRenderTakes(){
+  let el=document.getElementById('obList'); if(!el) return;
+  if(!obTakes.length){ el.textContent='No takes yet.'; return; }
+  el.innerHTML='';
+  obTakes.forEach(function(t){
+    let row=document.createElement('div'); row.style.cssText='border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin:8px 0';
+    let head=document.createElement('div'); head.textContent=t.name+' — '+t.stamp+' — '+t.duration.toFixed(1)+'s'; row.appendChild(head);
+    let au=document.createElement('audio'); au.controls=true; au.src=t.url; au.style.width='100%'; row.appendChild(au);
+    let vol=document.createElement('input'); vol.type='range'; vol.min=0; vol.max=100; vol.value=Math.round(t.volume*100);
+    vol.oninput=function(){ t.volume=vol.value/100; };
+    let volLab=document.createElement('label'); volLab.textContent='Volume'; volLab.appendChild(vol); row.appendChild(volLab);
+    let pan=document.createElement('input'); pan.type='range'; pan.min=-100; pan.max=100; pan.value=Math.round(t.pan*100);
+    pan.oninput=function(){ t.pan=pan.value/100; };
+    let panLab=document.createElement('label'); panLab.textContent='Pan (left − / right +)'; panLab.appendChild(pan); row.appendChild(panLab);
+    let mute=document.createElement('input'); mute.type='checkbox'; mute.checked=t.mute;
+    mute.onchange=function(){ t.mute=mute.checked; };
+    let muteLab=document.createElement('label'); muteLab.appendChild(mute); muteLab.appendChild(document.createTextNode(' Mute')); row.appendChild(muteLab);
+    let solo=document.createElement('input'); solo.type='checkbox'; solo.checked=t.solo;
+    solo.onchange=function(){ t.solo=solo.checked; };
+    let soloLab=document.createElement('label'); soloLab.appendChild(solo); soloLab.appendChild(document.createTextNode(' Solo')); row.appendChild(soloLab);
+    let del=document.createElement('button'); del.className='secondary'; del.textContent='Delete take';
+    del.onclick=function(){ obTakes=obTakes.filter(function(x){return x!==t;}); obRenderTakes(); document.getElementById('obMix').disabled=!obBeat||!obTakes.length; document.getElementById('obPlayMix').disabled=!obBeat||!obTakes.length; };
+    row.appendChild(del); el.appendChild(row);
+  });
+}
+document.getElementById('obBeatChoose').onclick=function(){ document.getElementById('obBeatFile').click(); };
+document.getElementById('obBeatFile').onchange=async function(e){
+  let f=e.target.files[0]; if(!f) return;
+  try{
+    let buf=await micCtxFn().decodeAudioData(await f.arrayBuffer());
+    obBeat={name:f.name, blob:f, buffer:buf, duration:buf.duration};
+    let au=document.getElementById('obBeatAudio'); au.src=URL.createObjectURL(f);
+    document.getElementById('obBeatInfo').textContent=f.name+' · '+buf.duration.toFixed(1)+'s · '+buf.sampleRate+' Hz · '+buf.numberOfChannels+'ch';
+    document.getElementById('obBeatPlay').disabled=false; document.getElementById('obBeatStop').disabled=false;
+    document.getElementById('obMix').disabled=!obTakes.length; document.getElementById('obPlayMix').disabled=!obTakes.length;
+    let bus=getBus(); if(bus.bpm) document.getElementById('obBpm').value=bus.bpm;
+  }catch(err){ document.getElementById('obBeatInfo').textContent='Beat could not be decoded: '+err.message; }
+};
+document.getElementById('obBeatPlay').onclick=function(){ let au=document.getElementById('obBeatAudio'); if(au) au.play(); };
+document.getElementById('obBeatStop').onclick=function(){ let au=document.getElementById('obBeatAudio'); if(au){ au.pause(); au.currentTime=0; } };
+document.getElementById('obBeatAudio').addEventListener('ended', function(){
+  if(obRec && obRec.state==='recording'){ try{ obRec.stop(); }catch(e){} document.getElementById('obOut').textContent='Beat ended — take stopped automatically.'; }
+});
+document.getElementById('obRec').onclick=async function(){
+  if(!obBeat){ document.getElementById('obOut').textContent='Load a beat first, then record over it.'; return; }
+  let au=document.getElementById('obBeatAudio');
+  let startSec=0;
+  if(au && !au.paused && !au.ended){ startSec=au.currentTime; }
+  else if(au){ au.currentTime=0; try{ await au.play(); }catch(e){} startSec=0; }
+  let stamp=obStamp(startSec);
+  try{
+    let stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    obChunks=[]; obRec=new MediaRecorder(stream);
+    obRec.ondataavailable=function(e){ if(e.data.size) obChunks.push(e.data); };
+    obRec.onstop=async function(){
+      try{ stream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){}
+      let blob=new Blob(obChunks,{type:'audio/webm'});
+      try{
+        let buf=await micCtxFn().decodeAudioData(await blob.arrayBuffer());
+        obTakeSeq++;
+        let take={name:'Take '+obTakeSeq, blob:blob, url:URL.createObjectURL(blob), buffer:buf, duration:buf.duration, stamp:stamp, startSec:startSec, volume:1, pan:0, mute:false, solo:false};
+        obTakes.push(take); obRenderTakes();
+        document.getElementById('obOut').textContent='Take saved: '+take.name+' — '+stamp+' — '+buf.duration.toFixed(1)+'s. It is not sent anywhere; it lives on this page until you leave it.';
+        document.getElementById('obMix').disabled=false; document.getElementById('obPlayMix').disabled=false;
+      }catch(err){ document.getElementById('obOut').textContent='Take could not be decoded for mixing: '+err.message+' — try recording again.'; }
+      document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true;
+    };
+    obRec.start();
+    document.getElementById('obRec').disabled=true; document.getElementById('obStopRec').disabled=false;
+    document.getElementById('obOut').textContent='Recording take over the beat… ('+stamp+') Wear headphones. Press Stop take when done.';
+  }catch(err){ document.getElementById('obOut').textContent='Microphone failed: '+err.message+' — allow microphone access in your browser.'; }
+};
+document.getElementById('obStopRec').onclick=function(){ if(obRec) obRec.stop(); document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true; };
+function obActiveTakes(){
+  let anySolo=obTakes.some(function(t){ return t.solo; });
+  return obTakes.filter(function(t){ if(t.mute) return false; if(anySolo && !t.solo) return false; return true; });
+}
+async function obBuildMix(){
+  if(!obBeat || !obBeat.buffer) throw new Error('No beat loaded.');
+  let active=obActiveTakes(); if(!active.length) throw new Error('No active takes to mix (all muted, or no takes yet).');
+  let sr=obBeat.buffer.sampleRate, end=obBeat.buffer.duration;
+  active.forEach(function(t){ end=Math.max(end, t.startSec + t.buffer.duration); });
+  let len=Math.ceil(end*sr);
+  let off=new OfflineAudioContext(2, len, sr);
+  let beatSrc=off.createBufferSource(); beatSrc.buffer=obBeat.buffer;
+  let beatGain=off.createGain(); beatGain.gain.value=1;
+  beatSrc.connect(beatGain); beatGain.connect(off.destination); beatSrc.start(0);
+  active.forEach(function(t){
+    let s=off.createBufferSource(); s.buffer=t.buffer;
+    let g=off.createGain(); g.gain.value=t.volume;
+    s.connect(g);
+    if(off.createStereoPanner){ let p=off.createStereoPanner(); p.pan.value=t.pan; g.connect(p); p.connect(off.destination); }
+    else { g.connect(off.destination); }
+    s.start(t.startSec);
+  });
+  let rendered=await off.startRendering();
+  let peak=0; for(let c=0;c<rendered.numberOfChannels;c++){ let d=rendered.getChannelData(c); for(let i=0;i<d.length;i++){ let a=Math.abs(d[i]); if(a>peak) peak=a; } }
+  if(peak>0.89){ let g=0.89/peak; for(let c=0;c<rendered.numberOfChannels;c++){ let d=rendered.getChannelData(c); for(let i=0;i<d.length;i++) d[i]*=g; } }
+  return {buffer:rendered, active:active.length, peak:peak};
+}
+document.getElementById('obMix').onclick=async function(){
+  let out=document.getElementById('obMixOut'); out.textContent='Mixing beat + takes… (offline render; a long song takes a moment)';
+  try{
+    let m=await obBuildMix(); obMixed=m.buffer;
+    let a=document.createElement('a'); a.href=URL.createObjectURL(micWav(m.buffer)); a.download='praime-beat-plus-vocals.wav'; a.click();
+    out.textContent='Downloaded praime-beat-plus-vocals.wav — beat + '+m.active+' take(s), normalised to 0.89 peak. Takes are placed at their recorded beat times.';
+  }catch(err){ out.textContent='Mix failed: '+err.message; }
+};
+document.getElementById('obPlayMix').onclick=async function(){
+  let out=document.getElementById('obMixOut'); out.textContent='Rendering mix preview…';
+  try{ let m=await obBuildMix(); obMixed=m.buffer; micPlay(m.buffer); out.textContent='Playing mix preview — beat + '+m.active+' take(s).'; }
+  catch(err){ out.textContent='Mix preview failed: '+err.message; }
+};
+
 let micOrig=null, micMastered=null, micCtx=null, micSrc=null;
 function micCtxFn(){ if(!micCtx) micCtx=new (window.AudioContext||window.webkitAudioContext)(); if(micCtx.state==='suspended') micCtx.resume(); return micCtx; }
 function micPlay(buf){ if(!buf) return; if(micSrc){ try{micSrc.stop();}catch(e){} } let c=micCtxFn(); let s=c.createBufferSource(); s.buffer=buf; s.connect(c.destination); s.start(); micSrc=s; }
@@ -292,4 +425,5 @@ document.addEventListener('click', function(e){
 }, true);
 </script>
 <script src="praime-cart.js"></script>
+<script src="real-sounds.js"></script>
 </body></html>

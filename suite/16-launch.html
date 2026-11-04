@@ -33,6 +33,18 @@ a{color:#7ee2ff}
 <div class="card"><h2>🟡 Partially ready — wired, but needs your accounts</h2><p>• PayPal: Beat Store now loads the real PayPal JS SDK with your merchant email/ID (client-id) and renders real PayPal buttons for the cart total. Next step for commercial use: a small server (or PayPal webhook) that verifies the captured order before you deliver stems — do not deliver on client-side capture alone.<br>• Meta Ads: Ads page generates real ad copy and a PNG card to post manually. Auto-launch to Meta Ads needs a Meta Ads account, app, and API token — not faked here.<br>• Distribution: no distributor is connected. Use DistroKid, TuneCore, CD Baby or similar for Spotify/Apple — they issue ISRC/UPC and handle royalties.<br>• Social posting: post pack is generated, posting itself is manual. Auto-posting needs each platform's official API and account approval.</p></div>
 <div class="card"><h2>❌ Still missing before a real launch</h2><p>• APK (Android): package these pages with Capacitor (npm, cap add android) or as a Trusted Web Activity, build in Android Studio, sign with your keystore, test on a real phone, then Google Play listing + privacy policy.<br>• iOS: package with Capacitor, build in Xcode on a Mac, Apple Developer account ($99/yr), signing + App Store review + privacy policy. No iOS build exists in this zip.<br>• Desktop (Windows/Mac/Linux): package with Electron or Tauri, code-sign the installer, test installs. No desktop build exists in this zip.<br>• Hosting: for PWA install, these pages must be hosted on HTTPS (not file://) with a manifest and service worker — a manifest file is included in this zip, hosting is not.<br>• Legal: privacy policy, terms of service, beat license contracts, copyright/ownership for beats and lyrics, tax handling for sales, and age/content policies for stores.<br>• Backend: user accounts, order history, stem delivery, and payment verification all need a server — the suite today is offline-first in the browser only.</p></div>
 <div class="card"><h2>Launch checklist — in order</h2><p>1) Finish songs, master to -14 LUFS / -1 dBTP, export WAV.<br>2) Get a distributor, ISRCs, UPC, cover art 3000×3000, release date + pre-save.<br>3) Set up PayPal Business, test checkout in Sandbox first, then add server verification.<br>4) Write privacy policy, terms, and beat licenses.<br>5) Host the suite on HTTPS, add the manifest, test PWA install.<br>6) Package APK via Capacitor, test on your Galaxy A15, then iOS via Xcode, then desktop via Electron/Tauri.<br>7) Submit to Play / App Store with listings, screenshots, and policy links.<br>8) Release social plan: teaser, hook videos, lyric video, reply to comments.</p></div>
+<div class="card"><h2>Distro Release Package — prepare it here, submit it yourself</h2>
+<p><b>Manual tool only — PrAIme does NOT submit anything to Spotify, Apple, or any store.</b> Fill in your release details, generate the package, and download the three files. Then upload them / enter the same details in <b>your own distributor account</b> (e.g. DistroKid, TuneCore, CD Baby). PrAIme also does <b>not</b> generate real UPC or ISRC codes — enter the codes your distributor gave you, or leave them blank and let your distributor assign them. Nothing on this page is a submission, a registration, or proof of a release.</p>
+<label>Track / release title *</label><input id="relTitle" placeholder="e.g. Night Shift">
+<label>Artist *</label><input id="relArtist" placeholder="e.g. Rapmosfieryk">
+<label>Genre</label><input id="relGenre" placeholder="e.g. Trap">
+<label>Release date</label><input id="relDate" type="date">
+<label>UPC (from your distributor — PrAIme does not generate one)</label><input id="relUpc" placeholder="e.g. 198012345678">
+<label>ISRC (from your distributor — PrAIme does not generate one)</label><input id="relIsrc" placeholder="e.g. USABC1234567">
+<label>Label</label><input id="relLabel" placeholder="e.g. PrAIme Productions">
+<label>Writer split — one writer per line, e.g. "Rapmosfieryk — 100%"</label><textarea id="relWriters" rows="3" placeholder="Rapmosfieryk — 100%"></textarea>
+<button id="relGenerate">Generate release package</button><button id="relSheet" class="secondary">⬇ Release sheet (.txt)</button><button id="relCsv" class="secondary">⬇ Tracking codes (.csv)</button><button id="relJson" class="secondary">⬇ Manifest (.json)</button>
+<div class="status" id="relOut">Fill in title and artist, then press Generate release package. The three downloads use exactly the details above — nothing is sent anywhere.</div></div>
 <button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
@@ -44,7 +56,49 @@ a{color:#7ee2ff}
 <input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
 <input id="rokModel" placeholder="Model, e.g. llama3.1" value="llama3.1">
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
-</div></main><script></script><script>// ---- Rokdabus Prhyme widget ----
+</div></main><script>
+// ---- Distro Release Package (manual, honest — no auto-submit, no generated codes) ----
+(function(){
+  function v(id){ var el=document.getElementById(id); return el ? el.value.trim() : ''; }
+  function meta(){
+    return { title:v('relTitle'), artist:v('relArtist'), genre:v('relGenre'), releaseDate:v('relDate'), upc:v('relUpc'), isrc:v('relIsrc'), label:v('relLabel'),
+      writers:v('relWriters').split('\n').map(function(s){ return s.trim(); }).filter(Boolean) };
+  }
+  function valid(m, out){
+    if(!m.title || !m.artist){ out.textContent='Title and artist are required before a package can be generated.'; return false; }
+    return true;
+  }
+  function sheet(m){
+    var lines=['PrAIme Release Sheet','====================','Title: '+m.title,'Artist: '+m.artist,'Genre: '+(m.genre||'(not entered)'),'Release date: '+(m.releaseDate||'(not entered)'),'UPC: '+(m.upc||'(not entered — distributor to assign)'),'ISRC: '+(m.isrc||'(not entered — distributor to assign)'),'Label: '+(m.label||'(not entered)'),'','Writer split:'];
+    if(m.writers.length){ m.writers.forEach(function(w){ lines.push('- '+w); }); } else { lines.push('(not entered)'); }
+    lines.push('','','NOTE: This sheet was prepared in the browser. PrAIme did NOT submit this release to any store or distributor, and did NOT generate the UPC/ISRC above. Submit the same details in your own distributor account.');
+    return lines.join('\n');
+  }
+  function csvCell(s){ s=String(s==null?'':s); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+  function csv(m){
+    var rows=[['title','artist','genre','release_date','upc','isrc','label','writer_split']];
+    if(m.writers.length){ m.writers.forEach(function(w){ rows.push([m.title,m.artist,m.genre,m.releaseDate,m.upc,m.isrc,m.label,w]); }); }
+    else { rows.push([m.title,m.artist,m.genre,m.releaseDate,m.upc,m.isrc,m.label,'']); }
+    return rows.map(function(r){ return r.map(csvCell).join(','); }).join('\n');
+  }
+  function download(name, text, type){
+    var blob=new Blob([text], {type:type}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  }
+  function baseName(m){ return m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'') || 'release'; }
+  function generate(){
+    var m=meta(), out=document.getElementById('relOut'); if(!valid(m, out)) return null;
+    var warn=[];
+    if(!m.upc) warn.push('No UPC entered — your distributor will assign one.');
+    if(!m.isrc) warn.push('No ISRC entered — your distributor will assign one.');
+    out.textContent='Package ready for "'+m.title+'" by '+m.artist+'. Download the sheet, CSV and manifest below, then submit the same details in your own distributor account. PrAIme has not submitted anything.'+(warn.length ? '\n'+warn.join('\n') : '');
+    return m;
+  }
+  document.getElementById('relGenerate').onclick=generate;
+  document.getElementById('relSheet').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-release-sheet.txt', sheet(m), 'text/plain'); };
+  document.getElementById('relCsv').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-tracking-codes.csv', csv(m), 'text/csv'); };
+  document.getElementById('relJson').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-manifest.json', JSON.stringify({release:m, note:'Prepared in the browser by PrAIme. Not submitted to any store or distributor. UPC/ISRC are user-entered only; PrAIme does not generate them.'}, null, 2), 'application/json'); };
+})();
+</script><script>// ---- Rokdabus Prhyme widget ----
 (function(){
   var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
   if(!btn||!panel) return;
@@ -228,4 +282,5 @@ document.addEventListener('click', function(e){
   }catch(err){}
 }, true);
 </script>
+<script src="real-sounds.js"></script>
 </body></html>

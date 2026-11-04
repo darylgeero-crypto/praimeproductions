@@ -23,7 +23,16 @@ a{color:#7ee2ff}
 <button id="chooseBtn">📁 Add files</button><input type="file" id="fileInput" multiple accept="audio/*,video/*,image/*,.txt,.json">
 <input id="filter" placeholder="Filter library by name...">
 <div id="list"></div><button id="manifest">Download manifest .JSON</button><div class="status" id="manifestOut"></div>
-<div class="status" id="out"></div><audio id="player" controls style="width:100%;margin-top:12px"></audio></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
+<div class="status" id="out"></div><audio id="player" controls style="width:100%;margin-top:12px"></audio>
+<div class="card"><h2>Music Player — 5-band equalizer</h2><p>Restored from the original Full suite player. The five bands run through Web Audio peaking filters on the player above, so they really change what you hear — not just a display. EQ is set up on first Play (a user gesture, which browsers require for audio).</p>
+<label>60 Hz <span id="eq60Val">0 dB</span></label><input type="range" id="eq60" min="-12" max="12" step="0.5" value="0">
+<label>230 Hz <span id="eq230Val">0 dB</span></label><input type="range" id="eq230" min="-12" max="12" step="0.5" value="0">
+<label>910 Hz <span id="eq910Val">0 dB</span></label><input type="range" id="eq910" min="-12" max="12" step="0.5" value="0">
+<label>3.6 kHz <span id="eq3600Val">0 dB</span></label><input type="range" id="eq3600" min="-12" max="12" step="0.5" value="0">
+<label>14 kHz <span id="eq14000Val">0 dB</span></label><input type="range" id="eq14000" min="-12" max="12" step="0.5" value="0">
+<div><button id="eqFlat">Flat</button><button id="eqBass" class="secondary">Bass</button><button id="eqVocal" class="secondary">Vocal</button><button id="eqBright" class="secondary">Bright</button><button id="eqReset" class="secondary">Reset to Flat</button></div>
+<label style="font-weight:400"><input type="checkbox" id="eqBypass" style="width:auto"> Bypass EQ (all bands to 0 dB, previous settings restored when unchecked)</label>
+<div class="status" id="eqOut">EQ ready — press Play on a track, then move a band or pick a preset.</div></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
 <div style="font-size:12px;color:#9ca3af">Rhyming studio guide for PrAIme Productions. Text or voice prompts. I explain every feature, walk you through creation end to end, and in the DAW I can auto-select mastering levels from real song analysis.</div>
@@ -37,12 +46,73 @@ a{color:#7ee2ff}
 </div>
 <script>
 let files=[];
-function render(){ const q=document.getElementById('filter').value.toLowerCase(); const list=document.getElementById('list'); list.innerHTML=''; files.forEach((f,i)=>{ if(q && !f.name.toLowerCase().includes(q)) return; const d=document.createElement('div'); d.style.cssText='display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)'; d.innerHTML='<span>'+f.name+' ('+Math.round(f.size/1024)+' KB)</span>'; const b1=document.createElement('button'); b1.textContent='Play'; b1.onclick=()=>{ document.getElementById('player').src=f.url; document.getElementById('player').play(); }; const b2=document.createElement('button'); b2.textContent='Download'; b2.className='secondary'; b2.onclick=()=>{ const a=document.createElement('a'); a.href=f.url; a.download=f.name; a.click(); }; const b3=document.createElement('button'); b3.textContent='Delete'; b3.className='secondary'; b3.onclick=()=>{ files.splice(i,1); render(); }; d.append(b1,b2,b3); list.appendChild(d); }); document.getElementById('out').textContent=files.length+' file(s) in library.'; }
+function render(){ const q=document.getElementById('filter').value.toLowerCase(); const list=document.getElementById('list'); list.innerHTML=''; files.forEach((f,i)=>{ if(q && !f.name.toLowerCase().includes(q)) return; const d=document.createElement('div'); d.style.cssText='display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)'; d.innerHTML='<span>'+f.name+' ('+Math.round(f.size/1024)+' KB)</span>'; const b1=document.createElement('button'); b1.textContent='Play'; b1.onclick=()=>{ const pl=document.getElementById('player'); pl.src=f.url; if(window.praimeEqEnsure){ window.praimeEqEnsure(); } pl.play(); }; const b2=document.createElement('button'); b2.textContent='Download'; b2.className='secondary'; b2.onclick=()=>{ const a=document.createElement('a'); a.href=f.url; a.download=f.name; a.click(); }; const b3=document.createElement('button'); b3.textContent='Delete'; b3.className='secondary'; b3.onclick=()=>{ files.splice(i,1); render(); }; d.append(b1,b2,b3); list.appendChild(d); }); document.getElementById('out').textContent=files.length+' file(s) in library.'; }
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange=e=>{ [...e.target.files].forEach(f=>files.push({name:f.name,size:f.size,type:f.type,url:URL.createObjectURL(f)})); render(); };
 document.getElementById('filter').oninput=render;
 document.getElementById('manifest').onclick=()=>{ const blob=new Blob([JSON.stringify(files.map(f=>({name:f.name,size:f.size,type:f.type})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-manifest.json'; a.click(); document.getElementById('manifestOut').textContent='Manifest downloaded: praime-library-manifest.json ('+files.length+' files).'; };
 render();
+
+// ---- Commander Music Player 5-band equalizer (restored) ----
+// Real Web Audio graph: player element -> 5 peaking filters -> destination.
+// MediaElementAudioSourceNode can only be created once per element, so it is
+// created lazily on first Play and then reused. If Web Audio is unavailable
+// the player keeps working directly, with a status note, instead of breaking.
+let eqCtx=null, eqSource=null, eqFilters=[];
+const eqIds=['eq60','eq230','eq910','eq3600','eq14000'];
+function praimeEqEnsure(){
+  if(eqCtx) { try{ eqCtx.resume(); }catch(e){} return true; }
+  try{
+    const pl=document.getElementById('player');
+    eqCtx=new (window.AudioContext||window.webkitAudioContext)();
+    eqSource=eqCtx.createMediaElementSource(pl);
+    const freqs=[60,230,910,3600,14000];
+    let prev=eqSource;
+    freqs.forEach(function(f){
+      const fl=eqCtx.createBiquadFilter();
+      fl.type='peaking'; fl.frequency.value=f; fl.Q.value=1; fl.gain.value=0;
+      prev.connect(fl); prev=fl; eqFilters.push(fl);
+    });
+    prev.connect(eqCtx.destination);
+    praimeEqApply();
+    return true;
+  }catch(e){
+    document.getElementById('eqOut').textContent='EQ unavailable in this browser ('+e.message+') — the player still plays without EQ.';
+    return false;
+  }
+}
+window.praimeEqEnsure=praimeEqEnsure;
+function praimeEqApply(){
+  const bypass=document.getElementById('eqBypass').checked;
+  eqIds.forEach(function(id,i){
+    const el=document.getElementById(id);
+    const val=parseFloat(el.value)||0;
+    const label=document.getElementById(id+'Val');
+    if(label) label.textContent=(bypass?0:val)+' dB';
+    if(eqFilters[i]) eqFilters[i].gain.value=bypass?0:val;
+  });
+  const out=document.getElementById('eqOut');
+  if(bypass) out.textContent='EQ bypassed — all bands at 0 dB. Uncheck Bypass to restore your settings.';
+  else out.textContent='EQ active: 60 Hz '+eqIds.map(function(id){ return document.getElementById(id).value; }).join(' / ')+' dB (60 / 230 / 910 / 3.6k / 14k).';
+}
+function praimeEqPreset(values){
+  eqIds.forEach(function(id,i){ document.getElementById(id).value=values[i]; });
+  document.getElementById('eqBypass').checked=false;
+  praimeEqEnsure(); praimeEqApply();
+}
+eqIds.forEach(function(id){
+  document.getElementById(id).oninput=function(){
+    document.getElementById('eqBypass').checked=false;
+    praimeEqEnsure(); praimeEqApply();
+  };
+});
+document.getElementById('eqFlat').onclick=function(){ praimeEqPreset([0,0,0,0,0]); };
+document.getElementById('eqBass').onclick=function(){ praimeEqPreset([6,3,0,-1,-2]); };
+document.getElementById('eqVocal').onclick=function(){ praimeEqPreset([-2,-1,2,4,2]); };
+document.getElementById('eqBright').onclick=function(){ praimeEqPreset([-1,0,1,3,5]); };
+document.getElementById('eqReset').onclick=function(){ praimeEqPreset([0,0,0,0,0]); };
+document.getElementById('eqBypass').onchange=function(){ praimeEqEnsure(); praimeEqApply(); };
+document.getElementById('player').addEventListener('play', function(){ praimeEqEnsure(); });
 
 // ---- Rokdabus Prhyme widget ----
 (function(){
