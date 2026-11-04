@@ -136,9 +136,16 @@ function batchRenderList(){
     const row=document.createElement('div'); row.style.cssText='display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)';
     const name=document.createElement('span'); name.style.cssText='font-weight:700;flex:1 1 180px'; name.textContent=(i+1)+'. '+q.file.name+' — '+((q.file.size/1048576).toFixed(1))+' MB — '+(q.status||'queued');
     const audio=document.createElement('audio'); audio.controls=true; audio.preload='metadata'; audio.src=q.url; audio.style.cssText='flex:1 1 220px;max-width:320px';
+    // OG-style Play button on EVERY song — not just the audio controls, and
+    // not just Play-all. Tapping it plays that song and pauses the others.
+    const playBtn=document.createElement('button'); playBtn.textContent='▶ Play'; playBtn.onclick=()=>{
+      document.querySelectorAll('#batchList audio').forEach(function(a){ if(a!==audio) a.pause(); });
+      document.querySelectorAll('#playAllList audio').forEach(function(a){ a.pause(); });
+      audio.play().catch(function(){});
+    };
     const dl=document.createElement('button'); dl.className='secondary'; dl.textContent='⬇ Download'; dl.onclick=()=>{ const a=document.createElement('a'); a.href=q.url; a.download=q.file.name; a.click(); };
     const rm=document.createElement('button'); rm.className='secondary'; rm.textContent='✕ Remove'; rm.onclick=()=>{ batchQueue.splice(i,1); document.getElementById('batchOut').textContent='Batch: '+batchQueue.length+' song(s) total.'; batchRenderList(); };
-    row.appendChild(name); row.appendChild(audio); row.appendChild(dl); row.appendChild(rm); el.appendChild(row);
+    row.appendChild(name); row.appendChild(playBtn); row.appendChild(audio); row.appendChild(dl); row.appendChild(rm); el.appendChild(row);
   });
 }
 document.getElementById('batchChooseBtn').onclick=()=>document.getElementById('batchInput').click();
@@ -246,7 +253,12 @@ async function playAllBatch(){
     var name = document.createElement('span'); name.style.cssText = 'font-weight:700;flex:1 1 180px'; name.textContent = (i+1) + '. MASTERED — ' + q.file.name;
     var audio = document.createElement('audio'); audio.controls = true; audio.preload = 'metadata'; audio.src = q.masterUrl; audio._name = q.file.name; audio.style.cssText = 'flex:1 1 220px;max-width:320px';
     audio.addEventListener('play', function(){ playAllState.index = i; });
-    row.appendChild(name); row.appendChild(audio); list.appendChild(row);
+    audio.onended = function(){ if(playAllState.playing) playAllNext(i+1); };
+    // OG-style Play button on EVERY mastered preview too — tapping it
+    // starts the consecutive sequence from that song, not just that one.
+    var playBtn = document.createElement('button'); playBtn.textContent = '▶ Play';
+    playBtn.onclick = function(){ playAllState.playing = true; playAllNext(i); };
+    row.appendChild(name); row.appendChild(playBtn); row.appendChild(audio); list.appendChild(row);
     playAllState.audios.push(audio);
   });
   out.textContent = 'All ' + batchQueue.length + ' mastered preview(s) ready — playing in order, consecutively.';
