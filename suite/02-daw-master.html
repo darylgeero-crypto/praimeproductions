@@ -95,7 +95,23 @@ document.getElementById('playLast').onclick=async ()=>{ if(!lastRenderedBlob){ d
 
 // ---- Batch upload & ZIP download (restored from the original Master suite) ----
 let batchQueue=[];
-function batchRenderList(){ const el=document.getElementById('batchList'); if(!el) return; el.textContent=batchQueue.length?batchQueue.map((q,i)=>(i+1)+'. '+q.file.name+' — '+(q.status||'queued')).join('\n'):'No batch loaded yet.'; }
+function batchRenderList(){
+  // Listed previews like the OG asset list: every batch track gets its own
+  // playable preview, an individual download, and a remove button — not
+  // just a text line. The two ZIP options below still bundle the whole batch.
+  const el=document.getElementById('batchList'); if(!el) return;
+  el.textContent='';
+  if(!batchQueue.length){ el.textContent='No batch loaded yet.'; return; }
+  batchQueue.forEach((q,i)=>{
+    if(!q.url) q.url=URL.createObjectURL(q.file);
+    const row=document.createElement('div'); row.style.cssText='display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)';
+    const name=document.createElement('span'); name.style.cssText='font-weight:700;flex:1 1 180px'; name.textContent=(i+1)+'. '+q.file.name+' — '+((q.file.size/1048576).toFixed(1))+' MB — '+(q.status||'queued');
+    const audio=document.createElement('audio'); audio.controls=true; audio.preload='metadata'; audio.src=q.url; audio.style.cssText='flex:1 1 220px;max-width:320px';
+    const dl=document.createElement('button'); dl.className='secondary'; dl.textContent='⬇ Download'; dl.onclick=()=>{ const a=document.createElement('a'); a.href=q.url; a.download=q.file.name; a.click(); };
+    const rm=document.createElement('button'); rm.className='secondary'; rm.textContent='✕ Remove'; rm.onclick=()=>{ batchQueue.splice(i,1); document.getElementById('batchOut').textContent='Batch: '+batchQueue.length+' song(s) total.'; batchRenderList(); };
+    row.appendChild(name); row.appendChild(audio); row.appendChild(dl); row.appendChild(rm); el.appendChild(row);
+  });
+}
 document.getElementById('batchChooseBtn').onclick=()=>document.getElementById('batchInput').click();
 document.getElementById('batchAddBtn').onclick=()=>document.getElementById('batchInput').click();
 document.getElementById('batchClearBtn').onclick=()=>{ batchQueue=[]; document.getElementById('batchInput').value=''; document.getElementById('batchOut').textContent='Batch cleared.'; batchRenderList(); };
