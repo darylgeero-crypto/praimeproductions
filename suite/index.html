@@ -121,7 +121,7 @@ function setBus(o){ const b=Object.assign(getBus(),o); localStorage.setItem('pra
 function showBus(el){ const b=getBus(); if(el) el.textContent='Prompt: '+(b.prompt||'—')+' | Genre: '+(b.genre||'—')+' | BPM: '+(b.bpm||'—')+' | Key: '+(b.key||'—')+' | Profile: '+(b.profile||'Daryl'); }
 
 const b=getBus(); document.getElementById('prompt').value=b.prompt||''; document.getElementById('genre').value=b.genre||'Boom Bap'; document.getElementById('bpm').value=b.bpm||90; document.getElementById('key').value=b.key||'C Minor'; document.getElementById('profile').value=b.profile||'Daryl'; showBus(document.getElementById('busOut'));
-function save(){ const nb=setBus({prompt:document.getElementById('prompt').value,genre:document.getElementById('genre').value,bpm:document.getElementById('bpm').value,key:document.getElementById('key').value,profile:document.getElementById('profile').value}); showBus(document.getElementById('busOut')); return nb; }
+function save(){ const nb=setBus({prompt:document.getElementById('prompt').value,genre:document.getElementById('genre').value,bpm:document.getElementById('bpm').value,key:document.getElementById('key').value,profile:document.getElementById('profile').value}); showBus(document.getElementById('busOut')); document.getElementById('busOut').textContent += ' · Saved ✓ ' + new Date().toLocaleTimeString(); return nb; }
 document.getElementById('saveOnly').onclick=save;
 document.getElementById('save').onclick=()=>{ save(); location.href='02-daw-master.html'; };
 

@@ -22,7 +22,7 @@ a{color:#7ee2ff}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main><h1>File Commander</h1><p><span class="badge">Separate page 7 of 10</span></p><div class="card"><h2>Library — upload, play, download, delete</h2><p>Files are kept in this page session (object URLs). Use Download Manifest to export a real JSON list of everything in the library.</p>
 <button id="chooseBtn">📁 Add files</button><input type="file" id="fileInput" multiple accept="audio/*,video/*,image/*,.txt,.json">
 <input id="filter" placeholder="Filter library by name...">
-<div id="list"></div><button id="manifest">Download manifest .JSON</button>
+<div id="list"></div><button id="manifest">Download manifest .JSON</button><div class="status" id="manifestOut"></div>
 <div class="status" id="out"></div><audio id="player" controls style="width:100%;margin-top:12px"></audio></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
@@ -41,7 +41,7 @@ function render(){ const q=document.getElementById('filter').value.toLowerCase()
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange=e=>{ [...e.target.files].forEach(f=>files.push({name:f.name,size:f.size,type:f.type,url:URL.createObjectURL(f)})); render(); };
 document.getElementById('filter').oninput=render;
-document.getElementById('manifest').onclick=()=>{ const blob=new Blob([JSON.stringify(files.map(f=>({name:f.name,size:f.size,type:f.type})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-manifest.json'; a.click(); };
+document.getElementById('manifest').onclick=()=>{ const blob=new Blob([JSON.stringify(files.map(f=>({name:f.name,size:f.size,type:f.type})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-manifest.json'; a.click(); document.getElementById('manifestOut').textContent='Manifest downloaded: praime-library-manifest.json ('+files.length+' files).'; };
 render();
 
 // ---- Rokdabus Prhyme widget ----
@@ -227,4 +227,5 @@ document.addEventListener('click', function(e){
   }catch(err){}
 }, true);
 </script>
+<script src="real-sounds.js"></script>
 </body></html>
