@@ -1,0 +1,123 @@
+<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>PrAIme — Analytics</title><style>body{font-family:'Inter',system-ui,sans-serif;background:#07090e;color:#f3f4f6;margin:0}
+header{position:sticky;top:0;z-index:40;background:rgba(15,20,32,.75);backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,.1)}
+.hi{max-width:900px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);display:flex;align-items:center;justify-content:center;font-size:22px}
+.grad{background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(0,243,255,.1);color:#00f3ff;border:1px solid rgba(0,243,255,.3);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+nav a{color:#e8eef4;text-decoration:none;font-size:13px;margin-right:10px}
+main{max-width:900px;margin:0 auto;padding:24px 20px 40px}
+.card{background:rgba(15,20,32,.75);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:20px;margin:16px 0}
+button{padding:11px 18px;border-radius:12px;border:0;background:linear-gradient(135deg,#00f3ff,#9d4edd);color:#fff;font-weight:700;margin:4px 6px 4px 0;cursor:pointer}
+button.secondary{background:#1e293b}
+input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:#07090e;color:#fff;box-sizing:border-box;margin:6px 0}
+label{font-weight:600;display:block;margin-top:10px}
+.status{background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;white-space:pre-wrap}
+small{color:#9ca3af} a{color:#7ee2ff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.stat{background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px}
+.stat b{font-size:1.6rem;display:block}
+.bar{height:12px;background:#1e293b;border-radius:99px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585)}
+#rokBtn{position:fixed;right:16px;bottom:16px;z-index:9999;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);color:#fff;font-size:28px;border:2px solid #fff;cursor:pointer;box-shadow:0 0 20px rgba(157,78,221,.6)}
+#rokPanel{position:fixed;right:16px;bottom:92px;z-index:9999;width:min(360px,92vw);max-height:70vh;overflow:auto;background:rgba(15,20,32,.97);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:14px;display:none}
+#rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
+</style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a><a href="22-analytics.html">Analytics</a></nav></div></header><main>
+<h1>Analytics — PrAIme Productions</h1>
+<p style="color:#9ca3af">Analytics on this page is private to each visitor: you see only your own entries, saved in this browser. Other visitors see only their own content's figures, never yours. Public catalogue prices and live server status are the only shared figures here — they are not personal analytics.</p>
+
+<div class="card"><h2>Private to you — by design</h2>
+<p><b>You see only your own analytics here, and no one else sees yours.</b> Every number on this page (except public catalogue prices and live server status) is saved in <i>this browser only</i> (localStorage). There is no shared server analytics account, and PrAIme does not pull or publish another user's figures. If someone else opens this page on their device, they start empty and see only whatever <i>they</i> enter for <i>their own</i> content — never your ads, sales, or followers. Likewise, your figures here are never sent to PrAIme's server.</p></div>
+
+<div class="card"><h2>Live server health</h2>
+<p id="healthStatus" class="status">Checking https://praimeproductions.onrender.com/api/health …</p>
+<button id="healthBtn">↻ Refresh health check</button>
+<p><small>This check never shows secrets. It only reports whether the server is live, whether PayPal is configured, and how many orders are verified in memory.</small></p></div>
+
+<div class="card"><h2>Catalogue</h2>
+<p>Trap / Lo-Fi / House Kits $9.99 each (14 sounds each) · Brass, Strings, Woodwinds, Keys &amp; Guitars $14.99 each · Instrument Kit $29.99 (551 sounds) · All-In Kit $49.99 (1,117 sounds)<br>
+Beat leases: MP3 $9.99 · WAV $19.99 · Trackout $49.99 · Unlimited $99.99 · Exclusive $199<br>
+Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · Video Render $1.99 per finished download · Lifetime Access $4,999</p>
+<div>Trap/Lo-Fi/House <div class="bar"><i style="width:14%"></i></div></div>
+<div>Instrument <div class="bar"><i style="width:50%"></i></div></div>
+<div>All-In <div class="bar"><i style="width:100%"></i></div></div>
+<p><small>Bars are relative kit sizes (All-In = 100%), not sales.</small></p></div>
+
+<div class="card"><h2>Ad impact — your content only</h2>
+<p>Enter figures only for content <i>you</i> posted. These numbers are yours only: they are saved in this browser (localStorage) and are <b>not</b> published on the site or sent to PrAIme's server.</p>
+<p><small>On Daryl's device, the 6 launch ads are pre-listed below as a starting point. On anyone else's device, these same rows start empty — they enter their own content's figures, and never see Daryl's numbers.</small></p>
+<div id="adTable"></div>
+<p id="adTotals" class="status"></p>
+<button id="saveAds">Save ad numbers</button></div>
+
+<div class="card"><h2>Your numbers — manual entry, saved locally</h2>
+<p>Enter what you see on each platform. These are saved in this browser only (localStorage), they are not sent to PrAIme's server.</p>
+<label>Instagram followers</label><input id="ig" type="number" placeholder="0">
+<label>X followers</label><input id="x" type="number" placeholder="0">
+<label>Facebook followers</label><input id="fb" type="number" placeholder="0">
+<label>TikTok followers — @daryl.jackson.rap</label><input id="tt" type="number" placeholder="0">
+<label>Beat / kit sales to date</label><input id="sales" type="number" placeholder="0">
+<label>Total sales value (USD)</label><input id="rev" type="number" placeholder="0">
+<button id="saveAnalytics">Save my numbers</button>
+<p id="analyticsStatus" class="status">Not saved yet on this device.</p></div>
+
+<div class="card"><h2>This device</h2>
+<p id="localStatus" class="status"></p>
+<p><small>Terms accepted on this device: shown below if the first-run popup has been accepted here. Clearing browser data resets it, and the Terms popup will show again on first run.</small></p></div>
+
+<button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
+<div id="rokPanel">
+<div style="font-weight:800">Rokdabus Prhyme</div>
+<div id="rokLog">Analytics help: this page shows live server health and your manual social/sales numbers. It does not fake live platform analytics — enter those yourself and they stay local.</div>
+<input id="rokInput" placeholder="Ask Rokdabus...">
+<div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button></div>
+</div></main><script>
+function loadHealth(){ var el=document.getElementById('healthStatus'); el.textContent='Checking…'; fetch('https://praimeproductions.onrender.com/api/health').then(function(r){ return r.json(); }).then(function(j){ el.textContent='Live: ok='+j.ok+' · mode='+j.mode+' · PayPal configured='+j.paypal_configured+' · delivery secret persistent='+j.delivery_secret_persistent+' · verified orders in memory='+j.verified_orders_in_memory; }).catch(function(){ el.textContent='Health check could not be reached from this browser. Try again, or open https://praimeproductions.onrender.com/api/health directly.'; }); }
+document.getElementById('healthBtn').onclick=loadHealth; loadHealth();
+(function(){
+  var ads=['Introducing','All-In Kit $49.99','Instrument Kit $29.99','Beats $9.99','Prime Your Music','Ultimate Mastering Suite'];
+  var tbl=document.getElementById('adTable');
+  ads.forEach(function(name,i){
+    var row=document.createElement('div');
+    row.innerHTML='<label>'+name+' — views</label><input id="adV'+i+'" type="number" placeholder="0"><label>'+name+' — link clicks</label><input id="adC'+i+'" type="number" placeholder="0"><label>'+name+' — sales from this ad</label><input id="adS'+i+'" type="number" placeholder="0">';
+    tbl.appendChild(row);
+    ['V','C','S'].forEach(function(t){ var v=localStorage.getItem('praime_ad_'+t+i); if(v!==null) document.getElementById('ad'+t+i).value=v; });
+  });
+  function totals(){ var v=0,c=0,s=0; ads.forEach(function(_,i){ v+=parseInt(document.getElementById('adV'+i).value||'0',10); c+=parseInt(document.getElementById('adC'+i).value||'0',10); s+=parseInt(document.getElementById('adS'+i).value||'0',10); }); document.getElementById('adTotals').textContent='Totals — views: '+v+' · link clicks: '+c+' · sales: '+s+(c? ' · click-to-sale: '+(s/c*100).toFixed(1)+'%':''); }
+  document.getElementById('saveAds').onclick=function(){ ads.forEach(function(_,i){ ['V','C','S'].forEach(function(t){ localStorage.setItem('praime_ad_'+t+i, document.getElementById('ad'+t+i).value||'0'); }); }); totals(); };
+  totals();
+})();
+try{
+  var keys=['ig','x','fb','tt','sales','rev'];
+  keys.forEach(function(k){ var v=localStorage.getItem('praime_analytics_'+k); if(v!==null) document.getElementById(k).value=v; });
+  document.getElementById('saveAnalytics').onclick=function(){ keys.forEach(function(k){ localStorage.setItem('praime_analytics_'+k, document.getElementById(k).value||'0'); }); document.getElementById('analyticsStatus').textContent='Saved locally on this device at '+new Date().toLocaleString()+'.'; };
+  var tos=localStorage.getItem('praime_tos_accepted'), at=localStorage.getItem('praime_tos_accepted_at');
+  document.getElementById('localStatus').textContent='Terms accepted on this device: '+(tos==='1' ? 'Yes'+(at ? ' ('+at+')' : '') : 'No — the Terms popup will show on first run.')+'\nAnalytics visits on this device: '+(function(){ var n=parseInt(localStorage.getItem('praime_analytics_visits')||'0',10)+1; localStorage.setItem('praime_analytics_visits', String(n)); return n; })();
+}catch(e){ document.getElementById('localStatus').textContent='Local storage is not available in this browser, so manual numbers cannot be saved here.'; }
+(function(){
+  var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
+  if(!btn||!panel) return; btn.onclick=function(){ panel.style.display = panel.style.display==='block' ? 'none' : 'block'; };
+  document.getElementById('rokSend').onclick=function(){ var inp=document.getElementById('rokInput'); if(!inp||!inp.value) return; log.textContent += '\n\nYou: '+inp.value+'\n\nRokdabus: Analytics on this page is honest — live server health, plus your own manual social and sales numbers, saved locally. I do not fake platform follower counts.'; inp.value=''; };
+})();
+</script><script>
+// PrAIme content:// link fix — MUST be included in every suite page, in every future iteration.
+// Why: When a page is opened via Samsung My Files, Chrome gets a content:// URI.
+// Relative links (e.g. Hub -> 02-daw-master.html) cannot be resolved under content://,
+// so every nav link breaks with ERR_FILE_NOT_FOUND, even though the files are present.
+// Fix: if this page was opened via content://, intercept any internal .html link click
+// and redirect it to the real file:// location on the phone. Once on a file:// page,
+// normal relative links work again, so this only needs to fire on the first hop.
+document.addEventListener('click', function(e){
+  try{
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if(!a) return;
+    var href = a.getAttribute('href');
+    if(!href || href.indexOf('http')===0 || href.indexOf('#')===0 || href.indexOf('mailto:')===0) return;
+    if(location.protocol==='content:' && href.indexOf('.html')>=0){
+      e.preventDefault();
+      var file = href.split('/').pop().split('#')[0].split('?')[0];
+      location.href = 'file:///storage/emulated/0/Download/Praime%20PRODUCTIONSNEMIC/suite/' + file;
+    }
+  }catch(err){}
+}, true);
+</script>
+</body></html>

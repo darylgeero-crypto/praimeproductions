@@ -34,6 +34,10 @@ a{color:#7ee2ff}
 #introGate{position:fixed;inset:0;z-index:10000;background:#07090d;color:#e8f4f1;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;transition:opacity .55s,visibility .55s}
 #introGate{position:fixed;inset:0;z-index:10000;background:#07090d;color:#e8f4f1;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;transition:opacity .55s,visibility .55s}
 #introGate.gone{opacity:0;visibility:hidden;pointer-events:none}
+#tosGate{position:fixed;inset:0;z-index:10001;background:rgba(7,9,14,.97);color:#e8f4f1;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto}
+#tosGate.gone{display:none}
+.tos-in{max-width:640px;padding:40px 20px;text-align:left}
+.tos-in .card{text-align:left}
 .gate-in{max-width:640px;padding:40px 20px;text-align:center}
 .disc{width:160px;height:160px;margin:20px auto;border-radius:50%;background:radial-gradient(circle at 50% 50%, #9d4edd 0 20%, #07090e 21% 45%, #00f3ff 46% 48%, #07090e 49%);animation:spin 4s linear infinite;box-shadow:0 0 30px rgba(0,243,255,.4)}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -91,6 +95,16 @@ a{color:#7ee2ff}
 <button id="gateSilent" class="secondary">Enter without sound</button>
 <button id="gatePlayIntro" class="secondary">▶ Play intro voice-over only</button>
 <p id="gateStatus" style="font-size:12px;color:#9ca3af"></p>
+</div>
+</div>
+<div id="tosGate" role="dialog" aria-modal="true" aria-label="PrAIme Productions Terms of Service" style="display:none">
+<div class="tos-in">
+<h1 style="font-size:1.6rem">Pr<span class="grad">AI</span>me™ Productions — Terms of Service</h1>
+<div class="card"><p>By using PrAIme you agree to be bound by the Terms of Service. In short: your creations stay yours; unpaid beats, masters, and renders stay PrAIme's until paid, with no licence until verified payment; beat licences are MP3 $9.99, WAV $19.99, Trackout $49.99, Unlimited $99.99, Exclusive $199; soundkits are licensed for use in your tracks, not for resale of the raw sounds; payments are via PayPal; the service is provided "as is"; and Alberta, Canada law governs.</p>
+<p><a href="18-tos.html" target="_blank" rel="noopener">Read the full Terms of Service</a> — the full 15-section Terms govern, this popup is only a summary.</p></div>
+<button id="tosAccept">✓ I accept the Terms of Service</button>
+<button id="tosDecline" class="secondary">I do not accept</button>
+<p id="tosStatus" style="font-size:12px;color:#9ca3af"></p>
 </div>
 </div>
 <main><h1>Universal Hub</h1><button id="replayIntro">▶ Replay intro</button><p><span class="badge">Separate page 1 of 10</span></p><div class="card"><h2>Shared state bus — actually saved</h2><p>This hub does not just show an alert. It saves your prompt, genre, BPM, key and profile to localStorage, so the other separate pages can read the same bus when you open them.</p>
@@ -279,6 +293,19 @@ document.getElementById('gateEnter').onclick=function(){ startIntroVisual(); win
 document.getElementById('gateSilent').onclick=function(){ try{ window.speechSynthesis.cancel(); }catch(e){} document.getElementById('introGate').classList.add('gone'); };
 document.getElementById('gatePlayIntro').onclick=function(){ startIntroVisual(); window.praimePlayIntro(); };
 var rp=document.getElementById('replayIntro'); if(rp) rp.onclick=function(){ var g=document.getElementById('introGate'); if(g) g.classList.remove('gone'); startIntroVisual(); window.praimePlayIntro(function(){ if(g) g.classList.add('gone'); }); };
+// ---- First-run Terms popup + automatic intro ----
+(function(){
+  var tosGate=document.getElementById('tosGate'), introGate=document.getElementById('introGate');
+  if(!tosGate||!introGate) return;
+  function autoIntro(){ startIntroVisual(); window.praimePlayIntro(function(){ introGate.classList.add('gone'); }); }
+  function showTos(){ tosGate.style.display='flex'; introGate.classList.add('gone'); }
+  var accepted=false; try{ accepted=(localStorage.getItem('praime_tos_accepted')==='1'); }catch(e){}
+  var acc=document.getElementById('tosAccept'), dec=document.getElementById('tosDecline'), st=document.getElementById('tosStatus');
+  if(acc) acc.onclick=function(){ try{ localStorage.setItem('praime_tos_accepted','1'); localStorage.setItem('praime_tos_accepted_at', new Date().toISOString()); }catch(e){} tosGate.classList.add('gone'); tosGate.style.display='none'; introGate.classList.remove('gone'); autoIntro(); };
+  if(dec) dec.onclick=function(){ if(st) st.textContent='You need to accept the Terms of Service to use PrAIme. The full Terms are linked above.'; };
+  if(!accepted){ showTos(); }
+  else { autoIntro(); }
+})();
 </script>
 </main><script>
 // PrAIme floating music notes — background, randomly generated, 1.5s float + dissolve
