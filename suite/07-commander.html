@@ -37,7 +37,7 @@ a{color:#7ee2ff}
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
 <div style="font-size:12px;color:#9ca3af">Rhyming studio guide for PrAIme Productions. Text or voice prompts. I explain every feature, walk you through creation end to end, and in the DAW I can auto-select mastering levels from real song analysis.</div>
 <div id="rokLog">Welcome to the suite, where the rhythms stay tight — we master all the audio and rock through the night! Ask me: "what does this page do?", "walk me through", "auto master", "what is LUFS?", "go to lyrics", "set BPM to 120".</div>
-<input id="rokInput" placeholder="Ask Rokdabus, or give a command...">
+<input id="rokInput" placeholder="Ask Rokdabus, or give a command... (Up/Down arrows recall past commands)">
 <div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button><button id="rokWalk" class="secondary">Walk me through</button><button id="rokIntro" class="secondary">▶ Play intro</button><button id="rokAuto" class="secondary">Auto-master this song</button><button id="rokRhyme" class="secondary">🎤 Rhyme it</button></div>
 <label style="font-size:12px">Ollama in Termux (optional, on your phone only)</label>
 <input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
@@ -232,8 +232,10 @@ document.getElementById('player').addEventListener('play', function(){ praimeEqE
     if(kb){ say(kb+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer.)'); return; }
     say('I can help with PrAIme and music theory: try "walk me through", "what is LUFS?", "what is compression?", "auto master" on the DAW page, or "go to lyrics". If Ollama is running in Termux, set its URL and model above and ask again — otherwise I answer from my built-in knowledge.');
   }
-  document.getElementById('rokSend').onclick=function(){ var inp=document.getElementById('rokInput'); ask(inp.value); inp.value=''; };
-  document.getElementById('rokInput').onkeydown=function(e){ if(e.key==='Enter'){ ask(e.target.value); e.target.value=''; } };
+  var rokHist=[], rokHistIdx=-1;
+  function rokPushHist(v){ if(v && (rokHist.length===0||rokHist[rokHist.length-1]!==v)) rokHist.push(v); rokHistIdx=-1; }
+  document.getElementById('rokSend').onclick=function(){ var inp=document.getElementById('rokInput'); rokPushHist(inp.value); ask(inp.value); inp.value=''; };
+  document.getElementById('rokInput').onkeydown=function(e){ if(e.key==='Enter'){ rokPushHist(e.target.value); ask(e.target.value); e.target.value=''; } else if(e.key==='ArrowUp'){ if(!rokHist.length) return; e.preventDefault(); if(rokHistIdx===-1) rokHistIdx=rokHist.length; rokHistIdx=Math.max(0,rokHistIdx-1); e.target.value=rokHist[rokHistIdx]; } else if(e.key==='ArrowDown'){ if(rokHistIdx===-1) return; e.preventDefault(); rokHistIdx++; if(rokHistIdx>=rokHist.length){ rokHistIdx=-1; e.target.value=''; } else e.target.value=rokHist[rokHistIdx]; } };
   document.getElementById('rokWalk').onclick=function(){ say(walk()); };
   var ri=document.getElementById('rokIntro'); if(ri) ri.onclick=function(){ if(typeof window.praimePlayIntro==='function'){ window.praimePlayIntro(); say('Playing the PrAIme Productions intro — Prime sung high, Productions dropped low.'); } else { if('speechSynthesis' in window){ try{ window.speechSynthesis.cancel(); var u1=new SpeechSynthesisUtterance('Prime'); u1.pitch=1.6; window.speechSynthesis.speak(u1); setTimeout(function(){ var u2=new SpeechSynthesisUtterance('Productions'); u2.pitch=0.55; window.speechSynthesis.speak(u2); },1200); setTimeout(function(){ var u3=new SpeechSynthesisUtterance('Welcome to Prime Productions. I am Rock Day Bus. I help you create.'); window.speechSynthesis.speak(u3); },2600); say('Playing the PrAIme Productions intro.'); }catch(e){ say('Speech is not available in this browser.'); } } else { say('Speech is not available in this browser.'); } } };
   document.getElementById('rokAuto').onclick=function(){ ask('auto master'); }; document.getElementById('rokRhyme').onclick=function(){ say('I am Rokdabus Prhyme, the octopus on time, eight tentacles on the decks, dropping beats that shine. I master every track, I never fall behind, PrAIme in the place, let the rhythm unwind.'); };
@@ -241,7 +243,7 @@ document.getElementById('player').addEventListener('play', function(){ praimeEqE
   voiceBtn.onclick=function(){
     var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR){ say('Voice prompts need Chrome on Android with SpeechRecognition. In this browser it is not available, so use text prompts here instead.'); return; }
-    var rec=new SR(); rec.lang='en-US'; rec.onresult=function(ev){ var t=ev.results[0][0].transcript; document.getElementById('rokInput').value=t; ask(t); }; rec.onerror=function(ev){ say('Voice prompt failed: '+(ev.error||'unknown error')+'. Try text instead.'); }; rec.start(); say('Listening… speak now.');
+    var rec=new SR(); rec.lang='en-US'; rec.onresult=function(ev){ var t=ev.results[0][0].transcript; document.getElementById('rokInput').value=t; rokPushHist(t); ask(t); }; rec.onerror=function(ev){ say('Voice prompt failed: '+(ev.error||'unknown error')+'. Try text instead.'); }; rec.start(); say('Listening… speak now.');
   };
   // Expose for DAW auto-master to report back
   window.rokdabusSay=say;
