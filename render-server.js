@@ -63,8 +63,8 @@ const TOKEN_SECRET_PERSISTENT = !!process.env.TOKEN_SECRET;
 // and why a durable database is the next step for production.
 const TOKEN_LEDGER_DIR = path.join(__dirname, 'data');
 const TOKEN_LEDGER_FILE = path.join(TOKEN_LEDGER_DIR, 'founder-tokens.json');
-let tokenLedger = {nextNumber:1, tokens:[]};
-try { fs.mkdirSync(TOKEN_LEDGER_DIR, {recursive:true}); const raw=fs.readFileSync(TOKEN_LEDGER_FILE,'utf8'); const j=JSON.parse(raw); if(j && Array.isArray(j.tokens) && Number.isInteger(j.nextNumber)) tokenLedger=j; } catch(e) {}
+let tokenLedger = {nextNumber:1, tokens:[], pending:[]};
+try { fs.mkdirSync(TOKEN_LEDGER_DIR, {recursive:true}); const raw=fs.readFileSync(TOKEN_LEDGER_FILE,'utf8'); const j=JSON.parse(raw); if(j && Array.isArray(j.tokens) && Number.isInteger(j.nextNumber)) { tokenLedger=j; if(!Array.isArray(tokenLedger.pending)) tokenLedger.pending=[]; } } catch(e) {}
 function saveTokenLedger(){ try { fs.mkdirSync(TOKEN_LEDGER_DIR, {recursive:true}); const tmp=TOKEN_LEDGER_FILE+'.tmp'; fs.writeFileSync(tmp, JSON.stringify(tokenLedger)); fs.renameSync(tmp, TOKEN_LEDGER_FILE); } catch(e) {} }
 function emailHash(email){ return crypto.createHash('sha256').update(String(email||'').trim().toLowerCase()).digest('hex'); }
 function pad3(n){ return String(n).padStart(3,'0'); }
@@ -83,6 +83,48 @@ const tokenIpBlocks = new Map(); // ipHash -> {blockedUntil, fails:[timestamps]}
 function tokenIpBlocked(ip){ const b=tokenIpBlocks.get(ipHash(ip)); return !!(b && Date.now() < b.blockedUntil); }
 function tokenIpFail(ip){ const h=ipHash(ip); const now=Date.now(); const b=tokenIpBlocks.get(h)||{blockedUntil:0, fails:[]}; b.fails=b.fails.filter(t=>now-t<3600000); b.fails.push(now); if(b.fails.length>=10) b.blockedUntil=now+86400000; tokenIpBlocks.set(h,b); }
 function reqIp(req){ return req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : (req.socket.remoteAddress||''); }
+// ---- Email verification delivery ----
+// A code is NEVER returned in an API response and NEVER shown on the page.
+// It is sent only to the claimed email address, and only its SHA-256 hash
+// is stored. Delivery needs ONE of, set in Render env only:
+//   RESEND_API_KEY (Resend, https://resend.com — free tier works), or
+//   SMTP_HOST + SMTP_PORT + SMTP_USER + SMTP_PASS (+ SMTP_FROM).
+// If neither is configured, claim refuses with email_delivery_not_configured
+// and NO token is issued — a fake email cannot verify itself.
+async function sendVerificationEmail(to, code){
+  const subject = 'Your PrAIme Founder Token verification code';
+  const text = 'Your PrAIme Productions Founder Token verification code is: ' + code + '\nIt expires in 15 minutes. If you did not request this, ignore this email.';
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const r = await fetch('https://api.resend.com/emails', {method:'POST', headers:{'Authorization':'Bearer ' + process.env.RESEND_API_KEY, 'Content-Type':'application/json'}, body:JSON.stringify({from: process.env.SMTP_FROM || 'PrAIme Productions <onboarding@resend.dev>', to:[to], subject, text})});
+      return r.ok;
+    } catch(e) { return false; }
+  }
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    // Minimal SMTP client (no dependencies): EHLO, AUTH LOGIN, MAIL/RCPT/DATA.
+    try {
+      const tls = require('tls');
+      const host = process.env.SMTP_HOST, port = parseInt(process.env.SMTP_PORT || '465', 10);
+      const sock = await new Promise((res, rej) => { const c = tls.connect(port, host, {}, () => res(c)); c.on('error', rej); });
+      const read = () => new Promise((res) => { let buf=''; const on=(d)=>{ buf+=d.toString(); if(buf.includes('\r\n')){ sock.off('data', on); res(buf); } }; sock.on('data', on); });
+      const cmd = async (line) => { sock.write(line + '\r\n'); return await read(); };
+      await read();
+      await cmd('EHLO praimeproductions.onrender.com');
+      await cmd('AUTH LOGIN');
+      await cmd(Buffer.from(process.env.SMTP_USER).toString('base64'));
+      await cmd(Buffer.from(process.env.SMTP_PASS).toString('base64'));
+      await cmd('MAIL FROM:<' + (process.env.SMTP_USER) + '>');
+      await cmd('RCPT TO:<' + to + '>');
+      await cmd('DATA');
+      sock.write('From: ' + (process.env.SMTP_FROM || process.env.SMTP_USER) + '\r\nTo: ' + to + '\r\nSubject: ' + subject + '\r\n\r\n' + text + '\r\n.\r\n');
+      await read();
+      sock.write('QUIT\r\n'); sock.end();
+      return true;
+    } catch(e) { return false; }
+  }
+  return false;
+}
+function emailDeliveryConfigured(){ return !!(process.env.RESEND_API_KEY || (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)); }
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://praime-productions.onrender.com').split(',').map(s => s.trim()).filter(Boolean);
 
@@ -255,10 +297,40 @@ const server = http.createServer(async (req, res) => {
       const eHash = emailHash(email);
       if (tokenLedger.tokens.some(t=>t.emailHash===eHash && t.active)) { tokenIpFail(ip); sendJson(res, 409, {ok:false, error:'email_already_claimed'}); return; }
       if (tokenLedger.tokens.some(t=>t.ipHash===ipHash(ip))) { tokenIpFail(ip); sendJson(res, 409, {ok:false, error:'ip_already_claimed'}); return; }
+      // Expire old pendings, then block a second pending for same email/IP
+      tokenLedger.pending = tokenLedger.pending.filter(x=>Date.now() < x.expiresAt);
+      if (tokenLedger.pending.some(x=>x.emailHash===eHash)) { sendJson(res, 409, {ok:false, error:'verification_already_pending'}); return; }
+      if (tokenLedger.pending.some(x=>x.ipHash===ipHash(ip))) { sendJson(res, 409, {ok:false, error:'ip_already_claimed'}); return; }
+      if (!emailDeliveryConfigured()) { sendJson(res, 503, {ok:false, error:'email_delivery_not_configured'}); return; }
+      const code = String(Math.floor(100000 + Math.random()*900000));
+      const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+      tokenLedger.pending.push({emailHash:eHash, ipHash:ipHash(ip), codeHash, expiresAt:Date.now()+900000, attempts:0});
+      saveTokenLedger();
+      const sent = await sendVerificationEmail(email, code);
+      if (!sent) { tokenLedger.pending = tokenLedger.pending.filter(x=>x.emailHash!==eHash); saveTokenLedger(); sendJson(res, 502, {ok:false, error:'email_send_failed'}); return; }
+      sendJson(res, 200, {ok:true, pending:true, message:'verification_code_sent'});
+      return;
+    }
+    if (urlPath === '/api/token/verify-code' && req.method === 'POST') {
+      if (!TOKEN_SECRET_PERSISTENT) { sendJson(res, 503, {ok:false, error:'token_not_configured'}); return; }
+      let body; try { body = JSON.parse(await readBody(req, 2000)); } catch(e) { sendJson(res, 400, {ok:false, error:'bad_json'}); return; }
+      const email = String(body.email||'').trim().toLowerCase();
+      const code = String(body.code||'').trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(code)) { sendJson(res, 400, {ok:false, error:'bad_request'}); return; }
+      const eHash = emailHash(email);
+      const pend = tokenLedger.pending.find(x=>x.emailHash===eHash);
+      if (!pend) { sendJson(res, 200, {ok:false, error:'no_pending_verification'}); return; }
+      if (Date.now() >= pend.expiresAt) { tokenLedger.pending = tokenLedger.pending.filter(x=>x.emailHash!==eHash); saveTokenLedger(); sendJson(res, 200, {ok:false, error:'code_expired'}); return; }
+      if (pend.attempts >= 5) { tokenLedger.pending = tokenLedger.pending.filter(x=>x.emailHash!==eHash); saveTokenLedger(); sendJson(res, 200, {ok:false, error:'too_many_attempts'}); return; }
+      const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+      if (codeHash !== pend.codeHash) { pend.attempts++; saveTokenLedger(); sendJson(res, 200, {ok:false, error:'wrong_code'}); return; }
+      // Code correct: re-check the hard caps at issuance time, then issue.
+      if (tokenLedger.tokens.some(t=>t.emailHash===eHash && t.active) || tokenLedger.tokens.some(t=>t.ipHash===pend.ipHash)) { tokenLedger.pending = tokenLedger.pending.filter(x=>x.emailHash!==eHash); saveTokenLedger(); sendJson(res, 409, {ok:false, error:'already_claimed'}); return; }
       if (tokenLedger.nextNumber > 100) { sendJson(res, 409, {ok:false, error:'all_100_claimed'}); return; }
+      tokenLedger.pending = tokenLedger.pending.filter(x=>x.emailHash!==eHash);
       const number = tokenLedger.nextNumber++;
       const token = makeToken(number, eHash);
-      tokenLedger.tokens.push({number, emailHash:eHash, ipHash:ipHash(ip), tokenHash:crypto.createHash('sha256').update(token).digest('hex'), active:true, issuedAt:new Date().toISOString()});
+      tokenLedger.tokens.push({number, emailHash:eHash, ipHash:pend.ipHash, tokenHash:crypto.createHash('sha256').update(token).digest('hex'), active:true, issuedAt:new Date().toISOString(), emailVerified:true});
       saveTokenLedger();
       sendJson(res, 200, {ok:true, token, number, claimed:tokenLedger.nextNumber-1, remaining:Math.max(0, 100-(tokenLedger.nextNumber-1))});
       return;
