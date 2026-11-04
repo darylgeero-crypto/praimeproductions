@@ -121,11 +121,33 @@
   UnifiedRapEngine.prototype.getMultisyllabicPartner = function(base, exclude){
     exclude = exclude || {};
     var baseWord = (typeof base === 'string' ? base : base.word).toLowerCase();
+    var baseKey = (typeof base === 'string' ? null : base.key);
+    var self = this;
+    if(!baseKey){
+      for(var k = 0; k < self.parsedPool.length; k++){ if(self.parsedPool[k].word === baseWord){ baseKey = self.parsedPool[k].key; break; } }
+    }
     for(var i=0;i<MULTI.length;i++){
       var group = MULTI[i];
       var idx = group.indexOf(baseWord);
       if(idx >= 0){
-        var opts = group.filter(function(p){ return p !== baseWord && !exclude[p]; });
+        // Strict terminal check (2026-11-04): a partner is only a rhyme
+        // if its final word either is not in the pool at all (curated
+        // slant phrases like "four inch door hinge", "rock a bit") or
+        // shares the base word's rhyme key (e.g. "heavy ready" for a
+        // ready-family base). This kills the loose legacy/energy ->
+        // ready-group false rhymes while keeping every curated
+        // multisyllabic scheme intact; if no candidate survives, return
+        // null so lyricsMode retries with a word that has a real partner.
+        var opts = group.filter(function(p){
+          if(p === baseWord || exclude[p]) return false;
+          if(baseKey){
+            var finalWord = p.split(' ').pop().toLowerCase();
+            for(var j = 0; j < self.parsedPool.length; j++){
+              if(self.parsedPool[j].word === finalWord && self.parsedPool[j].key !== baseKey) return false;
+            }
+          }
+          return true;
+        });
         if(opts.length > 0){
           var p = opts[Math.floor(Math.random()*opts.length)];
           exclude[p] = true;
@@ -178,7 +200,36 @@
     var prefix = prefixes[Math.floor(Math.random()*prefixes.length)];
     return (prefix + " " + w1.word + " & " + w2.word).toUpperCase();
   };
-  UnifiedRapEngine.prototype.lyricsMode = function(){
+  UnifiedRapEngine.prototype.lyricsMode = function(theme){
+    // Theme shaping (2026-11-04, Gemini theme part, user-approved):
+    // A prompt/theme shapes the IMAGERY only, never the rhyme targets.
+    // Theme phrases are inserted mid-line, before the rhyme word, so the
+    // rhyme guarantee below (last word/phrase of each line) is unchanged.
+    // If no theme keyword matches, templates run exactly as before.
+    var THEMES = {
+      cosmic: {keys:['star','stars','moon','sky','space','cosmic','galaxy','planet'], phrases:['under midnight stars','through the endless sky','past the silent moon','beyond the farthest star']},
+      street: {keys:['street','city','edmonton','block','hood','concrete','downtown','nightlife'], phrases:['down these city streets','through the Edmonton nights','on the concrete block','under city lights']},
+      triumph: {keys:['win','crown','champion','victory','triumph','rise','coming up','champ'], phrases:['from the bottom to the crown','through every hard fight','past the doubters and the doubt','to the top where I belong']},
+      grind: {keys:['grind','hustle','work','night shift','money','shift'], phrases:['grinding through the night shift','working while the city sleeps','hustling through the long days','putting in the work again']},
+      faith: {keys:['faith','god','grace','prayer','church','christian','saviour','savior','blessed'], phrases:['walking by faith','through the grace I found','with a prayer on my lips','standing on what I believe']},
+      introspection: {keys:['heart','memory','memories','mind','lonely','quiet','dream','introspect'], phrases:['inside my own mind','through the memories I keep','in the quiet after midnight','from the heart where it began']}
+    };
+    var themePhrases = null;
+    if(theme){
+      var low = String(theme).toLowerCase();
+      var names = Object.keys(THEMES);
+      for(var ti = 0; ti < names.length; ti++){
+        var th = THEMES[names[ti]];
+        for(var ki = 0; ki < th.keys.length; ki++){
+          if(low.indexOf(th.keys[ki]) >= 0){ themePhrases = th.phrases; break; }
+        }
+        if(themePhrases) break;
+      }
+    }
+    var themePhrase = function(){
+      if(!themePhrases) return '';
+      return themePhrases[Math.floor(Math.random() * themePhrases.length)] + ', ';
+    };
     // Gemini full song: 4 couplets, each couplet rhymes (wordA -> wordB rhyme partner)
     // Retry rule: if wordA has no perfect or multisyllabic partner (singleton
     // family), discard it and try another word — never pair it with a
@@ -201,24 +252,26 @@
       ["impossible", "unstoppable"],
       ["orange", "four inch door hinge"],
       ["chocolate", "rock a bit"],
-      ["elephant", "relevant"]
+      ["elephant", "relevant"],
+      ["cipher session", "higher tension"]
     ];
     // Varied line templates (2026-11-04): one sentence pair per couplet,
     // rotated so a generation never repeats the same two sentences.
     // The rhyme target stays the last word/phrase of each line, so the
     // rhyme guarantee below is unchanged.
     var TEMPLATES = [
-      ["When the bass drops down and I secure the {a},", "Every single bar is shining bright and {b}."],
-      ["I put my heart in the {a},", "And I keep rising through the {b}."],
-      ["No turning back, I'm chasing the {a},", "Every step I take is leading to the {b}."],
-      ["I built this sound around the {a},", "Now the whole room echoes with the {b}."]
+      ["{t}When the bass drops down and I secure the {a},", "{t}Every single bar is shining bright and {b}."],
+      ["{t}I put my heart in the {a},", "{t}And I keep rising through the {b}."],
+      ["{t}No turning back, I'm chasing the {a},", "{t}Every step I take is leading to the {b}."],
+      ["{t}I built this sound around the {a},", "{t}Now the whole room echoes with the {b}."]
     ];
     for(var i=0;i<4;i++){
       var tpl = TEMPLATES[i % TEMPLATES.length];
+      var tPhrase = themePhrase();
       if(i === 1){
         var scheme = MULTI_SCHEMES[Math.floor(Math.random() * MULTI_SCHEMES.length)];
-        lines.push(tpl[0].replace("{a}", scheme[0]));
-        lines.push(tpl[1].replace("{b}", scheme[1]));
+        lines.push(tpl[0].replace("{t}", tPhrase).replace("{a}", scheme[0]));
+        lines.push(tpl[1].replace("{t}", tPhrase).replace("{b}", scheme[1]));
         continue;
       }
       var wordA = null, wordB = null, tries = 0, self = this;
@@ -245,8 +298,8 @@
         // Last-resort known rhyming pair, so a couplet is never left unrhyme
         wordA = {word:"night", key:"AY-T"}; wordB = {word:"light", key:"AY-T"};
       }
-      lines.push(tpl[0].replace("{a}", wordA.word));
-      lines.push(tpl[1].replace("{b}", wordB.word));
+      lines.push(tpl[0].replace("{t}", tPhrase).replace("{a}", wordA.word));
+      lines.push(tpl[1].replace("{t}", tPhrase).replace("{b}", wordB.word));
     }
     return lines;
   };
