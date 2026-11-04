@@ -29,9 +29,26 @@
     var m=p.match(/(\d{2,3})\s*bpm/); var bpm=m?parseInt(m[1],10):GENRE_BPM[genre];
     return {genre:genre, bpm:bpm, mood:mood, prompt:prompt||''};
   }
-  function structure(){
+  // SONG LENGTHS VARY — not always 84 bars.
+  // Prompt can set it: "short", "2 min", "3 minutes", "long", "4:30", or a bar count.
+  // Otherwise vary by style: Rapmosfieryk ~3 min (vocal-led, no long intro), Trap/Drill ~3:30, Boom Bap/Lo-Fi ~4:00.
+  function structureFor(cfg){
+    var prompt=(cfg.prompt||'').toLowerCase();
+    var m=prompt.match(/(\d+)\s*(min|minutes|minute)/);
+    if(m){ var targetMin=parseInt(m[1],10); var bars=Math.max(32, Math.round(targetMin*60/(60/cfg.bpm*4))); return scaleStructure(bars); }
+    if(/short/.test(prompt)) return scaleStructure(48);
+    if(/long/.test(prompt)) return scaleStructure(96);
+    if(cfg.mood==='Rapmosfieryk') return [['Intro',4],['Verse',16],['Hook',8],['Verse 2',16],['Hook',8],['Outro',4]]; // ~56 bars, ~2:26-3:00 at 92-112 BPM, vocals enter quickly
+    if(cfg.genre==='Trap'||cfg.genre==='Drill') return [['Intro',8],['Verse',16],['Pre-Hook',4],['Hook',8],['Verse 2',16],['Hook',8],['Outro',8]]; // 76 bars
+    if(cfg.genre==='Boom Bap'||cfg.genre==='Lo-Fi') return [['Intro',8],['Verse',16],['Pre-Hook',4],['Hook',8],['Verse 2',16],['Hook',8],['Bridge',8],['Final Hook',8],['Outro',8]]; // 84 bars, longer soulful
     return [['Intro',8],['Verse',16],['Pre-Hook',4],['Hook',8],['Verse 2',16],['Hook',8],['Bridge',8],['Final Hook',8],['Outro',8]];
   }
+  function scaleStructure(totalBars){
+    // Keep the same section order, scale verse/hook lengths proportionally, minimums intact.
+    var base=[['Intro',8],['Verse',16],['Pre-Hook',4],['Hook',8],['Verse 2',16],['Hook',8],['Bridge',8],['Final Hook',8],['Outro',8]];
+    var scale=totalBars/84; return base.map(function(x){ return [x[0], Math.max(4, Math.round(x[1]*scale))]; });
+  }
+  function structure(){ return structureFor({prompt:'', genre:'HipHop', bpm:92, mood:'Dark'}); }
   // Chord / melody: scale degrees over real piano bank notes (60 notes, index = scale position)
   // Minor for Dark/Reflective, Major for Bright, Dorian-ish for Chill — mapped to bank indices, not synth freq.
   // HERO LOOP (DatPiff lesson): one memorable 4-note loop, repeated across the whole beat.
@@ -52,7 +69,7 @@
     // Returns a Promise<Blob> (WAV). Caller must provide AudioContext; this is the in-app path.
     render: async function(ctx, prompt){
       var cfg=parsePrompt(prompt);
-      var secs=structure(), totalBars=secs.reduce(function(s,x){return s+x[1];},0);
+      var secs=structureFor(cfg), totalBars=secs.reduce(function(s,x){return s+x[1];},0);
       var beatDur=60/cfg.bpm, barDur=beatDur*4, totalDur=totalBars*barDur;
       var off=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1, Math.ceil(totalDur*ctx.sampleRate), ctx.sampleRate);
       // Master chain: HP -> EQ -> comp -> saturation (waveshaper) -> limiter (dynamics) -> destination
