@@ -19,7 +19,7 @@ a{color:#7ee2ff}
 #rokPanel{position:fixed;right:16px;bottom:92px;z-index:9999;width:min(360px,92vw);max-height:70vh;overflow:auto;background:rgba(15,20,32,.97);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:14px;display:none}
 #rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
 #rokPanel input{margin-top:8px}
-</style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main><h1>DAW & Master</h1><p><span class="badge">Separate page 2 of 10</span></p><div class="card"><h2>Master a song — live = export</h2><p>Same chain as the Zero-Latency page: high-pass 30 Hz, low shelf 200 Hz, peak 3000 Hz, high shelf 10000 Hz, compressor, saturation, limiter −1 dB. One chain function for live and for offline render.</p>
+</style><script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main><h1>DAW & Master</h1><p><span class="badge">Separate page 2 of 10</span></p><div class="card"><h2>Master a song — live = export</h2><p>Same chain as the Zero-Latency page: high-pass 30 Hz, low shelf 200 Hz, peak 3000 Hz, high shelf 10000 Hz, compressor, saturation, limiter −1 dB. One chain function for live and for offline render.</p>
 <button id="chooseBtn">📁 Choose song file</button><input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aac">
 <p id="fileInfo">If the picker does not open in a preview, download this file and open it in Chrome.</p>
 <label>Low shelf 200 Hz</label><input type="range" id="low" min="-12" max="12" step="0.5" value="-2">
@@ -27,6 +27,10 @@ a{color:#7ee2ff}
 <label>High shelf 10000 Hz</label><input type="range" id="high" min="-12" max="12" step="0.5" value="2">
 <button id="play" disabled>▶ Play live</button><button id="stop" disabled class="secondary">■ Stop</button><button id="render" disabled>⬇ Render &amp; download WAV</button><button id="autoMaster" disabled>🤖 Rokdabus Auto-master</button>
 <div class="status" id="out">No song loaded. Bus: </div><canvas id="viz" width="820" height="120"></canvas></div>
+<div class="card"><h2>Batch upload &amp; ZIP download — restored</h2><p>Pick several songs at once. Each one is mastered through the same chain above (high-pass 30 Hz, low shelf 200 Hz, peak 3000 Hz, high shelf 10000 Hz, compressor, saturation, limiter −1 dB), then all the mastered WAVs are bundled into one ZIP — the original "Batch Download All Stems (.ZIP)". ZIP works offline too: if the JSZip library has not loaded, a built-in uncompressed ZIP writer is used instead.</p>
+<button id="batchChooseBtn">📁 Choose batch of songs</button><input type="file" id="batchInput" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aac" multiple style="display:none">
+<button id="batchMasterZip">⬇ Master all &amp; download ZIP</button><button id="batchOrigZip" class="secondary">⬇ ZIP originals (no mastering)</button>
+<div class="status" id="batchOut">No batch loaded yet.</div><div class="status" id="batchList"></div></div>
 <div class="card"><h2>Beat preview (real synth)</h2><p>Tap Play Beat to hear a real Web Audio beat at the hub BPM — kick, snare and hat, no audio file needed.</p>
 <button id="beatPlay">▶ Play beat</button><button id="beatStop" class="secondary">■ Stop beat</button><p id="beatInfo"></p></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
@@ -56,6 +60,49 @@ document.getElementById('stop').onclick=stopLive;
 document.getElementById('play').onclick=async ()=>{ stopLive(); await ctx.resume(); src=ctx.createBufferSource(); src.buffer=decoded; analyser=chain(ctx,src,parseFloat(document.getElementById('low').value),parseFloat(document.getElementById('peak').value),parseFloat(document.getElementById('high').value)); src.start(); document.getElementById('stop').disabled=false; draw(); };
 function wav(buf){ const ch=buf.numberOfChannels,sr=buf.sampleRate,len=buf.length*ch,out=new ArrayBuffer(44+len*2),v=new DataView(out); function s(o,t){for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));} s(0,'RIFF'); v.setUint32(4,36+len*2,true); s(8,'WAVE'); s(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,ch,true); v.setUint32(24,sr,true); v.setUint32(28,sr*ch*2,true); v.setUint16(32,ch*2,true); v.setUint16(34,16,true); s(36,'data'); v.setUint32(40,len*2,true); let o=44; for(let i=0;i<buf.length;i++)for(let c2=0;c2<ch;c2++){let x=Math.max(-1,Math.min(1,buf.getChannelData(c2)[i])); v.setInt16(o,x<0?x*0x8000:x*0x7FFF,true); o+=2;} return new Blob([out],{type:'audio/wav'}); }
 document.getElementById('render').onclick=async ()=>{ const t0=performance.now(); const off=new OfflineAudioContext(decoded.numberOfChannels,decoded.length,decoded.sampleRate); const s=off.createBufferSource(); s.buffer=decoded; chain(off,s,parseFloat(document.getElementById('low').value),parseFloat(document.getElementById('peak').value),parseFloat(document.getElementById('high').value)); s.start(0); const rb=await off.startRendering(); const sec=(performance.now()-t0)/1000; const blob=wav(rb); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; a.click(); document.getElementById('out').textContent='Downloaded '+fileName+' — '+decoded.duration.toFixed(1)+'s song rendered in '+sec.toFixed(2)+'s ('+(decoded.duration/Math.max(sec,0.01)).toFixed(1)+'x faster than real-time)'; };
+
+// ---- Batch upload & ZIP download (restored from the original Master suite) ----
+let batchQueue=[];
+function batchRenderList(){ const el=document.getElementById('batchList'); if(!el) return; el.textContent=batchQueue.length?batchQueue.map((q,i)=>(i+1)+'. '+q.file.name+' — '+(q.status||'queued')).join('\n'):'No batch loaded yet.'; }
+document.getElementById('batchChooseBtn').onclick=()=>document.getElementById('batchInput').click();
+document.getElementById('batchInput').onchange=e=>{ batchQueue=Array.from(e.target.files||[]).map(f=>({file:f,status:'queued'})); document.getElementById('batchOut').textContent='Batch loaded: '+batchQueue.length+' song(s). Press Master all & download ZIP.'; batchRenderList(); };
+function crc32(buf){ let table=crc32.table; if(!table){ table=[]; for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; table[n]=c>>>0; } crc32.table=table; } let c=0xFFFFFFFF; for(let i=0;i<buf.length;i++) c=table[(c^buf[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+async function zipStore(files){ // files: [{name, blob}] — STORE (no compression), works with no library
+  const chunks=[]; const central=[]; let offset=0;
+  for(const f of files){ const data=new Uint8Array(await f.blob.arrayBuffer()); const crc=crc32(data); const name=new TextEncoder().encode(f.name);
+    const lh=new DataView(new ArrayBuffer(30)); lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0,true); lh.setUint16(8,0,true); lh.setUint16(10,0,true); lh.setUint16(12,0,true); lh.setUint32(14,crc,true); lh.setUint32(18,data.length,true); lh.setUint32(22,data.length,true); lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+    chunks.push(lh.buffer, name.buffer, data.buffer);
+    const cd=new DataView(new ArrayBuffer(46)); cd.setUint32(0,0x02014b50,true); cd.setUint16(4,20,true); cd.setUint16(6,20,true); cd.setUint16(8,0,true); cd.setUint16(10,0,true); cd.setUint16(12,0,true); cd.setUint16(14,0,true); cd.setUint32(16,crc,true); cd.setUint32(20,data.length,true); cd.setUint32(24,data.length,true); cd.setUint16(28,name.length,true); cd.setUint32(42,offset,true);
+    central.push(cd.buffer, name.buffer); offset+=30+name.length+data.length;
+  }
+  const cdSize=central.reduce((a,c)=>a+c.byteLength,0); const cdStart=offset;
+  const end=new DataView(new ArrayBuffer(22)); end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true); end.setUint32(12,cdSize,true); end.setUint32(16,cdStart,true);
+  return new Blob([...chunks, ...central, end.buffer], {type:'application/zip'});
+}
+async function batchZip(mastered){
+  const out=document.getElementById('batchOut');
+  if(!batchQueue.length){ out.textContent='No batch loaded — choose a batch of songs first.'; return; }
+  if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+  await ctx.resume();
+  const low=parseFloat(document.getElementById('low').value), peak=parseFloat(document.getElementById('peak').value), high=parseFloat(document.getElementById('high').value);
+  const files=[];
+  for(let i=0;i<batchQueue.length;i++){ const q=batchQueue[i]; q.status='working…'; batchRenderList(); out.textContent='Processing '+(i+1)+' of '+batchQueue.length+': '+q.file.name;
+    try{
+      if(mastered){ const dec=await ctx.decodeAudioData(await q.file.arrayBuffer()); const off=new OfflineAudioContext(dec.numberOfChannels,dec.length,dec.sampleRate); const s=off.createBufferSource(); s.buffer=dec; chain(off,s,low,peak,high); s.start(0); const rb=await off.startRendering(); files.push({name:q.file.name.replace(/\.[^.]+$/,'')+'.praime-mastered.wav', blob:wav(rb)}); }
+      else { files.push({name:q.file.name, blob:q.file}); }
+      q.status='done'; 
+    }catch(e){ q.status='failed: '+e.message; }
+    batchRenderList();
+  }
+  if(!files.length){ out.textContent='Batch failed — no files could be processed.'; return; }
+  let blob;
+  if(typeof JSZip!=='undefined'){ const zip=new JSZip(); const folder=zip.folder('PrAIme_Master_Stems'); for(const f of files) folder.file(f.name, f.blob); blob=await zip.generateAsync({type:'blob'}); }
+  else { blob=await zipStore(files); }
+  const zipName='PrAIme_Master_Stems_Bundle_'+Date.now()+'.zip'; const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=zipName; a.click();
+  out.textContent='Downloaded '+zipName+' — '+files.length+' of '+batchQueue.length+' file(s)'+(mastered?' mastered through the DAW chain':' (originals)');
+}
+document.getElementById('batchMasterZip').onclick=()=>batchZip(true);
+document.getElementById('batchOrigZip').onclick=()=>batchZip(false);
 
 // ---- Rokdabus Auto-master: measure the actual song, then pick levels ----
 async function bandRMS(filterType, freq, freq2){
