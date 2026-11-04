@@ -45,6 +45,35 @@ const MODE = (process.env.PAYPAL_MODE || 'live').toLowerCase() === 'sandbox' ? '
 const PAYPAL_BASE = MODE === 'sandbox' ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
 const DELIVERY_SECRET = process.env.DELIVERY_SECRET || crypto.randomBytes(32).toString('hex');
 const DELIVERY_SECRET_PERSISTENT = !!process.env.DELIVERY_SECRET;
+const TOKEN_SECRET = process.env.TOKEN_SECRET || '';
+const TOKEN_SECRET_PERSISTENT = !!process.env.TOKEN_SECRET;
+// ---- Founder Tokens: server-only, HMAC-signed, email-bound, ledger-backed ----
+// No token is ever generated in the browser. A token is valid ONLY if:
+//  (a) its HMAC (with TOKEN_SECRET, never in code/git) recomputes, AND
+//  (b) the server ledger holds that exact token as ACTIVE, AND
+//  (c) on verify, the email supplied hashes to the emailHash stored for it.
+// Copying a token string alone therefore does NOT work without the owner's
+// email, and a transferred/revoked token fails (b) even if its signature
+// still recomputes. Claims are capped at 100 EVER (active + revoked).
+// Ledger file: data/founder-tokens.json, written atomically (tmp + rename).
+// HONEST LIMIT: on Render free, disk is ephemeral across deploys/restarts,
+// so the ledger file must be backed up regularly (see SERVER_VERIFICATION.md
+// and the Tokens page). If the ledger file is lost, the count resets —
+// that is why the page also shows the claimed count from the live server,
+// and why a durable database is the next step for production.
+const TOKEN_LEDGER_DIR = path.join(__dirname, 'data');
+const TOKEN_LEDGER_FILE = path.join(TOKEN_LEDGER_DIR, 'founder-tokens.json');
+let tokenLedger = {nextNumber:1, tokens:[]};
+try { fs.mkdirSync(TOKEN_LEDGER_DIR, {recursive:true}); const raw=fs.readFileSync(TOKEN_LEDGER_FILE,'utf8'); const j=JSON.parse(raw); if(j && Array.isArray(j.tokens) && Number.isInteger(j.nextNumber)) tokenLedger=j; } catch(e) {}
+function saveTokenLedger(){ try { fs.mkdirSync(TOKEN_LEDGER_DIR, {recursive:true}); const tmp=TOKEN_LEDGER_FILE+'.tmp'; fs.writeFileSync(tmp, JSON.stringify(tokenLedger)); fs.renameSync(tmp, TOKEN_LEDGER_FILE); } catch(e) {} }
+function emailHash(email){ return crypto.createHash('sha256').update(String(email||'').trim().toLowerCase()).digest('hex'); }
+function pad3(n){ return String(n).padStart(3,'0'); }
+function tokenSig(number, eHash, rand){ return crypto.createHmac('sha256', TOKEN_SECRET).update('F-'+pad3(number)+'|'+eHash+'|'+rand).digest('hex').slice(0,32); }
+function makeToken(number, eHash){ const rand=crypto.randomBytes(16).toString('hex'); return 'PRAIME-F-'+pad3(number)+'-'+rand+'-'+tokenSig(number, eHash, rand); }
+function parseToken(tok){ const m=/^PRAIME-F-(\d{3})-([0-9a-f]{32})-([0-9a-f]{32})$/.exec(String(tok||'').trim()); if(!m) return null; return {number:parseInt(m[1],10), rand:m[2], sig:m[3]}; }
+const tokenRate = new Map();
+function tokenRateOk(ip, kind){ const key=ip+'|'+kind; const now=Date.now(); const arr=(tokenRate.get(key)||[]).filter(t=>now-t<3600000); if(arr.length >= (kind==='claim'?5:60)) return false; arr.push(now); tokenRate.set(key, arr); return true; }
+
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://praime-productions.onrender.com').split(',').map(s => s.trim()).filter(Boolean);
 
 // ---- Server-side price rules (canonical, in USD cents) ----
@@ -54,7 +83,7 @@ function priceFor(name) {
   if (n.includes('lifetime')) return 499900;
   if (n.includes('trap kit') || n.includes('lo-fi kit') || n.includes('house kit')) return 999;
   if (n.includes('instrument kit')) return 2999;
-  if (n.includes('brass kit') || n.includes('strings kit') || n.includes('woodwinds kit') || n.includes('keys & guitars kit')) return 1999;
+  if (n.includes('brass kit') || n.includes('strings kit') || n.includes('woodwinds kit') || n.includes('keys & guitars kit')) return 1499;
   if (n.includes('re-beat')) return 1999;
   if (n.includes('separate')) return 299;
   if (n.includes('song master')) return 299;
@@ -142,7 +171,7 @@ const server = http.createServer(async (req, res) => {
 
     // GET /api/health — configuration status only, NEVER any secret value
     if (req.method === 'GET' && urlPath === '/api/health') {
-      sendJson(res, 200, {ok:true, mode:MODE, paypal_configured:!!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET), delivery_secret_persistent:DELIVERY_SECRET_PERSISTENT, verified_orders_in_memory:verifiedOrders.size});
+      sendJson(res, 200, {ok:true, mode:MODE, paypal_configured:!!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET), delivery_secret_persistent:DELIVERY_SECRET_PERSISTENT, verified_orders_in_memory:verifiedOrders.size, token_configured:TOKEN_SECRET_PERSISTENT, token_claimed:tokenLedger.nextNumber-1, token_remaining:Math.max(0, 100-(tokenLedger.nextNumber-1)), token_active:tokenLedger.tokens.filter(t=>t.active).length});
       return;
     }
 
@@ -200,6 +229,54 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, {'Content-Type':'application/zip', 'Content-Disposition':'attachment; filename="' + file + '"'});
         res.end(data);
       });
+      return;
+    }
+
+    // POST /api/token/status, /claim, /verify, /transfer — server-only Founder Tokens
+    if (urlPath === '/api/token/status' && req.method === 'POST') { sendJson(res, 200, {ok:true, configured:TOKEN_SECRET_PERSISTENT, claimed:tokenLedger.nextNumber-1, remaining:Math.max(0, 100-(tokenLedger.nextNumber-1)), active:tokenLedger.tokens.filter(t=>t.active).length}); return; }
+    if (urlPath === '/api/token/claim' && req.method === 'POST') {
+      if (!TOKEN_SECRET_PERSISTENT) { sendJson(res, 503, {ok:false, error:'token_not_configured'}); return; }
+      const ip = req.headers['x-forwarded-for'] ? String(req.headers['x-forwarded-for']).split(',')[0].trim() : (req.socket.remoteAddress||'');
+      if (!tokenRateOk(ip,'claim')) { sendJson(res, 429, {ok:false, error:'rate_limited'}); return; }
+      let body; try { body = JSON.parse(await readBody(req, 2000)); } catch(e) { sendJson(res, 400, {ok:false, error:'bad_json'}); return; }
+      const email = String(body.email||'').trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { sendJson(res, 400, {ok:false, error:'valid_email_required'}); return; }
+      const eHash = emailHash(email);
+      if (tokenLedger.tokens.some(t=>t.emailHash===eHash && t.active)) { sendJson(res, 409, {ok:false, error:'email_already_claimed'}); return; }
+      if (tokenLedger.nextNumber > 100) { sendJson(res, 409, {ok:false, error:'all_100_claimed'}); return; }
+      const number = tokenLedger.nextNumber++;
+      const token = makeToken(number, eHash);
+      tokenLedger.tokens.push({number, emailHash:eHash, tokenHash:crypto.createHash('sha256').update(token).digest('hex'), active:true, issuedAt:new Date().toISOString()});
+      saveTokenLedger();
+      sendJson(res, 200, {ok:true, token, number, claimed:tokenLedger.nextNumber-1, remaining:Math.max(0, 100-(tokenLedger.nextNumber-1))});
+      return;
+    }
+    if (urlPath === '/api/token/verify' && req.method === 'POST') {
+      if (!TOKEN_SECRET_PERSISTENT) { sendJson(res, 503, {ok:false, error:'token_not_configured'}); return; }
+      let body; try { body = JSON.parse(await readBody(req, 2000)); } catch(e) { sendJson(res, 400, {ok:false, error:'bad_json'}); return; }
+      const parsed = parseToken(body.token); if (!parsed) { sendJson(res, 200, {ok:false, valid:false, error:'bad_token_format'}); return; }
+      const entry = tokenLedger.tokens.find(t=>t.number===parsed.number && t.active);
+      if (!entry) { sendJson(res, 200, {ok:false, valid:false, error:'not_active_or_revoked'}); return; }
+      if (tokenSig(parsed.number, entry.emailHash, parsed.rand) !== parsed.sig) { sendJson(res, 200, {ok:false, valid:false, error:'bad_signature'}); return; }
+      if (body.email && emailHash(body.email) !== entry.emailHash) { sendJson(res, 200, {ok:false, valid:false, error:'email_mismatch'}); return; }
+      sendJson(res, 200, {ok:true, valid:true, number:parsed.number, issuedAt:entry.issuedAt});
+      return;
+    }
+    if (urlPath === '/api/token/transfer' && req.method === 'POST') {
+      if (!TOKEN_SECRET_PERSISTENT) { sendJson(res, 503, {ok:false, error:'token_not_configured'}); return; }
+      let body; try { body = JSON.parse(await readBody(req, 2000)); } catch(e) { sendJson(res, 400, {ok:false, error:'bad_json'}); return; }
+      const parsed = parseToken(body.token); const newEmail = String(body.newEmail||'').trim().toLowerCase();
+      if (!parsed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) { sendJson(res, 400, {ok:false, error:'bad_request'}); return; }
+      const entry = tokenLedger.tokens.find(t=>t.number===parsed.number && t.active);
+      if (!entry || tokenSig(parsed.number, entry.emailHash, parsed.rand) !== parsed.sig) { sendJson(res, 200, {ok:false, error:'invalid_token'}); return; }
+      if (body.email && emailHash(body.email) !== entry.emailHash) { sendJson(res, 200, {ok:false, error:'email_mismatch'}); return; }
+      const newHash = emailHash(newEmail);
+      if (tokenLedger.tokens.some(t=>t.emailHash===newHash && t.active)) { sendJson(res, 409, {ok:false, error:'new_email_already_claimed'}); return; }
+      entry.active=false; entry.revokedAt=new Date().toISOString();
+      const newToken = makeToken(parsed.number, newHash);
+      tokenLedger.tokens.push({number:parsed.number, emailHash:newHash, tokenHash:crypto.createHash('sha256').update(newToken).digest('hex'), active:true, issuedAt:entry.issuedAt, transferredAt:new Date().toISOString()});
+      saveTokenLedger();
+      sendJson(res, 200, {ok:true, token:newToken, number:parsed.number});
       return;
     }
 
