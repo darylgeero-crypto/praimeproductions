@@ -39,6 +39,7 @@ a{color:#7ee2ff}
 <button id="batchChooseBtn">📁 Choose batch of songs</button><button id="batchAddBtn" class="secondary">➕ Add more songs</button><button id="batchClearBtn" class="secondary">🗑 Clear batch</button><input type="file" id="batchInput" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg,.aac" multiple style="display:none">
 <p style="font-size:12px;color:#9ca3af">Tip: on Android, tap and hold the first song, then tap the others, then Select — or pick one at a time with "Add more songs": picks now ADD to the batch instead of replacing it.</p>
 <button id="batchMasterZip">⬇ Master all &amp; download ZIP</button><button id="batchOrigZip" class="secondary">⬇ ZIP originals (no mastering)</button>
+<div class="card" style="margin-top:12px"><h2>▶ Play all mastered previews — in order, one after another</h2><p>Push Play and every batch track is mastered in the browser (offline render, faster than real-time, no download), then <b>all</b> the mastered previews are shown at once below, and they play <b>consecutively, in batch order</b> — when one ends, the next starts automatically, until the last one finishes. You can also tap any preview below to jump to it.</p><button id="batchPlayAllBtn">▶ Play all previews in order</button><button id="batchStopAllBtn" class="secondary">■ Stop play-all</button><button id="previewPlayAllBtn" class="secondary">▶ Play single song: original, then mastered</button><p id="playAllOut" style="font-size:12px;color:#9ca3af">No play-all yet — load a batch (or a single song) first.</p><div id="playAllList"></div></div>
 <div class="status" id="batchOut">No batch loaded yet.</div><div class="status" id="batchList"></div></div>
 <div class="card"><h2>Beat preview (real synth)</h2><p>Tap Play Beat to hear a real Web Audio beat at the hub BPM — kick, snare and hat, no audio file needed.</p>
 <button id="beatPlay">▶ Play beat</button><button id="beatStop" class="secondary">■ Stop beat</button><p id="beatInfo"></p></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
@@ -185,6 +186,92 @@ async function batchZip(mastered){
 }
 document.getElementById('batchMasterZip').onclick=()=>batchZip(true);
 document.getElementById('batchOrigZip').onclick=()=>batchZip(false);
+// ---- Play all mastered previews, in order, consecutively ----
+// One Play button: master every track instantly (offline render, no
+// download), show ALL mastered previews at once, then play them in
+// batch order, advancing automatically on each track's 'ended' event.
+var playAllState = {audios:[], index:-1, playing:false};
+function playAllStop(){
+  playAllState.playing = false;
+  if(playAllState.audios[playAllState.index]){ try{ playAllState.audios[playAllState.index].pause(); }catch(e){} }
+  document.getElementById('playAllOut').textContent = 'Play-all stopped.';
+}
+function playAllNext(i){
+  var list = document.getElementById('playAllList');
+  if(!playAllState.playing) return;
+  if(i >= playAllState.audios.length){
+    playAllState.playing = false; playAllState.index = -1;
+    document.getElementById('playAllOut').textContent = 'Finished all ' + playAllState.audios.length + ' mastered preview(s), in order.';
+    return;
+  }
+  playAllState.index = i;
+  var rows = list.querySelectorAll('[data-playall-row]');
+  rows.forEach(function(r, ri){ r.style.outline = (ri === i) ? '2px solid #00f3ff' : 'none'; });
+  var a = playAllState.audios[i];
+  document.getElementById('playAllOut').textContent = 'Now playing ' + (i+1) + ' of ' + playAllState.audios.length + ': ' + (a._name || '');
+  a.currentTime = 0;
+  a.onended = function(){ playAllNext(i+1); };
+  a.play().catch(function(){ playAllNext(i+1); });
+}
+async function playAllBatch(){
+  var out = document.getElementById('playAllOut'), list = document.getElementById('playAllList');
+  playAllStop();
+  if(!batchQueue.length){
+    out.textContent = 'No batch loaded — load a batch above, or use "Play single song: original, then mastered" for one song.';
+    return;
+  }
+  if(!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  var eff = effectiveChain();
+  list.textContent = ''; playAllState.audios = [];
+  out.textContent = 'Mastering instantly… 0 of ' + batchQueue.length;
+  for(var i = 0; i < batchQueue.length; i++){
+    var q = batchQueue[i];
+    out.textContent = 'Mastering instantly… ' + (i+1) + ' of ' + batchQueue.length + ': ' + q.file.name;
+    try{
+      var dec = await ctx.decodeAudioData(await q.file.arrayBuffer());
+      var off = new OfflineAudioContext(dec.numberOfChannels, dec.length, dec.sampleRate);
+      var s = off.createBufferSource(); s.buffer = dec; chain(off, s, eff.low, eff.peak, eff.high, eff); s.start(0);
+      var rb = await off.startRendering(); var blob = wav(rb);
+      if(q.masterUrl) URL.revokeObjectURL(q.masterUrl);
+      q.masterUrl = URL.createObjectURL(blob); q.masterDuration = dec.duration; q.status = 'mastered preview ready';
+    }catch(e){ q.status = 'master preview failed: ' + e.message; q.masterUrl = q.url; }
+  }
+  batchRenderList();
+  // Show ALL mastered previews simultaneously, in order.
+  batchQueue.forEach(function(q, i){
+    if(!q.masterUrl) q.masterUrl = q.url;
+    var row = document.createElement('div'); row.setAttribute('data-playall-row','1');
+    row.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)';
+    var name = document.createElement('span'); name.style.cssText = 'font-weight:700;flex:1 1 180px'; name.textContent = (i+1) + '. MASTERED — ' + q.file.name;
+    var audio = document.createElement('audio'); audio.controls = true; audio.preload = 'metadata'; audio.src = q.masterUrl; audio._name = q.file.name; audio.style.cssText = 'flex:1 1 220px;max-width:320px';
+    audio.addEventListener('play', function(){ playAllState.index = i; });
+    row.appendChild(name); row.appendChild(audio); list.appendChild(row);
+    playAllState.audios.push(audio);
+  });
+  out.textContent = 'All ' + batchQueue.length + ' mastered preview(s) ready — playing in order, consecutively.';
+  playAllState.playing = true; playAllNext(0);
+}
+async function playAllSingle(){
+  // One song, no batch: play its original preview, then its mastered preview, consecutively, in the single-song preview player.
+  if(!decoded){ document.getElementById('playAllOut').textContent = 'No single song loaded — choose a song file above first.'; return; }
+  playAllStop();
+  var e = effectiveChain();
+  var off = new OfflineAudioContext(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
+  var s = off.createBufferSource(); s.buffer = decoded; chain(off, s, e.low, e.peak, e.high, e); s.start(0);
+  var rb = await off.startRendering();
+  var origUrl = URL.createObjectURL(wav(decoded)), masterUrl = URL.createObjectURL(wav(rb));
+  var audio = document.getElementById('previewAudio');
+  var list = document.getElementById('playAllList'); list.textContent = '';
+  var row = document.createElement('div'); row.textContent = 'Single song play-all: 1. ORIGINAL, then 2. MASTERED — playing in the preview player above.';
+  list.appendChild(row);
+  document.getElementById('playAllOut').textContent = 'Playing single song in order: 1. ORIGINAL, then 2. MASTERED.';
+  audio.src = origUrl; audio.onended = function(){ audio.onended = null; audio.src = masterUrl; audio.play().catch(function(){}); document.getElementById('playAllOut').textContent = 'Playing single song in order: 2. MASTERED (original finished).'; };
+  audio.play().catch(function(){});
+}
+document.getElementById('batchPlayAllBtn').onclick = playAllBatch;
+document.getElementById('batchStopAllBtn').onclick = playAllStop;
+document.getElementById('previewPlayAllBtn').onclick = playAllSingle;
 
 // ---- Rokdabus Auto-master: measure the actual song, then pick levels ----
 async function bandRMS(filterType, freq, freq2){
