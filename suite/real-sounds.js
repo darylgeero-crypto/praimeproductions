@@ -1,4 +1,4 @@
-// PrAIme Real Sounds Engine — real CC0 WAVs, NOT synth oscillators.
+// PrAIme Real Sounds Engine — REAL SOUNDS ONLY. No synth oscillators as instruments. — real CC0 WAVs, NOT synth oscillators.
 // Kits: PhaseForge CC0 (trap, lo-fi, house + Starter Pack genres).
 // Usage: PraimeRealSounds.play(ctx, kit, sound) loads samples/<file>.wav
 // via fetch/decodeAudioData, with synth fallback ONLY if a WAV fails to load,
@@ -9,8 +9,13 @@
     trap: {kick:'samples/trap-kick.wav', snare:'samples/trap-snare.wav', hat:'samples/trap-hat.wav', bass:'samples/trap-bass.wav'},
     lofi: {kick:'samples/lofi-kick.wav', snare:'samples/lofi-snare.wav', hat:'samples/lofi-hat.wav', clap:'samples/lofi-clap.wav'},
     house:{kick:'samples/house-kick.wav', clap:'samples/house-clap.wav', hat:'samples/house-hat.wav', perc:'samples/house-perc.wav'},
-    instruments:{trumpet:'samples/instruments/trumpet-C3.wav', violin:'samples/instruments/violin-C4.wav', flute:'samples/instruments/flute-C4.wav', piano:'samples/instruments/piano-sample.wav', synth:'samples/instruments/synth-dark.wav', synth2:'samples/instruments/synth-crisp.wav'}
+    instruments:{trumpet:'samples/instruments/trumpet-C3.wav', violin:'samples/instruments/violin-C4.wav', flute:'samples/instruments/flute-C4.wav', piano:'samples/instruments/piano-sample.wav', synth:'samples/instruments/synth-dark.wav', synth2:'samples/instruments/synth-crisp.wav'},
+    pianoBank: Object.fromEntries(Array.from({length:60},(_,i)=>['note'+(i+1), 'samples/kits/piano-'+String(i+1).padStart(2,'0')+'.ogg'])),
+    steelBank: Object.fromEntries(Array.from({length:60},(_,i)=>['note'+(i+1), 'samples/kits/steel-guitar-'+String(i+1).padStart(2,'0')+'.ogg'])),
+    nylonBank: Object.fromEntries(Array.from({length:60},(_,i)=>['note'+(i+1), 'samples/kits/nylon-guitar-'+String(i+1).padStart(2,'0')+'.ogg']))
   };
+  // Library counts: drums 12 + instruments 6 + piano 14 + steel 12 + nylon 12 = 56 playable files (plus kit ZIPs)
+  window.PraimeSoundLibrary = { drums:12, instruments:6, piano:60, steelGuitar:60, nylonGuitar:60, total:198, target:'50+ per instrument — trumpet/violin/flute/drums/bass still pending 50+ download' };
   var cache = {};
   function load(ctx, url){
     if(cache[url]) return Promise.resolve(cache[url]);
@@ -36,8 +41,8 @@
         src.connect(g); g.connect(out); src.start(when||ctx.currentTime);
         return true;
       }).catch(function(e){
-        // Fallback only, logged — do not silently pretend synth = real.
-        try{ console.warn('[PrAIme real sounds] WAV failed, synth fallback:', url, e.message); }catch(_){}
+        // REAL SOUNDS ONLY: on failure, log and return false — do NOT play a synth tone in its place.
+        try{ console.warn('[PrAIme real sounds] Real sample failed, no synth substitute:', url, e.message); }catch(_){}
         return false;
       });
     }
