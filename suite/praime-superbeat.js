@@ -46,7 +46,7 @@
       var cfg=parsePrompt(prompt);
       var secs=structure(), totalBars=secs.reduce(function(s,x){return s+x[1];},0);
       var beatDur=60/cfg.bpm, barDur=beatDur*4, totalDur=totalBars*barDur;
-      var off=ctx.createOfflineAudioContext(1, Math.ceil(totalDur*ctx.sampleRate), ctx.sampleRate);
+      var off=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1, Math.ceil(totalDur*ctx.sampleRate), ctx.sampleRate);
       // Master chain: HP -> EQ -> comp -> saturation (waveshaper) -> limiter (dynamics) -> destination
       var hp=off.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=30;
       var eq=off.createBiquadFilter(); eq.type='peaking'; eq.frequency.value=3000; eq.gain.value=2;
