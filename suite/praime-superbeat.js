@@ -99,7 +99,7 @@
       var off=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1, Math.ceil(totalDur*ctx.sampleRate), ctx.sampleRate);
       // Master chain: HP -> EQ -> comp -> saturation (waveshaper) -> limiter (dynamics) -> destination
       var hp=off.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=30;
-      var eq=off.createBiquadFilter(); eq.type='peaking'; eq.frequency.value=3000; eq.gain.value=2;
+      var eq=off.createBiquadFilter(); eq.type='peaking'; eq.frequency.value=3000; eq.gain.value=(/Trap|Drill|Dubstep/.test(cfg.genre)?0.5:2); // 7) MIX: bass-heavy genres less 3k harshness, others +2dB clarity
       var comp=off.createDynamicsCompressor(); comp.threshold.value=-18; comp.ratio.value=4; comp.attack.value=0.01; comp.release.value=0.2;
       var sat=off.createWaveShaper(); var curve=new Float32Array(1024); for(var i=0;i<1024;i++){ var x=i/512-1; curve[i]=Math.tanh(x*1.5); } sat.curve=curve;
       var lim=off.createDynamicsCompressor(); lim.threshold.value=-1; lim.ratio.value=20; lim.attack.value=0.001; lim.release.value=0.05;
@@ -119,11 +119,14 @@
       var barIdx=0;
       function play(bufObj, when, gain, rate, stopAfter){
         if(!bufObj) return; var s=off.createBufferSource(); s.buffer=bufObj; if(rate) s.playbackRate.value=rate;
-        var g=off.createGain(); g.gain.value=gain; s.connect(g); g.connect(master); s.start(when);
+        var g=off.createGain(); g.gain.value=gain*(typeof secGain!=='undefined'?secGain:1); s.connect(g); g.connect(master); s.start(when);
         if(stopAfter) try{ s.stop(when+stopAfter); }catch(e){}
       }
+      // 4) ARRANGE: section dynamics — Intro quiet, Verse medium, Pre-Hook lift, Hook full, Bridge stripped, Final Hook fullest, Outro fade.
+      var sectionGains={'Intro':0.6,'Verse':0.8,'Pre-Hook':0.9,'Hook':1.0,'Verse 2':0.85,'Bridge':0.6,'Final Hook':1.05,'Outro':0.6};
+      var secGain=1;
       for(var si=0; si<secs.length; si++){
-        var sec=secs[si][0], bars=secs[si][1];
+        var sec=secs[si][0], bars=secs[si][1]; secGain=sectionGains[sec]||0.85;
         for(var b=0;b<bars;b++){
           var barStart=(barIdx+b)*barDur;
           var isHook=sec.indexOf('Hook')>=0, isIntro=sec==='Intro', isOutro=sec==='Outro', isBridge=sec==='Bridge';
@@ -156,11 +159,13 @@
           }
           // Melody: real piano bank notes, one per beat, varied by section
           var notes=melodyFor(sec, b, cfg.mood);
+          // 5) SOUND DESIGN: melody voice per genre curve — piano / steel-guitar / nylon-guitar banks, not always piano.
+          var melPrefix = curve.melodyVoice==='steel' ? 'steel-guitar-' : curve.melodyVoice==='nylon' ? 'nylon-guitar-' : 'piano-';
           // MELODY FIX: piano-*.ogg are 404 on Render (verified 00:58), so try OGG first, then live WAV fallbacks.
           // Fallbacks are all 200 live: trumpet-C3, violin-C4, flute-C4, piano-sample, synth, synth2.
           var melFallbacks=['samples/instruments/trumpet-C3.wav','samples/instruments/violin-C4.wav','samples/instruments/flute-C4.wav','samples/instruments/piano-sample.wav'];
           for(var bi=0; bi<notes.length; bi++){
-            var idx=notes[bi]; var url='samples/kits/piano-'+String(idx).padStart(2,'0')+'.ogg';
+            var idx=notes[bi]; var url='samples/kits/'+melPrefix+String(idx).padStart(2,'0')+'.ogg';
             if(!pianoBufs[url]){
               try{ pianoBufs[url]=await buf(url); }
               catch(e){
