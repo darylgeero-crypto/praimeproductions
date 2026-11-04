@@ -245,6 +245,9 @@ function obRenderTakes(){
     let pan=document.createElement('input'); pan.type='range'; pan.min=-100; pan.max=100; pan.value=Math.round(t.pan*100);
     pan.oninput=function(){ t.pan=pan.value/100; };
     let panLab=document.createElement('label'); panLab.textContent='Pan (left − / right +)'; panLab.appendChild(pan); row.appendChild(panLab);
+    let nudge=document.createElement('input'); nudge.type='range'; nudge.min=-100; nudge.max=100; nudge.value=t.nudgeMs||0;
+    nudge.oninput=function(){ t.nudgeMs=parseInt(nudge.value,10)||0; };
+    let nudgeLab=document.createElement('label'); nudgeLab.textContent='Nudge take (ms, −100 to +100 — shifts this take in the mix only, to correct mic/recording latency)'; nudgeLab.appendChild(nudge); row.appendChild(nudgeLab);
     let mute=document.createElement('input'); mute.type='checkbox'; mute.checked=t.mute;
     mute.onchange=function(){ t.mute=mute.checked; };
     let muteLab=document.createElement('label'); muteLab.appendChild(mute); muteLab.appendChild(document.createTextNode(' Mute')); row.appendChild(muteLab);
@@ -291,7 +294,7 @@ document.getElementById('obRec').onclick=async function(){
       try{
         let buf=await micCtxFn().decodeAudioData(await blob.arrayBuffer());
         obTakeSeq++;
-        let take={name:'Take '+obTakeSeq, blob:blob, url:URL.createObjectURL(blob), buffer:buf, duration:buf.duration, stamp:stamp, startSec:startSec, volume:1, pan:0, mute:false, solo:false};
+        let take={name:'Take '+obTakeSeq, blob:blob, url:URL.createObjectURL(blob), buffer:buf, duration:buf.duration, stamp:stamp, startSec:startSec, volume:1, pan:0, nudgeMs:0, mute:false, solo:false};
         obTakes.push(take); obRenderTakes();
         document.getElementById('obOut').textContent='Take saved: '+take.name+' — '+stamp+' — '+buf.duration.toFixed(1)+'s. It is not sent anywhere; it lives on this page until you leave it.';
         document.getElementById('obMix').disabled=false; document.getElementById('obPlayMix').disabled=false;
@@ -312,7 +315,7 @@ async function obBuildMix(){
   if(!obBeat || !obBeat.buffer) throw new Error('No beat loaded.');
   let active=obActiveTakes(); if(!active.length) throw new Error('No active takes to mix (all muted, or no takes yet).');
   let sr=obBeat.buffer.sampleRate, end=obBeat.buffer.duration;
-  active.forEach(function(t){ end=Math.max(end, t.startSec + t.buffer.duration); });
+  active.forEach(function(t){ end=Math.max(end, Math.max(0, t.startSec + ((t.nudgeMs||0)/1000)) + t.buffer.duration); });
   let len=Math.ceil(end*sr);
   let off=new OfflineAudioContext(2, len, sr);
   let beatSrc=off.createBufferSource(); beatSrc.buffer=obBeat.buffer;
@@ -324,7 +327,7 @@ async function obBuildMix(){
     s.connect(g);
     if(off.createStereoPanner){ let p=off.createStereoPanner(); p.pan.value=t.pan; g.connect(p); p.connect(off.destination); }
     else { g.connect(off.destination); }
-    s.start(t.startSec);
+    s.start(Math.max(0, t.startSec + ((t.nudgeMs||0)/1000)));
   });
   let rendered=await off.startRendering();
   let peak=0; for(let c=0;c<rendered.numberOfChannels;c++){ let d=rendered.getChannelData(c); for(let i=0;i<d.length;i++){ let a=Math.abs(d[i]); if(a>peak) peak=a; } }
