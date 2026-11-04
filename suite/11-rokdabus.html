@@ -66,6 +66,20 @@ a{color:#7ee2ff}
 <li><b>Genre guides:</b> Boom Bap, Trap, Drill, Lo-Fi, Rave — BPM, sound, and how to mix/master each one.</li>
 <li><b>Music theory:</b> BPM, key, chord progressions, 808s, saturation.</li>
 </ul><p>Try in the widget: "how do I mix vocals?", "mastering for Spotify", "mixing drums", "what is true peak?", "Boom Bap mastering".</p></div>
+
+<div class="card"><h2>Instrumental Creation Knowledge Base — what Rokdabus draws from</h2>
+<p>Ask Rokdabus on any page about any of these, by text or voice. He answers from this built-in knowledge, or from Ollama if it is connected in Termux. This is the instrumental creation section — how to make a beat in PrAIme, from prompt to pay-worthy file.</p>
+<ul>
+<li><b>Start with a prompt, not a loop:</b> genre, mood, BPM, instruments. Example: "dark HipHop 92 BPM, aggressive, piano melody, heavy bass hook" or "Rapmosfieryk Christian rap, vocal-forward, positive, HipHop". SuperBeat on Full Beats (15) parses that prompt into genre / mood / BPM.</li>
+<li><b>DatPiff 1-9 — buy-worthy rules:</b> (1) One hero idea — one memorable 4-note loop for the whole beat, never a new melody every bar. (2) Hook in the first 10 seconds — Intro plays the hero loop, not a drum-only intro. (3) Arrangement, not just a loop — Intro 8 → Verse 16 (stripped) → Pre-Hook 4 → Hook 8 (full) → Verse 2 16 → Hook 8 → Bridge 8 → Final Hook 8 → Outro 8; variation = mute / fill / hat-change, not new melody. (4) Space for the vocal — verse = 2-3 layers max, hero quieter in verse, midrange open for long verses. (5) Bass discipline — bass tuned to hero roots, locked to kick, never wandering. (6) Drum groove — crisp forward snare, punchy kick, hats with triplet/roll variation + fills, swing + ±12ms jitter + velocity variation. (7) Mix clarity — HP 30Hz, EQ, comp, saturation, limiter -1dB, tight low end, highs not harsh. (8) Length and repeatability — 84 bars, ~3:30-4:30, loop memorable after one play. (9) Identity — hero loop + genre kit + swing signature, not generic presets.</li>
+<li><b>Melodies:</b> hero loop from real piano / guitar bank notes (60 each), 8th-note line with off-beat echo. If piano OGGs are missing on Render, SuperBeat falls back to live WAVs (trumpet-C3, violin-C4, flute-C4, piano-sample) — never silence, never synth oscillators as instruments.</li>
+<li><b>Bass:</b> real bass sample, 4 notes per bar on beats, louder in Hook (0.85) than Verse (0.70), bass hook octave in Hook, sparse bass in Intro. Bass must be heard, not just felt.</li>
+<li><b>Rapmosfieryk style:</b> Christian Rap / New School Hip-Hop, vocal-forward, lyric-dense, short repeated title hooks, vocals enter quickly, verse-heavy, no long instrumental intro, positive/urgent not dark trap/drill. Prompt with "rapmosfieryk" or "christian" to use that preset.</li>
+<li><b>Real sounds only:</b> drums, piano, guitar, bass, strings, brass, woodwinds from CC0 libraries (PhaseForge, VSCO-2-CE, Meta, FreePats, Karoryfer). No synth oscillators as instruments. If a sample fails to load, SuperBeat logs it and uses a live fallback — it does not play a synth tone in its place.</li>
+<li><b>Mastering on export:</b> offline render → HP 30Hz → EQ → compressor → saturation → limiter -1dB, normalized to -1dB peak. Live and download use the same chain.</li>
+<li><b>Before sale:</b> you must hear the beat and approve it. SuperBeat does NOT auto-list for sale. Unpaid beats are owned by Daryl / PrAIme, leases do not transfer copyright, Exclusive $199 pulls a beat from sale and needs a contract.</li>
+<li><b>Try in the app:</b> Full Beats (15) → SuperBeat card → type your prompt → Generate SuperBeat (in-app) → listen → Download SuperBeat WAV. Then tell Rokdabus what to change: melody, bass, drums, hook, or structure.</li>
+</ul></div>
 <div class="card"><h2>Video Generation Assistance</h2><p>Rokdabus helps with video too, not just audio. On the Video page, say: "video title to My Song", "video style warm", "video aspect 9:16 for TikTok", "preview video", "make video", or "video help". He will set the title, style and aspect, explain which aspect fits which platform (16:9 YouTube, 9:16 TikTok/Reels, 1:1 Instagram feed), and start/stop recording. Video recording is real-time to WebM — it is not AI-generated footage, and it is not faster than real-time.</p></div>
 </main>
 <script>// ---- Rokdabus Prhyme widget ----
@@ -85,6 +99,12 @@ a{color:#7ee2ff}
     ['2010s', '2010s hit DNA: trap (140 BPM, hi-hat rolls, 808 slides), EDM pop (128 BPM, drop chorus), lo-fi (70-85 BPM, jazzy chords, vinyl feel). Streaming changed structure: short intros, hook early, songs under 3:30.'],
     ['2020s', '2020s hit DNA: drill (140-150 BPM, sliding 808, dark minor keys), Afrobeats (100-115 BPM, log drum / shaker grooves), hyperpop (fast, distorted, 140-160 BPM). Short-form video drives the hook — the first 3 seconds are the single.'],
     ['hit dna', 'Hit DNA means style traits — tempo, chord form, drum pattern, song structure, instrumentation — learned from chart history in general, not copied melodies, lyrics or recordings. If you want to use an actual hit recording or lyric, you need a license. This suite never copies a hit song, it only uses its general style recipe.'],
+
+    ['instrumental', 'Instrumental creation: start with a prompt (genre, mood, BPM, instruments) on Full Beats SuperBeat. Use DatPiff 1-9: one hero loop, hook in first 10 seconds, Intro → Verse → Pre-Hook → Hook → Verse 2 → Hook → Bridge → Final Hook → Outro, vocal pocket in verse, bass locked to kick, drum groove with fills, mix clarity, 84 bars ~3:30-4:30, identity from hero + kit + swing. Real sounds only, mastered HP 30Hz → EQ → comp → saturation → limiter -1dB. You must hear and approve before sale — SuperBeat does not auto-list.'],
+    ['superbeat', 'SuperBeat: Full Beats (15) SuperBeat card. Type a prompt like "dark HipHop 92 BPM, aggressive, piano melody, heavy bass hook" or "Rapmosfieryk Christian rap, vocal-forward". Press Generate SuperBeat (in-app), listen, then Download SuperBeat WAV. It renders offline with real sounds, hero loop, bass line, and mastering.'],
+    ['melody', 'Melody in SuperBeat: one 4-note hero loop from real piano/guitar bank notes, 8th-note line with off-beat echo, louder in Hook than Verse. If piano OGGs are missing on Render, it falls back to live WAVs (trumpet, violin, flute, piano-sample) — never silence, never synth.'],
+    ['bass', 'Bass in SuperBeat: real bass sample, 4 notes per bar, gain 0.70 verse / 0.85 hook, bass hook octave in Hook, sparse in Intro. Bass tuned to hero roots and locked to kick — that is bass discipline.'],
+    ['hero', 'Hero loop: one memorable 4-note loop for the whole beat. Verse strips it back, Hook makes it fuller/louder, Bridge sparser — same loop, not a new melody every bar. That is DatPiff rule 1, and the amateur tell is changing melody every 4 bars.'],
     ['top ten', 'Top-ten lists: this suite does not claim a verified top-10 artists / top-10 songs per genre per artist list back to the 1950s, because that list would be thousands of songs and would need a licensed chart database to be accurate. What it does have is era + genre style DNA (ask Rokdabus about 1950s, 1970s, 1990s, trap, drill, etc.) and your own taste profile, which is what actually personalises your beats.'],
     ['spotify', 'Mastering for Spotify / YouTube: aim around -14 LUFS integrated, true peak -1 dBTP. Spotify will turn louder songs down, so crushing to -8 LUFS does not make you louder on Spotify — it just loses dynamics.'],
     ['apple', 'Mastering for Apple Music: Apple normalizes to around -16 LUFS. Aim -14 to -16 LUFS, true peak -1 dBTP, and check that your limiter does not create inter-sample peaks above 0 dBTP.'],
@@ -249,4 +269,5 @@ document.addEventListener('click', function(e){
   }catch(err){}
 }, true);
 </script>
+<script src="real-sounds.js"></script>
 </body></html>
