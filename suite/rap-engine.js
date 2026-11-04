@@ -34,6 +34,32 @@
     "truth|UW-TH|95","youth|UW-TH|90","proof|UW-F|88","roof|UW-F|85","smooth|UW-TH|90","move|UW-V|95","groove|UW-V|92","improve|UW-V|88","blue|UW|95","true|UW|97","new|UW|98","you|UW|99","through|UW|95","crew|UW|90","view|UW|92","few|UW|88",
     "mind|AY-ND|97","grind|AY-ND|95","shine|AY-N|92","line|AY-N|95",
     "bind|AY-ND|82","signed|AY-ND|80","aligned|AY-ND|78","aim|EY-M|85","blame|EY-M|88","shame|EY-M|85","tame|EY-M|80","claim|EY-M|88","chime|AY-M|80","slime|AY-M|78","sublime|AY-M|82","wire|AY-ER|85","tire|AY-ER|82","inspire|AY-ER|88","empire|AY-ER|85","choir|AY-ER|80","jack|AE-K|85","knack|AE-K|75","real|IY-L|95","deal|IY-L|92","feel|IY-L|95","steel|IY-L|88","heal|IY-L|85","wheel|IY-L|88","seal|IY-L|82","appeal|IY-L|85","conceal|IY-L|80","pro|OW|85","throw|OW|88","row|OW|82","might|AY-T|90","white|AY-T|88","rite|AY-T|75","go|OW|98",
+    // Hard / multisyllabic single words — orange has no perfect single-word rhyme,
+    // so it is paired below with multi-word rhymes, plus slant partners here.
+    "orange|OR-INJ|80","porridge|OR-INJ|78","storage|OR-INJ|75","forage|OR-INJ|72",
+    "silver|IH-LVER|70","purple|ER-PEL|70","month|UH-NTH|70","wolf|UH-LF|78",
+  ];
+  // MULTISYLLABIC / MULTI-WORD RHYME GROUPS.
+  // Each group is a set of phrases that rhyme across 2+ syllables.
+  // Rule: if a single word has no perfect partner, rhyme it with a whole
+  // phrase whose last syllables match — e.g. orange -> four inch door hinge.
+  var MULTI = [
+    ["orange", "porridge", "four inch door hinge", "door hinge", "four inch", "storage"],
+    ["higher power", "fire tower", "desire hour", "tired flower", "wire power"],
+    ["power hour", "tower flower", "shower power", "flower tower"],
+    ["prime time", "rhyme crime", "climb high", "night time"],
+    ["true blue", "new crew", "through you", "blue crew"],
+    ["ready steady", "heavy ready", "energy", "legacy"],
+    ["kingdom come", "singing dumb", "ringing drums", "bringing some"],
+    ["silver lining", "quiver timing", "river climbing"],
+    ["purple circle", "turtle hurdle", "myrtle purple"],
+    ["caterpillar", "after her", "laugh at her", "chapter her"],
+    ["banana", "Montana", "savanna", "bandana"],
+    ["elephant", "relevant", "heaven sent", "elephant"],
+    ["chocolate", "rock a bit", "lock a bit", "chocolate"],
+    ["beautiful", "dutiful", "suitable", "beautiful"],
+    ["incredible", "edible", "credible", "incredible"],
+    ["impossible", "unstoppable", "responsible", "impossible"],
   ];
   // Deduplicate by word, keep highest freq
   var seen = {}, items = [];
@@ -90,6 +116,25 @@
     this.lastWord = s;
     return s;
   };
+  // Find a multisyllabic / multi-word rhyme partner for a word or phrase.
+  // Returns {word: phrase, key, multi: true} or null.
+  UnifiedRapEngine.prototype.getMultisyllabicPartner = function(base, exclude){
+    exclude = exclude || {};
+    var baseWord = (typeof base === 'string' ? base : base.word).toLowerCase();
+    for(var i=0;i<MULTI.length;i++){
+      var group = MULTI[i];
+      var idx = group.indexOf(baseWord);
+      if(idx >= 0){
+        var opts = group.filter(function(p){ return p !== baseWord && !exclude[p]; });
+        if(opts.length > 0){
+          var p = opts[Math.floor(Math.random()*opts.length)];
+          exclude[p] = true;
+          return {word:p, key:(typeof base === 'string' ? '' : base.key), multi:true, freq:80, weight:80};
+        }
+      }
+    }
+    return null;
+  };
   UnifiedRapEngine.prototype.getRhymingPartner = function(base, exclude){
     exclude = exclude || {};
     var fam = this.rhymeMap[base.key] || [];
@@ -98,6 +143,10 @@
       var c = matches[Math.floor(Math.random()*matches.length)];
       exclude[c.word] = true; return c;
     }
+    // Multisyllabic / multi-word fallback: rhyme more than one word if
+    // a single-word rhyme cannot be found — e.g. orange -> four inch door hinge.
+    var multi = this.getMultisyllabicPartner(base, exclude);
+    if(multi) return multi;
     // near rhyme: same vowel (before '-'), different terminal
     var vowel = base.key.split('-')[0];
     var near = [];
@@ -114,6 +163,22 @@
     var f = this.getNextWord(); exclude[f.word] = true; return f;
   };
   UnifiedRapEngine.prototype.wordMode = function(){ return this.getNextWord(this.lastWord).word.toUpperCase(); };
+  // Multisyllabic mode: return a rhyming pair of phrases, e.g.
+  // "ORANGE / FOUR INCH DOOR HINGE" — rhymes across 2+ syllables / words.
+  UnifiedRapEngine.prototype.multisyllabicMode = function(baseWord){
+    var group = MULTI[Math.floor(Math.random()*MULTI.length)];
+    if(baseWord){
+      var m = this.getMultisyllabicPartner(baseWord, {});
+      if(m) return (baseWord.toUpperCase() + " / " + m.word.toUpperCase());
+    }
+    var a = group[0], b = group[Math.floor(Math.random()*(group.length-1))+1];
+    return (a.toUpperCase() + " / " + b.toUpperCase());
+  };
+  // Explicit orange demo, so the user can test the exact case they asked for.
+  UnifiedRapEngine.prototype.orangeRhyme = function(){
+    var m = this.getMultisyllabicPartner("orange", {});
+    return m ? ("ORANGE / " + m.word.toUpperCase()) : "ORANGE / PORRIDGE";
+  };
   UnifiedRapEngine.prototype.phraseMode = function(){
     // Gemini phrase: prefix + w1 & w2, w2 rhyme-connected to w1
     var prefixes = ["locked in","pushing","heavy","raw","clean","strict","deep in"];
