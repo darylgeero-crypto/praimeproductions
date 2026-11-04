@@ -23,6 +23,7 @@ a{color:#7ee2ff}
 <label>Prompt / title</label><input id="title" value="PrAIme — New Track">
 <label>Style</label><select id="style"><option value="cyber">Cyberpunk (cyan/magenta)</option><option value="warm">Warm (orange/red)</option><option value="cool">Cool (blue/green)</option></select>
 <label>Aspect</label><select id="aspect"><option value="16:9">16:9 — 1280×720</option><option value="9:16">9:16 — 720×1280</option><option value="1:1">1:1 — 720×720</option></select>
+<label>Watermark / handle (optional — drawn on the canvas, so it is in the recorded video)</label><input id="watermark" placeholder="e.g. @yourhandle">
 <button id="chooseBtn">📁 Choose song</button><input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac,.m4a">
 <p id="fileInfo"></p><canvas id="canvas" width="1280" height="720"></canvas>
 <button id="preview" disabled>▶ Preview</button><button id="record" disabled>● Record video</button><button id="stop" disabled class="secondary">■ Stop &amp; download</button>
@@ -44,7 +45,7 @@ function setBus(o){ const b=Object.assign(getBus(),o); localStorage.setItem('pra
 function showBus(el){ const b=getBus(); if(el) el.textContent='Prompt: '+(b.prompt||'—')+' | Genre: '+(b.genre||'—')+' | BPM: '+(b.bpm||'—')+' | Key: '+(b.key||'—')+' | Profile: '+(b.profile||'Daryl'); }
 
 let ctx=null,decoded=null,src=null,analyser=null,raf=null,rec=null,chunks=[],streamDest=null,recording=false;
-function draw(){ const c=document.getElementById('canvas'),g=c.getContext('2d'); const style=document.getElementById('style').value; const cols=style==='warm'?['#ff8800','#ff2255']:style==='cool'?['#00ffcc','#0066ff']:['#00f3ff','#f72585']; const gr=g.createLinearGradient(0,0,c.width,c.height); gr.addColorStop(0,'#07090e'); gr.addColorStop(1,'#1a0f2e'); g.fillStyle=gr; g.fillRect(0,0,c.width,c.height); if(analyser){ const d=new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d); const n=48,w=c.width/n; for(let i=0;i<n;i++){ const v=d[i]/255,h=v*c.height*0.6; g.fillStyle=cols[i%2]; g.fillRect(i*w+2,c.height-h,w-4,h); } } g.fillStyle='#fff'; g.font='800 56px system-ui'; g.fillText(document.getElementById('title').value||'',40,90); g.fillStyle=cols[0]; g.font='600 28px system-ui'; g.fillText('PrAIme™ Video',40,c.height-40); raf=requestAnimationFrame(draw); }
+function draw(){ const c=document.getElementById('canvas'),g=c.getContext('2d'); const style=document.getElementById('style').value; const cols=style==='warm'?['#ff8800','#ff2255']:style==='cool'?['#00ffcc','#0066ff']:['#00f3ff','#f72585']; const gr=g.createLinearGradient(0,0,c.width,c.height); gr.addColorStop(0,'#07090e'); gr.addColorStop(1,'#1a0f2e'); g.fillStyle=gr; g.fillRect(0,0,c.width,c.height); if(analyser){ const d=new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d); const n=48,w=c.width/n; for(let i=0;i<n;i++){ const v=d[i]/255,h=v*c.height*0.6; g.fillStyle=cols[i%2]; g.fillRect(i*w+2,c.height-h,w-4,h); } } g.fillStyle='#fff'; g.font='800 56px system-ui'; g.fillText(document.getElementById('title').value||'',40,90); g.fillStyle=cols[0]; g.font='600 28px system-ui'; g.fillText('PrAIme™ Video',40,c.height-40); const wm=(document.getElementById('watermark').value||'').trim(); if(wm){ g.fillStyle='rgba(255,255,255,0.85)'; g.font='600 24px system-ui'; g.textAlign='right'; g.fillText(wm,c.width-40,c.height-40); g.textAlign='left'; } raf=requestAnimationFrame(draw); }
 function setAspect(){ const a=document.getElementById('aspect').value; const c=document.getElementById('canvas'); if(a==='9:16'){c.width=720;c.height=1280;} else if(a==='1:1'){c.width=720;c.height=720;} else {c.width=1280;c.height=720;} }
 document.getElementById('aspect').onchange=setAspect;
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
@@ -240,4 +241,5 @@ document.addEventListener('click', function(e){
 }, true);
 </script>
 <script src="praime-cart.js"></script>
+<script src="real-sounds.js"></script>
 </body></html>
