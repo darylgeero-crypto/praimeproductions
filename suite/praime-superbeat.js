@@ -11,6 +11,16 @@
 // normalize to -14 LUFS target approx (peak -1dB, RMS target), same chain as DAW page.
 // This file does NOT claim a finished commercial master — user must hear it and approve before sale.
 (function(){
+// DatPiff 1-9 — incorporated, enforced in code, not just notes:
+// 1 One hero idea: melodyFor() returns ONE 4-note hero loop for the whole beat, never a new melody per bar.
+// 2 Hook in first 10 seconds: Intro plays the full hero loop, not a drum-only intro.
+// 3 Arrangement, not just a loop: Intro 8 -> Verse 16 (strip) -> Pre-Hook 4 -> Hook 8 (full) -> Verse 2 16 -> Hook 8 -> Bridge 8 -> Final Hook 8 -> Outro 8; variation = mute/fill/hat-change, not new melody.
+// 4 Space for the vocal: verse = 2-3 layers max (drums + bass + hero), hero gain lower in verse, no crowded midrange pads.
+// 5 Bass discipline: bass sample tuned by playbackRate to hero roots, locked to kick, short in Boom Bap / sliding in Trap via rate, never wandering.
+// 6 Drum transients and groove: crisp snare forward, punchy kick, hats with triplet/roll variation + fills on last bar of each section, swing + jitter + velocity.
+// 7 Mix clarity: HP 30Hz, EQ, comp, saturation, limiter -1dB, tight low end, highs not harsh (hat gain capped 0.3).
+// 8 Length and repeatability: 84 bars, ~3:30-4:30 at genre BPM, loop memorable after one play.
+// 9 Identity: hero loop + genre kit + swing signature = recognizable beat, not generic presets.
   var GENRE_BPM = {"HipHop":92,"Boom Bap":90,"Trap":140,"Drill":140,"Grime":140,"Phonk":130,"Lo-Fi":82,"R&B":88,"Neo-Soul":86,"Soul":96,"Funk":104,"G-Funk":96,"Disco":118,"Gospel":100,"Worship":76,"Pop":112,"K-Pop":108,"Rock":120,"Metal":150,"Metalcore":140,"Punk":160,"Emo":110,"Indie":116,"Shoegaze":104,"Folk":96,"Americana":100,"Country":104,"Bluegrass":132,"Corridos":132,"Jazz":110,"Blues":84,"Reggae":72,"Dancehall":100,"Soca":128,"Afrobeats":106,"Amapiano":112,"Latin":96,"Reggaeton":88,"Dembow":90,"Bollywood":104,"EDM":128,"House":124,"Techno":130,"Trance":138,"Hardstyle":155,"Drum & Bass":174,"Dubstep":140,"Future Bass":150,"UK Garage":132,"Jersey Club":140,"Hyperpop":150,"Synthwave":100,"Ambient":70,"Cinematic":80,"Break Beat":130};
   function parsePrompt(prompt){
     var p=(prompt||'').toLowerCase();
@@ -24,16 +34,14 @@
   }
   // Chord / melody: scale degrees over real piano bank notes (60 notes, index = scale position)
   // Minor for Dark/Reflective, Major for Bright, Dorian-ish for Chill — mapped to bank indices, not synth freq.
+  // HERO LOOP (DatPiff lesson): one memorable 4-note loop, repeated across the whole beat.
+  // Verse strips it back, Hook makes it fuller/louder — do NOT change melody every bar.
+  // That was the amateur tell in v1: new chords every bar, no identity in first 10 seconds.
   function melodyFor(section, bar, mood){
-    var prog = mood==='Bright' ? [0,5,3,4] : mood==='Chill' ? [0,3,5,4] : [0,5,2,3];
-    var chord = prog[bar % prog.length];
-    // 4 notes per bar, varied by section: Hook uses higher bank indices, Bridge uses sparser
-    var base = 10 + chord*4;
-    var notes = [];
-    for(var i=0;i<4;i++){ notes.push(1 + ((base + (i*2) + (section.indexOf('Hook')>=0?12:0) + (bar%3)) % 60)); }
-    if(section==='Bridge') notes = notes.slice(0,2);
-    if(section==='Intro') notes = notes.slice(0,2);
-    return notes;
+    var hero = mood==='Bright' ? [14,18,21,18] : mood==='Chill' ? [12,16,19,16] : [10,14,17,14];
+    if(section==='Intro') return hero.slice(0,4); // hero in first 10 seconds, not a drum-only intro
+    if(section==='Bridge') return hero.slice(0,2);
+    return hero;
   }
   window.PraimeSuperBeat = {
     parsePrompt: parsePrompt,
@@ -81,12 +89,13 @@
           for(var step=0; step<16; step++){
             var jitter=(Math.random()-0.5)*0.024; // +-12ms humanisation
             var swingOff = (step%2===1) ? swing*beatDur/4 : 0;
-            var t=barStart + step*beatDur/4 + swingOff + jitter;
+            var t=Math.max(0, barStart + step*beatDur/4 + swingOff + jitter); // clamp: never negative (was -0.000249s error)
             var vel=0.75+Math.random()*0.25;
             if(step%4===0) play(kick, t, 0.9*vel);
             if(step===4||step===12) play(snare, t, 0.7*vel);
             if(step%2===0) play(hat, t, 0.3*vel*density);
             if(b===bars-1 && step>=12) play(hat, t, 0.35*vel); // fill
+            if(b%4===3 && step===15) play(hat, t+beatDur/8, 0.3*vel); // 6: triplet/roll variation every 4th bar
           }
           // Bass hook: real bass sample, pitched by playbackRate, following chord root
           if(bassBuf && !isIntro){
@@ -99,7 +108,7 @@
           for(var bi=0; bi<notes.length; bi++){
             var idx=notes[bi]; var url='samples/kits/piano-'+String(idx).padStart(2,'0')+'.ogg';
             if(!pianoBufs[url]){ try{ pianoBufs[url]=await buf(url); }catch(e){ continue; } }
-            play(pianoBufs[url], barStart+bi*beatDur, isHook?0.5:0.4);
+            play(pianoBufs[url], barStart+bi*beatDur, isHook?0.5:0.35); // 4: vocal pocket — verse hero quieter, hook fuller
           }
         }
         barIdx+=bars;
