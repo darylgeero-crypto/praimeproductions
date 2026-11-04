@@ -30,6 +30,15 @@ a{color:#7ee2ff}
 <p style="font-size:12px;color:#9ca3af">⚡ Near-zero latency graphics: the visuals read your song straight from the browser's AnalyserNode every animation frame — no upload, no server round-trip — so bars, rings and bursts react within a frame of the sound. Smoothing is set low (0.12) on purpose, so it does not lag behind the beat. Not literally zero milliseconds — nothing on a screen is — but frame-level, on-device.</p>
 <label>Transition</label><select id="transition"><option value="cut">Cut — no transition</option><option value="fade">Fade in</option><option value="slide">Slide in</option><option value="wipe">Wipe in</option></select>
 <label>Fingerprint prompt — words that change the palette, particles and shapes (deterministic, no AI: the words are hashed, the same words always give the same look)</label><input id="fingerprint" placeholder="e.g. midnight city neon rain">
+<label><input type="checkbox" id="uniqueBg" checked style="width:auto"> Unique backgrounds — each background is used once, then gone</label>
+<button id="newBgBtn" class="secondary">🎲 New unique background</button><p id="bgOut" style="font-size:12px;color:#9ca3af">Unique background ready — not used before, and once a video is recorded with it, it will never come back.</p>
+<label>Lyrics for video — syllable-synced</label><textarea id="videoLyrics" rows="3" placeholder="Paste lyrics here, one line per line. Each syllable highlights in time with the song."></textarea>
+<label><input type="checkbox" id="syllableSync" checked style="width:auto"> Syllable-synced lyrics on the video</label>
+<p style="font-size:12px;color:#9ca3af">Honest timing: this is NOT AI forced-alignment and it does not hear the words — syllables are split by a vowel-group heuristic and spread evenly across the song's length, so the current syllable lights up in yellow as the song plays. Best for a steady flow; it will drift on songs with long pauses or ad-libs.</p>
+<button id="subSrtBtn" class="secondary">⬇ Generate subtitles (.srt — line by line)</button><button id="subVttBtn" class="secondary">⬇ Generate subtitles (.vtt — syllable by syllable)</button><p id="subOut" style="font-size:12px;color:#9ca3af">Subtitles are generated from the lyrics above + the loaded song's length. Load a song first, then download the .srt or .vtt to use with the video in any player / editor. Timing is the same even-distribution estimate as the on-canvas syllables — not AI alignment — so check it against the song and edit the file if a line lands early or late.</p>
+<label>AI-generated background — prompt</label><input id="aiBgPrompt" placeholder="e.g. neon octopus over a city skyline at night, cinematic">
+<button id="aiBgBtn">🤖 Generate AI background</button><button id="aiBgDlBtn" class="secondary">⬇ Download AI background image</button><p id="aiBgOut" style="font-size:12px;color:#9ca3af">Real AI image, not a canvas pattern: generated via Pollinations (free, no key, rate-limited — about 1 image per 45 seconds anonymously, may return 402/503 when busy). The image is drawn behind the video visuals. It is unique by seed, and once it is recorded or sold, it is gone. Check Pollinations' terms before selling a generated image commercially.</p>
+<button id="sellBgBtn">🛒 Sell this background — $4.99 to Live PayPal cart</button><button id="markSoldBtn" class="secondary">Mark as sold — retire this background</button><p id="bgSellOut" style="font-size:12px;color:#9ca3af">Sellable background: $4.99, same Live PayPal cart as the Beat Store. Licence, like beats: the buyer may use the background in their videos, they do not own it and may not resell it. Once a background is sold, mark it as sold and it will never be generated again.</p>
 <label><input type="checkbox" id="titleCard" checked style="width:auto"> Show title card for the first 3 seconds</label>
 <label><input type="checkbox" id="outroCard" checked style="width:auto"> Show outro card for 2.5 seconds when the song ends</label>
 <label>Grading — brightness</label><input type="range" id="bright" min="0.5" max="1.5" step="0.05" value="1">
@@ -61,6 +70,111 @@ function showBus(el){ const b=getBus(); if(el) el.textContent='Prompt: '+(b.prom
 
 let ctx=null,decoded=null,src=null,analyser=null,raf=null,rec=null,chunks=[],streamDest=null,recording=false;
 let videoType='sweet', photoImg=null, camStream=null, camFrame=null, fpSeed=0, particles=[], transStart=0, playStart=0, outroUntil=0;
+// ---- Unique backgrounds: each one used once, then gone ----
+// A background is its seed (palette + particles + shapes). Used seeds are
+// saved in this browser only, under praime_used_backgrounds, and are never
+// generated again. A background is "used" when a video is RECORDED with it
+// (previewing does not burn it, or you could never check it first).
+// On record completion the used seed is retired and a fresh unique one
+// is generated automatically, so the next video cannot look like the last.
+function usedBackgrounds(){
+  try{ return JSON.parse(localStorage.getItem('praime_used_backgrounds')||'[]'); }catch(e){ return []; }
+}
+function saveUsedBackground(seed){
+  try{
+    var used=usedBackgrounds(); if(used.indexOf(seed)<0) used.push(seed);
+    localStorage.setItem('praime_used_backgrounds', JSON.stringify(used));
+  }catch(e){}
+}
+function newUniqueBackground(){
+  var used=usedBackgrounds(), seed=0, tries=0;
+  do{ seed=Math.floor(Math.random()*4294967295); tries++; }while(used.indexOf(seed)>=0 && tries<100);
+  fpSeed=seed; regenParticles(); var out=document.getElementById('bgOut');
+  if(out) out.textContent='Unique background #' + seed + ' — not used before. Record a video with it, and it is gone: it will never be generated again.';
+  return seed;
+}
+function retireCurrentBackground(){
+  if(!fpSeed) return;
+  saveUsedBackground(fpSeed);
+  var out=document.getElementById('bgOut');
+  if(out) out.textContent='That background is gone — used once, never reused. A fresh unique background is ready for the next video.';
+  newUniqueBackground();
+}
+// ---- Syllable-synced lyrics ----
+// Split a word into syllables by vowel groups (heuristic, not a dictionary).
+// e.g. "beautiful" -> beau-ti-ful, "orange" -> o-range (approximate).
+function splitSyllables(word){
+  var m = word.match(/[^aeiouAEIOUy]*[aeiouAEIOUy]+[^aeiouAEIOUy]*/g);
+  if(!m || !m.length) return [word];
+  var out = [], cur = '';
+  m.forEach(function(part){ cur += part; out.push(cur); cur = ''; });
+  // Re-join tiny fragments so we do not get single-letter syllables everywhere.
+  return out;
+}
+function syllableLines(){
+  var text = (document.getElementById('videoLyrics')||{}).value || '';
+  return text.split(/\n/).map(function(line){
+    var syls = [];
+    line.split(/\s+/).filter(Boolean).forEach(function(w){
+      splitSyllables(w).forEach(function(s){ syls.push(s); });
+    });
+    return syls;
+  }).filter(function(l){ return l.length; });
+}
+// ---- Subtitle generation (.srt line-by-line, .vtt syllable-by-syllable) ----
+function fmtSrt(sec){
+  var h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=Math.floor(sec%60), ms=Math.floor((sec%1)*1000);
+  function p(n,l){ return String(n).padStart(l,'0'); } return p(h,2)+':'+p(m,2)+':'+p(s,2)+','+p(ms,3);
+}
+function fmtVtt(sec){ return fmtSrt(sec).replace(',', '.'); }
+function downloadText(name, text){
+  var blob=new Blob([text], {type:'text/plain'}); var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+}
+function generateSubtitles(format){
+  var out=document.getElementById('subOut');
+  if(!decoded){ out.textContent='Load a song first — subtitles need the song length to time the lines.'; return; }
+  var rawLines=(document.getElementById('videoLyrics')||{}).value.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  if(!rawLines.length){ out.textContent='Paste lyrics first — there is nothing to subtitle yet.'; return; }
+  var lines=syllableLines(), total=lines.reduce(function(a,l){ return a+l.length; },0);
+  if(!total){ out.textContent='Paste lyrics first.'; return; }
+  var dur=decoded.duration, acc=0, cues=[];
+  if(format==='srt'){
+    lines.forEach(function(syls, li){
+      var start=acc/total*dur, end=(acc+syls.length)/total*dur;
+      cues.push((li+1)+'\n'+fmtSrt(start)+' --> '+fmtSrt(end)+'\n'+rawLines[li]+'\n');
+      acc+=syls.length;
+    });
+    downloadText('praime-subtitles.srt', cues.join('\n'));
+    out.textContent='Subtitles downloaded: praime-subtitles.srt — '+lines.length+' line(s), timed across '+dur.toFixed(1)+'s. Even-distribution estimate, not AI alignment.';
+  } else {
+    var flat=[]; lines.forEach(function(syls){ syls.forEach(function(s){ flat.push(s); }); });
+    var parts=['WEBVTT\n'];
+    flat.forEach(function(s, i){
+      var start=i/total*dur, end=(i+1)/total*dur;
+      parts.push(fmtVtt(start)+' --> '+fmtVtt(end)+'\n'+s+'\n');
+    });
+    downloadText('praime-subtitles.vtt', parts.join('\n'));
+    out.textContent='Subtitles downloaded: praime-subtitles.vtt — '+flat.length+' syllable(s), timed across '+dur.toFixed(1)+'s. Even-distribution estimate, not AI alignment.';
+  }
+}
+// ---- AI-generated background (Pollinations, real AI image, no key) ----
+let aiBgImg=null, aiBgSeed=null, aiBgUrl='';
+function generateAIBackground(){
+  var out=document.getElementById('aiBgOut');
+  var prompt=(document.getElementById('aiBgPrompt')||{}).value.trim()
+    || (document.getElementById('fingerprint')||{}).value.trim()
+    || (document.getElementById('title')||{}).value.trim();
+  if(!prompt){ out.textContent='Enter an AI background prompt first.'; return; }
+  var used=usedBackgrounds(), seed=0, tries=0;
+  do{ seed=Math.floor(Math.random()*4294967295); tries++; }while(used.indexOf(seed)>=0 && tries<100);
+  var url='https://image.pollinations.ai/prompt/'+encodeURIComponent(prompt)+'?width=1280&height=720&nologo=true&seed='+seed;
+  out.textContent='Generating AI background… (free anonymous tier: about 1 image per 45 seconds, may be busy — wait if it fails, no fake image will be substituted.)';
+  var img=new Image(); img.crossOrigin='anonymous';
+  img.onload=function(){ aiBgImg=img; aiBgSeed=seed; aiBgUrl=url; fpSeed=seed; regenParticles(); draw(); out.textContent='AI background generated — seed '+seed+', unique, not used before. Record it or sell it, and it is gone.'; };
+  img.onerror=function(){ out.textContent='AI generation failed or rate-limited (402/503 when busy on the free tier). Wait about 45 seconds and try again — no fake image was substituted.'; };
+  img.src=url;
+}
 let prevBass=0, lastBeat=0, beatPulse=0, bursts=[];
 function audioMetrics(d){
   if(!d) return {bass:0, mid:0, high:0, energy:0};
@@ -89,7 +203,9 @@ function draw(){
   if(te<800){ const f=te/800; if(trans==='fade') alpha=f; else if(trans==='slide') tx=(1-f)*c.width; else if(trans==='wipe') wipeW=c.width*f; }
   g.save(); g.globalAlpha=alpha; g.beginPath(); g.rect(0,0,wipeW,c.height); g.clip(); g.translate(-tx,0);
   const gr=g.createLinearGradient(0,0,c.width,c.height); gr.addColorStop(0,'#07090e'); gr.addColorStop(1,'#1a0f2e'); g.fillStyle=gr; g.fillRect(0,0,c.width,c.height);
-  const bgImg=camFrame||photoImg;
+  const bgImg=aiBgImg||camFrame||photoImg;
+  // AI background behind the visuals (selfie/collage draw it themselves below).
+  if(aiBgImg && type!=='selfie' && type!=='collage'){ drawCover(aiBgImg,c,g); g.fillStyle='rgba(7,9,14,0.35)'; g.fillRect(0,0,c.width,c.height); }
   const type=videoType;
   if(type==='selfie'&&bgImg){ drawCover(bgImg,c,g); g.fillStyle='rgba(7,9,14,0.35)'; g.fillRect(0,0,c.width,c.height); }
   if(type==='collage'){
@@ -155,6 +271,36 @@ function draw(){
     const words=(document.getElementById('title').value||'').split(/\s+/).filter(Boolean);
     if(words.length){ const idx=analyser?Math.min(words.length-1,Math.floor((now-playStart)/1000)%words.length):0; g.fillStyle='#fff'; g.font='800 64px system-ui'; g.textAlign='center'; g.fillText(words[idx],c.width/2,c.height-120); g.textAlign='left'; }
   }
+  // Syllable-synced lyrics: current syllable yellow, sung syllables in the
+  // accent colour, upcoming syllables dim white. Timing is even across the
+  // song (see note above the textarea), not AI word detection.
+  if(document.getElementById('syllableSync') && document.getElementById('syllableSync').checked){
+    const lines=syllableLines();
+    if(lines.length){
+      const total=lines.reduce(function(a,l){ return a+l.length; },0);
+      let curIdx=0, curLine=0;
+      if(analyser && decoded && playStart){
+        const elapsed=(now-playStart)/1000;
+        curIdx=Math.min(total-1, Math.floor(elapsed/Math.max(0.1,decoded.duration)*total));
+        let acc=0; for(let li=0; li<lines.length; li++){ if(curIdx<acc+lines[li].length){ curLine=li; break; } acc+=lines[li].length; }
+      }
+      const lineSyls=lines[curLine];
+      // Centre the whole line: measure first, then draw syllable by syllable.
+      g.font='800 48px system-ui';
+      let widths=lineSyls.map(function(s){ return g.measureText(s+' ').width; });
+      let totalW=widths.reduce(function(a,b){ return a+b; },0);
+      let x=c.width/2-totalW/2, y=c.height-180, acc2=0;
+      for(let li2=0; li2<curLine; li2++) acc2+=lines[li2].length;
+      lineSyls.forEach(function(s, si){
+        const globalIdx=acc2+si;
+        if(globalIdx<curIdx){ g.fillStyle=cols[0]; }
+        else if(globalIdx===curIdx){ g.fillStyle='#ffe600'; g.font='800 56px system-ui'; }
+        else { g.fillStyle='rgba(255,255,255,0.6)'; g.font='800 48px system-ui'; }
+        g.textAlign='left'; g.fillText(s, x, y); x+=widths[si]; g.font='800 48px system-ui';
+      });
+      g.textAlign='left';
+    }
+  }
   if(type==='selfie'&&!bgImg){ g.strokeStyle=cols[0]; g.lineWidth=6; g.beginPath(); g.arc(c.width/2,c.height/2-40,110,0,6.283); g.stroke(); g.fillStyle='#fff'; g.font='600 28px system-ui'; g.textAlign='center'; g.fillText('Add a photo or camera snapshot',c.width/2,c.height/2+110); g.textAlign='left'; }
   g.fillStyle='#fff'; g.font='800 56px system-ui'; g.fillText(document.getElementById('title').value||'',40,90);
   g.fillStyle=cols[0]; g.font='600 28px system-ui'; g.fillText('PrAIme\u2122 Video',40,c.height-40);
@@ -178,17 +324,48 @@ document.getElementById('aspect').onchange=setAspect;
 document.getElementById('videoType').onchange=e=>{ videoType=e.target.value; transStart=performance.now(); draw(); };
 document.getElementById('transition').onchange=()=>{ transStart=performance.now(); };
 document.getElementById('fingerprint').oninput=e=>{ fpSeed=hashWords(e.target.value.trim()); regenParticles(); };
+document.getElementById('newBgBtn').onclick=()=>{ newUniqueBackground(); draw(); };
+document.getElementById('uniqueBg').onchange=e=>{
+  if(e.target.checked){ newUniqueBackground(); draw(); }
+  else { var out=document.getElementById('bgOut'); if(out) out.textContent='Unique backgrounds off — fingerprint words now set the look again (same words = same look).'; }
+};
 document.getElementById('photoBtn').onclick=()=>document.getElementById('photoInput').click();
 document.getElementById('photoInput').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>{ photoImg=img; document.getElementById('camOut').textContent='Photo loaded: '+f.name+' — drawn on the canvas (and in the recorded video).'; draw(); }; img.onerror=()=>{ document.getElementById('camOut').textContent='That photo could not be loaded. Try a JPG or PNG.'; }; img.src=URL.createObjectURL(f); };
 document.getElementById('camStart').onclick=async ()=>{ const out=document.getElementById('camOut'); try{ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia) throw new Error('Camera is not available in this browser.'); camStream=await navigator.mediaDevices.getUserMedia({video:true}); const v=document.getElementById('camPreview'); v.srcObject=camStream; v.style.display='block'; out.textContent='Camera running — press Snapshot to canvas to capture a frame.'; }catch(err){ out.textContent='Camera unavailable: '+(err&&err.message?err.message:err)+'. On this device, use Choose photo instead — the camera needs a secure page and camera permission, and it must not be blocked by the browser.'; } };
 document.getElementById('camSnap').onclick=()=>{ const v=document.getElementById('camPreview'); const out=document.getElementById('camOut'); if(!camStream||!v.videoWidth){ out.textContent='Start the camera first, wait for the preview, then snapshot.'; return; } const cv=document.createElement('canvas'); cv.width=v.videoWidth; cv.height=v.videoHeight; cv.getContext('2d').drawImage(v,0,0); const img=new Image(); img.onload=()=>{ camFrame=img; out.textContent='Camera snapshot captured — drawn on the canvas (and in the recorded video).'; draw(); }; img.src=cv.toDataURL('image/png'); };
 document.getElementById('camStop').onclick=()=>{ if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; } const v=document.getElementById('camPreview'); v.srcObject=null; v.style.display='none'; document.getElementById('camOut').textContent='Camera stopped. A captured snapshot stays on the canvas until you clear it.'; };
 document.getElementById('clearPhoto').onclick=()=>{ photoImg=null; camFrame=null; document.getElementById('camOut').textContent='Photo / snapshot cleared.'; draw(); };
-regenParticles();
+document.getElementById('subSrtBtn').onclick=()=>generateSubtitles('srt');
+document.getElementById('subVttBtn').onclick=()=>generateSubtitles('vtt');
+document.getElementById('aiBgBtn').onclick=generateAIBackground;
+document.getElementById('aiBgDlBtn').onclick=()=>{
+  var out=document.getElementById('aiBgOut');
+  if(!aiBgImg){ out.textContent='Generate an AI background first.'; return; }
+  try{
+    var cv=document.createElement('canvas'); cv.width=aiBgImg.width||1280; cv.height=aiBgImg.height||720;
+    cv.getContext('2d').drawImage(aiBgImg,0,0,cv.width,cv.height);
+    var a=document.createElement('a'); a.href=cv.toDataURL('image/png'); a.download='praime-ai-background-'+(aiBgSeed||'x')+'.png'; a.click();
+    out.textContent='AI background downloaded as PNG.';
+  }catch(e){ out.textContent='Could not download directly (cross-origin image). Open the generated image URL instead and save it from there.'; if(aiBgUrl) window.open(aiBgUrl,'_blank'); }
+};
+document.getElementById('sellBgBtn').onclick=()=>{
+  var out=document.getElementById('bgSellOut');
+  var seed=aiBgSeed||fpSeed;
+  if(!seed){ out.textContent='Generate a background first — unique or AI — then sell it.'; return; }
+  if(typeof PraimeCart!=='undefined') PraimeCart.add('PrAIme Background #'+seed, 4.99);
+  out.textContent='Background #'+seed+' added to the Beat Store cart ($4.99). Go to Beat Store to pay with Live PayPal. Licence: buyer may use it in their videos, they do not own it and may not resell it. Once paid, mark it as sold so it is gone.';
+};
+document.getElementById('markSoldBtn').onclick=()=>{
+  var seed=aiBgSeed||fpSeed; if(seed) saveUsedBackground(seed);
+  aiBgImg=null; aiBgSeed=null; aiBgUrl='';
+  newUniqueBackground(); draw();
+  document.getElementById('bgSellOut').textContent='Marked as sold — that background is gone, never generated again. A fresh unique background is ready.';
+};
+if(document.getElementById('uniqueBg') && document.getElementById('uniqueBg').checked) newUniqueBackground(); else regenParticles();
 
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
 document.getElementById('fileInput').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume(); decoded=await ctx.decodeAudioData(await f.arrayBuffer()); setBus({prompt:document.getElementById('title').value}); document.getElementById('fileInfo').textContent=f.name+' — '+decoded.duration.toFixed(1)+'s'; document.getElementById('preview').disabled=false; document.getElementById('record').disabled=false; draw(); };
-function start(forRec){ playStart=performance.now(); transStart=performance.now(); outroUntil=0; if(src) try{src.stop();}catch(e){} src=ctx.createBufferSource(); src.buffer=decoded; const inp=ctx.createGain(); src.connect(inp); analyser=ctx.createAnalyser(); analyser.fftSize=256; analyser.smoothingTimeConstant=0.12; inp.connect(analyser); analyser.connect(ctx.destination); streamDest=ctx.createMediaStreamDestination(); analyser.connect(streamDest); src.start(); draw(); src.onended=()=>{ if(document.getElementById('outroCard').checked){ outroUntil=performance.now()+2500; setTimeout(()=>{ if(recording) stopRec(); },2500); } else if(recording) stopRec(); }; if(forRec){ chunks=[]; const c=document.getElementById('canvas'); const stream=new MediaStream([...c.captureStream(parseInt((document.getElementById('vidFps')||{}).value||30,10)).getVideoTracks(),...streamDest.stream.getAudioTracks()]); rec=new MediaRecorder(stream,{mimeType:'video/webm'}); rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);}; rec.onstop=()=>{ const blob=new Blob(chunks,{type:'video/webm'}); const url=URL.createObjectURL(blob); const v=document.getElementById('outVideo'); v.src=url; v.style.display='block'; const a=document.createElement('a'); a.href=url; a.download='praime-video.webm'; a.click(); document.getElementById('out').textContent='Video downloaded: praime-video.webm ('+Math.round(blob.size/1024)+' KB), recorded in real time.'; }; rec.start(); recording=true; document.getElementById('out').textContent='Recording video in real time…'; } }
+function start(forRec){ playStart=performance.now(); transStart=performance.now(); outroUntil=0; if(src) try{src.stop();}catch(e){} src=ctx.createBufferSource(); src.buffer=decoded; const inp=ctx.createGain(); src.connect(inp); analyser=ctx.createAnalyser(); analyser.fftSize=256; analyser.smoothingTimeConstant=0.12; inp.connect(analyser); analyser.connect(ctx.destination); streamDest=ctx.createMediaStreamDestination(); analyser.connect(streamDest); src.start(); draw(); src.onended=()=>{ if(document.getElementById('outroCard').checked){ outroUntil=performance.now()+2500; setTimeout(()=>{ if(recording) stopRec(); },2500); } else if(recording) stopRec(); }; if(forRec){ chunks=[]; const c=document.getElementById('canvas'); const stream=new MediaStream([...c.captureStream(parseInt((document.getElementById('vidFps')||{}).value||30,10)).getVideoTracks(),...streamDest.stream.getAudioTracks()]); rec=new MediaRecorder(stream,{mimeType:'video/webm'}); rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);}; rec.onstop=()=>{ const blob=new Blob(chunks,{type:'video/webm'}); const url=URL.createObjectURL(blob); const v=document.getElementById('outVideo'); v.src=url; v.style.display='block'; const a=document.createElement('a'); a.href=url; a.download='praime-video.webm'; a.click(); document.getElementById('out').textContent='Video downloaded: praime-video.webm ('+Math.round(blob.size/1024)+' KB), recorded in real time.'; if(document.getElementById('uniqueBg').checked) retireCurrentBackground(); }; rec.start(); recording=true; document.getElementById('out').textContent='Recording video in real time…'; } }
 function stopRec(){ if(!recording) return; recording=false; try{rec.stop();}catch(e){} if(src) try{src.stop();}catch(e){} document.getElementById('stop').disabled=true; document.getElementById('record').disabled=false; }
 document.getElementById('preview').onclick=()=>start(false);
 document.getElementById('record').onclick=()=>{ start(true); document.getElementById('record').disabled=true; document.getElementById('stop').disabled=false; };
