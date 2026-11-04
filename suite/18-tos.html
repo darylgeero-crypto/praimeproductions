@@ -27,6 +27,7 @@ a{color:#7ee2ff}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main>
 <h1>Terms of Service — Draft for PrAIme Productions (not a lawyer, get a lawyer to review)</h1>
+<div><button id="dlTermsBtn">⬇ Download Terms as Plain Text</button><span id="dlTermsStatus" class="status" style="display:inline-block;margin-left:8px"></span></div>
 <div class="card"><h2>Important: this is NOT a “total access” TOS</h2>
 <p>Amazon and Google do <b>not</b> have total access to your life. They have long, specific terms + privacy policies, with limits, user rights, deletion, and data-processing rules — and they are regulated. A TOS that claimed total, unlimited access to a user's phone, music library, contacts, or other people's copyrighted songs would not be legally sound, and it would not be accepted by app stores or payment providers. This draft is the honest, launchable version instead.</p></div>
 <div class="card"><h2>Draft terms — summary (full text below, for review)</h2>
@@ -44,7 +45,8 @@ a{color:#7ee2ff}
 <input id="rokOllama" placeholder="http://127.0.0.1:11434" value="http://127.0.0.1:11434">
 <input id="rokModel" placeholder="Model, e.g. llama3.1" value="llama3.1">
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
-</div></main><script></script><script>// ---- Rokdabus Prhyme widget ----
+</div></main><script></script><script>// Terms plain-text download: exports the existing draft text unchanged (h1 + cards only, not the Rokdabus panel).
+document.getElementById('dlTermsBtn').onclick=function(){ var parts=[document.querySelector('h1').innerText]; document.querySelectorAll('main .card').forEach(function(c){ parts.push(c.innerText); }); var blob=new Blob([parts.join('\n\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-terms.txt'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); document.getElementById('dlTermsStatus').textContent='Downloaded Terms as TXT.'; };
 (function(){
   var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
   if(!btn||!panel) return;
@@ -228,4 +230,5 @@ document.addEventListener('click', function(e){
   }catch(err){}
 }, true);
 </script>
+<script src="real-sounds.js"></script>
 </body></html>
