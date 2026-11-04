@@ -71,11 +71,18 @@
   // HERO LOOP (DatPiff lesson): one memorable 4-note loop, repeated across the whole beat.
   // Verse strips it back, Hook makes it fuller/louder — do NOT change melody every bar.
   // That was the amateur tell in v1: new chords every bar, no identity in first 10 seconds.
+  // MUSICALITY FIX: hero is recognizable, but NOT identical every bar.
+  // Verse = hero as written. Pre-Hook = hero reversed. Hook = hero + octave turnaround. Bridge = hero sparse + new turnaround.
+  // Every 4th bar = passing note between hero notes. Same hero DNA, real variation — not super repetitive, not a new melody.
   function melodyFor(section, bar, mood){
-    var hero = mood==='Rapmosfieryk' ? [14,18,21,18] : mood==='Bright' ? [14,18,21,18] : mood==='Chill' ? [12,16,19,16] : [10,14,17,14]; // Rapmosfieryk: positive/urgent, simple repeating hook, vocal-led, not dark trap/drill
-    if(section==='Intro') return hero.slice(0,4); // hero in first 10 seconds, not a drum-only intro
-    if(section==='Bridge') return hero.slice(0,2);
-    return hero;
+    var hero = mood==='Rapmosfieryk' ? [14,18,21,18] : mood==='Bright' ? [14,18,21,18] : mood==='Chill' ? [12,16,19,16] : [10,14,17,14];
+    var notes = hero.slice();
+    if(section==='Intro') return notes;
+    if(section==='Pre-Hook') return notes.slice().reverse();
+    if(section==='Bridge') return [notes[0], notes[2], notes[3]+7]; // sparse + octave turnaround
+    if(section.indexOf('Hook')>=0) notes = [notes[0], notes[1], notes[2], notes[3]+12]; // hook octave lift
+    if(bar%4===3) notes = [notes[0], notes[0]+2, notes[1], notes[2], notes[3]]; // passing note every 4th bar
+    return notes;
   }
   window.PraimeSuperBeat = {
     parsePrompt: parsePrompt,
@@ -110,9 +117,10 @@
       // Schedule bars
       var curve=genreCurve(cfg.genre); var swing=curve.swing; // dynamically curved per genre, not binary
       var barIdx=0;
-      function play(bufObj, when, gain, rate){
+      function play(bufObj, when, gain, rate, stopAfter){
         if(!bufObj) return; var s=off.createBufferSource(); s.buffer=bufObj; if(rate) s.playbackRate.value=rate;
         var g=off.createGain(); g.gain.value=gain; s.connect(g); g.connect(master); s.start(when);
+        if(stopAfter) try{ s.stop(when+stopAfter); }catch(e){}
       }
       for(var si=0; si<secs.length; si++){
         var sec=secs[si][0], bars=secs[si][1];
@@ -126,22 +134,24 @@
             var swingOff = (step%2===1) ? swing*beatDur/4 : 0;
             var t=Math.max(0, barStart + step*beatDur/4 + swingOff + jitter); // clamp: never negative (was -0.000249s error)
             var vel=0.75+Math.random()*0.25;
-            if(step%4===0) play(kick, t, 0.9*vel);
-            if(step===4||step===12) play(snare, t, 0.7*vel);
-            if(step%2===0) play(hat, t, 0.3*vel*density);
+            if(step%4===0) play(kick, t, 0.70*vel);
+            if(step===4||step===12) play(snare, t, 0.55*vel);
+            if(step%2===0) play(hat, t, 0.20*vel*density);
             if(b===bars-1 && step>=12) play(hat, t, 0.35*vel); // fill
             if(b%4===3 && step===15) play(hat, t+beatDur/8, 0.3*vel); // 6: triplet/roll variation every 4th bar
           }
           // Bass hook: real bass sample, pitched by playbackRate, following chord root
-          // BASS FIX: was 1 quiet note per bar, buried under kick/comp — now a real bass line, 4 notes per bar.
+          // BASSLINE FIX: was same pitch 4x per bar, 4.7s sample overlapping into a drone — no bassline, just a wash.
+          // Now: short notes (stop after 0.9 beat), different pitch per beat: root, root, 5th, octave — a real bassline.
           if(bassBuf){
-            var roots=[1,0.89,1.12,0.94]; var rate=roots[b%4];
-            var bgain = isHook ? 0.85 : 0.70; // bass must be heard, not just felt
+            var barRoot=[1,0.89,1.12,0.94][b%4];
+            var bassLine=[barRoot, barRoot, barRoot*1.5, barRoot*2]; // root, root, 5th, octave
+            var bgain = isHook ? 0.75 : 0.60;
             if(isIntro){
-              play(bassBuf, barStart, 0.60, rate);
+              play(bassBuf, barStart, 0.55, barRoot, beatDur*0.9);
             } else {
-              for(var bb=0; bb<4; bb++){ play(bassBuf, barStart+bb*beatDur, bgain, rate); }
-              if(isHook) play(bassBuf, barStart+beatDur*2, 0.85, rate*1.5); // bass hook octave
+              for(var bb=0; bb<4; bb++){ play(bassBuf, barStart+bb*beatDur, bgain, bassLine[bb], beatDur*0.9); }
+              if(isHook) play(bassBuf, barStart+beatDur*2, 0.75, barRoot*1.5, beatDur*0.9);
             }
           }
           // Melody: real piano bank notes, one per beat, varied by section
@@ -160,11 +170,12 @@
                 pianoBufs[url]=pianoBufs[fb];
               }
             }
-            // Melody: 8th-note pattern, not 1 per beat — a real melody line, louder, with variation by bar.
-            // Play hero note on beat, plus an octave/echo note on the off-beat, so it is actually heard as a melody.
-            var mgain = cfg.mood==='Rapmosfieryk' ? (isHook?0.55:0.40) : (isHook?0.65:0.50);
-            play(pianoBufs[url], barStart+bi*beatDur, mgain);
-            if(!isIntro) play(pianoBufs[url], barStart+bi*beatDur+beatDur/2, mgain*0.6, 1.5);
+            // MELODY FIX: was same pitch every time (fallback file, no rate) + 7-15s sustains overlapping into a wash.
+            // Now: pitch per note index (semitone rate), short notes (stop after 0.8 beat), melody gain above drums.
+            var mgain = cfg.mood==='Rapmosfieryk' ? (isHook?0.65:0.50) : (isHook?0.75:0.60);
+            var noteRate = Math.pow(2, (idx-14)/12); // hero note 14 = base pitch, others are real intervals
+            play(pianoBufs[url], barStart+bi*beatDur, mgain, noteRate, beatDur*0.8);
+            if(!isIntro) play(pianoBufs[url], barStart+bi*beatDur+beatDur/2, mgain*0.5, noteRate*1.5, beatDur*0.4);
           }
         }
         barIdx+=bars;
