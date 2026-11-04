@@ -52,7 +52,7 @@ a{color:#7ee2ff}
 <li><b>Beat — Exclusive: $199</b> — typical $300–$500 for a first exclusive. You save 34–60%. Beat is pulled from sale on exclusive purchase (contract required). <button class="addCart" data-name="Beat exclusive" data-price="199">Add to cart</button></li>
 <li><b>Song master — WAV: $2.99</b> — LANDR ~$10 per WAV, Waves ~$3.99. You save 25–70%. <button class="addCart" data-name="Song master WAV" data-price="2.99">Add to cart</button></li>
 <li><b>Vocal master — Any-Mic: $1.99</b> — human engineer typically $50+ per track. <button class="addCart" data-name="Vocal master" data-price="1.99">Add to cart</button></li>
-<li><b>Separate &amp; Re-Beat: $2.99</b> — vocal + new backing beat mix. <button class="addCart" data-name="Separate and Re-Beat" data-price="2.99">Add to cart</button></li>
+<li><b>Separate: $2.99</b> — vocal extraction only. <button class="addCart" data-name="Separate" data-price="2.99">Add to cart</button></li><li><b>Re-Beat: $19.99</b> — separate vocal + a new custom backing beat built for it + mix. Costs more than a regular $9.99 MP3 beat lease because it is a custom rebuild, not a stock lease. <button class="addCart" data-name="Re-Beat" data-price="19.99">Add to cart</button></li>
 <li><b>Video render — WebM: $1.99</b> — per finished video download. <button class="addCart" data-name="Video render" data-price="1.99">Add to cart</button></li>
 </ul></div>
 
@@ -61,7 +61,7 @@ a{color:#7ee2ff}
 <ul>
 <li>$9.99 beat → ~$9.40 after PayPal, before any hosting cost</li>
 <li>$19.99 beat → ~$19.11 after PayPal</li>
-<li>$2.99 master → ~$2.60 after PayPal</li>
+<li>$2.99 master → ~$2.60 after PayPal</li><li>$19.99 Re-Beat → ~$19.11 after PayPal</li>
 <li>$1.99 vocal master → ~$1.63 after PayPal</li>
 </ul>
 <p>Because a generated beat or a browser master costs almost nothing extra to make — no studio hour, no human engineer, no sample clearance on a synth beat — the margin is in volume, not in charging $50 for an MP3. Lower price, more buyers, still profitable. If you later add server hosting, accounts and support, those costs come out of this margin first, and prices can be reviewed then — they are not locked to a server cost today.</p></div>
@@ -137,7 +137,7 @@ document.getElementById('lyricStyle').onclick=function(){ if(!sel){ document.get
   function say(t){ var rhymes=['Rokdabus in the mix, making beats that stick and tricks that click.','Eight tentacles on the decks, dropping rhythms you will not forget.','PrAIme in the place, let the bass and the rhythm set the pace.','I master every track, I never fall behind, I keep the sound refined.','From the Hub to the stage, I turn the page and set the gauge.']; var out=t; if(!/\.$/.test(out)) out+='.'; out+=' '+rhymes[Math.abs(t.length)%rhymes.length]; log.textContent += '\n\nRokdabus: '+out; log.scrollTop=log.scrollHeight; try{ if(window.speechSynthesis){ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(out); u.rate=1; u.pitch=1; window.speechSynthesis.speak(u); } }catch(e){} }
   function userSay(t){ log.textContent += '\n\nYou: '+t; log.scrollTop=log.scrollHeight; }
   var KB=[
-['pricing', 'PrAIme pricing: Free tier $0 (3 beats, 3 song masters, 3 vocal masters per month, MP3 personal use). Pay per use: MP3 lease $9.99, WAV $19.99, trackout $49.99, unlimited $99.99, exclusive $199, song master $2.99, vocal master $1.99, Separate and Re-Beat $2.99, video $1.99. Lifetime Access Pass $4,999 one-time, all access. Founder Tokens: first 100 signups, free lifetime, transferrable — local prototype on the Pricing page, backend needed for a global count.'],
+['pricing', 'PrAIme pricing: Free tier $0 (3 beats, 3 song masters, 3 vocal masters per month, MP3 personal use). Pay per use: MP3 lease $9.99, WAV $19.99, trackout $49.99, unlimited $99.99, exclusive $199, song master $2.99, vocal master $1.99, Separate $2.99, Re-Beat $19.99, video $1.99. Lifetime Access Pass $4,999 one-time, all access. Founder Tokens: first 100 signups, free lifetime, transferrable — local prototype on the Pricing page, backend needed for a global count.'],
 ['lifetime', 'Lifetime Access Pass is $4,999 one-time for all access: all beats WAV plus stems, unlimited masters, video renders and future suite pages. Breakeven is 50 unlimited leases. Checkout is in the Beat Store with PayPal, and server verification is required before granting access.'],
     ['1950s', '1950s hit DNA (style, not lyrics): rock & roll and early R&B — 12-bar blues form, backbeat, simple I-IV-V chords, 120-160 BPM for rockers, 70-90 for ballads, sax/guitar lead, call-and-response vocals. Learn from the structure and feel, do not copy melodies or lyrics.'],
     ['1960s', '1960s hit DNA: Motown (punchy bass, tambourine, call-and-response, 100-120 BPM), British Invasion (guitar bands, verse-chorus, 120-140 BPM), soul (horn sections, gospel vocals). Song form is usually verse-chorus-bridge, under 3 minutes.'],
