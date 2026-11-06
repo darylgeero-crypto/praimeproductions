@@ -25,9 +25,11 @@ a{color:#7ee2ff}
 .gate-in{max-width:640px;padding:40px 20px;text-align:center}
 .disc{width:160px;height:160px;margin:20px auto;border-radius:50%;background:radial-gradient(circle at 50% 50%, #9d4edd 0 20%, #07090e 21% 45%, #00f3ff 46% 48%, #07090e 49%);animation:spin 4s linear infinite;box-shadow:0 0 30px rgba(0,243,255,.4)}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media print{ header,#rokBtn,#rokPanel,button,.status,small{display:none!important} body{background:#fff!important;color:#000!important} main{max-width:100%!important;padding:0!important} .card{border:1px solid #000!important;box-shadow:none!important;background:#fff!important;color:#000!important;margin:0 0 12px!important;padding:12px!important} }
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main>
 <h1>Pricing — Free, Pay Per Use, Lifetime</h1>
 <p>Prices set to undercut the typical market as much as possible, while still leaving a cushion — because PrAIme beats and masters are generated locally in your browser, not by a human engineer in a studio, the cost of one more beat or master is close to zero. The cushion is the PayPal fee plus margin, not studio time.</p>
+<button id="printPricing" class="secondary">🖨 Print pricing / PDF</button>
 
 <div class="card"><h2>Free tier — $0, forever, no card</h2>
 <p>Start free, no card required. This is the tier that gets people in the door.</p>
@@ -105,6 +107,7 @@ a{color:#7ee2ff}
 <button id="paySubLive" class="secondary">Pay pay-per-use items with Live PayPal (goes to Beat Store cart)</button>
 <div id="livePayButtons" style="margin-top:12px"></div><p id="livePayOut"></p></div>
 <script>
+document.getElementById('printPricing').onclick=function(){ window.print(); };
 document.getElementById('payLifetimeLive').onclick=function(){
   var cid=document.getElementById('liveCid').value.trim();
   if(!cid){ document.getElementById('livePayOut').textContent='Live Client ID missing.'; return; }
