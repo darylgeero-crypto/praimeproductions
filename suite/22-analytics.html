@@ -13,6 +13,7 @@ input{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,2
 label{font-weight:600;display:block;margin-top:10px}
 .status{background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;white-space:pre-wrap}
 small{color:#9ca3af} a{color:#7ee2ff}
+@media print{header,button,#rokBtn,#rokPanel{display:none!important}body{background:#fff;color:#000}.card,.stat,.status{background:#fff;color:#000;border-color:#999}a{color:#000}}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
 .stat{background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px}
 .stat b{font-size:1.6rem;display:block}
@@ -24,6 +25,7 @@ small{color:#9ca3af} a{color:#7ee2ff}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a><a href="22-analytics.html">Analytics</a></nav></div></header><main>
 <h1>Analytics — PrAIme Productions</h1>
 <p style="color:#9ca3af">Analytics on this page is private to each visitor: you see only your own entries, saved in this browser. Other visitors see only their own content's figures, never yours. Public catalogue prices and live server status are the only shared figures here — they are not personal analytics.</p>
+<button id="printAnalyticsBtn" class="secondary">🖨 Print analytics</button>
 
 <div class="card" id="musicStatsCard" style="display:none"><h2>My music stats — Rapmosfieryk</h2>
 <p>Your catalogue, as catalogued for PrAIme. Plays are manual — enter what each platform shows, saved in this browser only.</p>
@@ -93,6 +95,7 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 <input id="rokInput" placeholder="Ask Rokdabus...">
 <div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button></div>
 </div></main><script>
+document.getElementById('printAnalyticsBtn').onclick=function(){ window.print(); };
 function loadHealth(){ var el=document.getElementById('healthStatus'); el.textContent='Checking…'; fetch('https://praimeproductions.onrender.com/api/health').then(function(r){ return r.json(); }).then(function(j){ el.textContent='Live: ok='+j.ok+' · mode='+j.mode+' · PayPal configured='+j.paypal_configured+' · delivery secret persistent='+j.delivery_secret_persistent+' · verified orders in memory='+j.verified_orders_in_memory; }).catch(function(){ el.textContent='Health check could not be reached from this browser. Try again, or open https://praimeproductions.onrender.com/api/health directly.'; }); }
 document.getElementById('healthBtn').onclick=loadHealth; loadHealth();
 (function(){
