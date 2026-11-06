@@ -53,6 +53,7 @@ a{color:#7ee2ff}
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
 <div style="font-size:12px;color:#9ca3af">Rhyming studio guide for PrAIme Productions. Text or voice prompts. I explain every feature, walk you through creation end to end, and in the DAW I can auto-select mastering levels from real song analysis.</div>
 <div id="rokLog">Welcome to the suite, where the rhythms stay tight — we master all the audio and rock through the night! Ask me: "what does this page do?", "walk me through", "auto master", "what is LUFS?", "go to lyrics", "set BPM to 120".</div>
+<div id="rokSource" style="font-size:12px;color:#9ca3af;margin-top:8px">Last answer source: — ask me something first.</div>
 <input id="rokInput" placeholder="Ask Rokdabus, or give a command...">
 <div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button><button id="rokWalk" class="secondary">Walk me through</button><button id="rokIntro" class="secondary">▶ Play intro</button><button id="rokAuto" class="secondary">Auto-master this song</button><button id="rokRhyme" class="secondary">🎤 Rhyme it</button><button id="rokRepeat" class="secondary">↻ Repeat last</button></div>
 <label style="font-size:12px">Ollama in Termux (optional, on your phone only)</label>
@@ -126,7 +127,7 @@ a{color:#7ee2ff}
   if(!btn||!panel) return;
   btn.onclick=function(){ panel.style.display = panel.style.display==='block' ? 'none' : 'block'; };
   var lastSpoken='';
-  function say(t){ var rhymes=['Rokdabus in the mix, making beats that stick and tricks that click.','Eight tentacles on the decks, dropping rhythms you will not forget.','PrAIme in the place, let the bass and the rhythm set the pace.','I master every track, I never fall behind, I keep the sound refined.','From the Hub to the stage, I turn the page and set the gauge.']; var out=t; if(!/\.$/.test(out)) out+='.'; out+=' '+rhymes[Math.abs(t.length)%rhymes.length]; lastSpoken=out; log.textContent += '\n\nRokdabus: '+out; log.scrollTop=log.scrollHeight; try{ if(window.speechSynthesis){ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(out); u.rate=1; u.pitch=1; window.speechSynthesis.speak(u); } }catch(e){} }
+  function say(t, src){ var rhymes=['Rokdabus in the mix, making beats that stick and tricks that click.','Eight tentacles on the decks, dropping rhythms you will not forget.','PrAIme in the place, let the bass and the rhythm set the pace.','I master every track, I never fall behind, I keep the sound refined.','From the Hub to the stage, I turn the page and set the gauge.']; var out=t; if(!/\.$/.test(out)) out+='.'; out+=' '+rhymes[Math.abs(t.length)%rhymes.length]; lastSpoken=out; if(src){ var ss=document.getElementById('rokSource'); if(ss){ ss.textContent='Last answer source: '+src; ss.style.color=(src.indexOf('Ollama')===0)?'#00f3ff':'#9ca3af'; } } log.textContent += '\n\nRokdabus: '+out; log.scrollTop=log.scrollHeight; try{ if(window.speechSynthesis){ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(out); u.rate=1; u.pitch=1; window.speechSynthesis.speak(u); } }catch(e){} }
   function userSay(t){ log.textContent += '\n\nYou: '+t; log.scrollTop=log.scrollHeight; }
   var KB=[
     ['1950s', '1950s hit DNA (style, not lyrics): rock & roll and early R&B — 12-bar blues form, backbeat, simple I-IV-V chords, 120-160 BPM for rockers, 70-90 for ballads, sax/guitar lead, call-and-response vocals. Learn from the structure and feel, do not copy melodies or lyrics.'],
@@ -231,8 +232,8 @@ a{color:#7ee2ff}
   async function ask(raw){
     var q=(raw||'').toLowerCase().trim(); if(!q) return;
     userSay(raw);
-    if(q.indexOf('walk')>=0 || q.indexOf('how do i use')>=0 || q.indexOf('what does this')>=0){ say(walk()); return; }
-    var cmd=doCommand(q); if(cmd){ say(cmd); return; }
+    if(q.indexOf('walk')>=0 || q.indexOf('how do i use')>=0 || q.indexOf('what does this')>=0){ say(walk(), 'built-in knowledge'); return; }
+    var cmd=doCommand(q); if(cmd){ say(cmd, 'built-in knowledge'); return; }
     var kb=kbAnswer(q); 
     // Rokdabus wired to Optimus: on Daryl's personal phone, Ollama at
     // 127.0.0.1:11434 serves qwen2.5:0.5b (the model actually installed);
@@ -242,22 +243,22 @@ a{color:#7ee2ff}
     var model=(document.getElementById('rokModel')||{}).value||'qwen2.5:0.5b';
     if(window.PraimeRokdabus){
       var oll=await window.PraimeRokdabus.askOllama(raw, url, model);
-      if(oll){ say('From Optimus / Ollama ('+oll.model+', '+oll.genre+'): '+oll.response); return; }
+      if(oll){ say('From Optimus / Ollama ('+oll.model+', '+oll.genre+'): '+oll.response, 'Ollama ('+oll.model+')'); return; }
       // Ollama not reachable: fall through to genre advice / local knowledge
       var g=window.PraimeRokdabus.detectGenre(raw);
-      if(g && g!=='HipHop'){ say(window.PraimeRokdabus.genreAdvice(g)+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer. On Daryl\'s phone, Optimus is Rokdabus; vault, autonomous tapping, self-rewrite and Tor are Termux-only and are not in this app.)'); return; }
+      if(g && g!=='HipHop'){ say(window.PraimeRokdabus.genreAdvice(g)+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer. On Daryl\'s phone, Optimus is Rokdabus; vault, autonomous tapping, self-rewrite and Tor are Termux-only and are not in this app.)', 'built-in knowledge — Ollama not reachable'); return; }
     } else {
       try{
         var res=await fetch(url.replace(/\/$/,'')+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model,prompt:'You are Rokdabus Prhyme, the rhyming studio guide for PrAIme Productions. Answer helpfully, with music-theory best practices, in plain language. User: '+raw,stream:false})});
-        if(res.ok){ var data=await res.json(); if(data && data.response){ say('From Ollama ('+model+'): '+data.response); return; } }
+        if(res.ok){ var data=await res.json(); if(data && data.response){ say('From Ollama ('+model+'): '+data.response, 'Ollama ('+model+')'); return; } }
       }catch(e){ /* fall through */ }
     }
-    if(kb){ say(kb+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer.)'); return; }
-    say('I can help with PrAIme and music theory: try "walk me through", "what is LUFS?", "what is compression?", "auto master" on the DAW page, or "go to lyrics". If Ollama is running in Termux, set its URL and model above and ask again — otherwise I answer from my built-in knowledge.');
+    if(kb){ say(kb+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer.)', 'built-in knowledge — Ollama not reachable'); return; }
+    say('I can help with PrAIme and music theory: try "walk me through", "what is LUFS?", "what is compression?", "auto master" on the DAW page, or "go to lyrics". If Ollama is running in Termux, set its URL and model above and ask again — otherwise I answer from my built-in knowledge.', 'built-in knowledge');
   }
   document.getElementById('rokSend').onclick=function(){ var inp=document.getElementById('rokInput'); ask(inp.value); inp.value=''; };
   document.getElementById('rokInput').onkeydown=function(e){ if(e.key==='Enter'){ ask(e.target.value); e.target.value=''; } };
-  document.getElementById('rokWalk').onclick=function(){ say(walk()); };
+  document.getElementById('rokWalk').onclick=function(){ say(walk(), 'built-in knowledge'); };
   var ri=document.getElementById('rokIntro'); if(ri) ri.onclick=function(){ if(typeof window.praimePlayIntro==='function'){ window.praimePlayIntro(); say('Playing the PrAIme Productions intro — Prime sung high, Productions dropped low.'); } else { if('speechSynthesis' in window){ try{ window.speechSynthesis.cancel(); var u1=new SpeechSynthesisUtterance('Prime'); u1.pitch=1.6; window.speechSynthesis.speak(u1); setTimeout(function(){ var u2=new SpeechSynthesisUtterance('Productions'); u2.pitch=0.55; window.speechSynthesis.speak(u2); },1200); setTimeout(function(){ var u3=new SpeechSynthesisUtterance('Welcome to Prime Productions. I am Rock Day Bus. I help you create.'); window.speechSynthesis.speak(u3); },2600); say('Playing the PrAIme Productions intro.'); }catch(e){ say('Speech is not available in this browser.'); } } else { say('Speech is not available in this browser.'); } } };
   document.getElementById('rokAuto').onclick=function(){ ask('auto master'); }; document.getElementById('rokRhyme').onclick=function(){ say('I am Rokdabus Prhyme, the octopus on time, eight tentacles on the decks, dropping beats that shine. I master every track, I never fall behind, PrAIme in the place, let the rhythm unwind.'); };
   document.getElementById('rokRepeat').onclick=function(){ if(!lastSpoken){ log.textContent += '\n\nRokdabus: Nothing to repeat yet — ask me something first.'; log.scrollTop=log.scrollHeight; return; } try{ if(window.speechSynthesis){ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(lastSpoken); u.rate=1; u.pitch=1; window.speechSynthesis.speak(u); } }catch(e){} };
