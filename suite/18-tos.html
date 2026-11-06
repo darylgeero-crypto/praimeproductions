@@ -25,9 +25,10 @@ a{color:#7ee2ff}
 .gate-in{max-width:640px;padding:40px 20px;text-align:center}
 .disc{width:160px;height:160px;margin:20px auto;border-radius:50%;background:radial-gradient(circle at 50% 50%, #9d4edd 0 20%, #07090e 21% 45%, #00f3ff 46% 48%, #07090e 49%);animation:spin 4s linear infinite;box-shadow:0 0 30px rgba(0,243,255,.4)}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media print{body{background:#fff!important;color:#000!important}header,button,#rokBtn,#rokPanel,#introGate{display:none!important}.card{background:#fff!important;color:#000!important;border:1px solid #000!important;box-shadow:none!important}}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main>
 <h1>Terms of Service — PrAIme Productions</h1>
-<div><button id="dlTermsBtn">⬇ Download Terms as Plain Text</button><span id="dlTermsStatus" class="status" style="display:inline-block;margin-left:8px"></span></div>
+<div><button id="dlTermsBtn">⬇ Download Terms as Plain Text</button><button id="printTermsBtn" class="secondary">🖨 Print Terms</button><span id="dlTermsStatus" class="status" style="display:inline-block;margin-left:8px"></span></div>
 <div class="card"><h2>1. Acceptance and Parties</h2>
 <p>These Terms of Service ("Terms") are a binding agreement between you ("you", "User") and PrAIme Productions ("PrAIme", "we", "us"). By accessing or using the PrAIme studio, website, Beat Store, or any PrAIme service, you agree to be bound by these Terms and by the Privacy provisions in Section 11. If you do not agree, do not use the service. You must be at least 18 years old, or have the consent of a parent or legal guardian, to use paid features.</p></div>
 <div class="card"><h2>2. The Service</h2>
@@ -71,6 +72,8 @@ a{color:#7ee2ff}
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
 </div></main><script></script><script>// Terms plain-text download: exports the existing terms text unchanged (h1 + cards only, not the Rokdabus panel).
 document.getElementById('dlTermsBtn').onclick=function(){ var parts=[document.querySelector('h1').innerText]; document.querySelectorAll('main .card').forEach(function(c){ parts.push(c.innerText); }); var blob=new Blob([parts.join('\n\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-terms.txt'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); document.getElementById('dlTermsStatus').textContent='Downloaded Terms as TXT.'; };
+// Print Terms: browser print / save-as-PDF of the page as-is; no wording changed.
+document.getElementById('printTermsBtn').onclick=function(){ window.print(); };
 (function(){
   var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
   if(!btn||!panel) return;
