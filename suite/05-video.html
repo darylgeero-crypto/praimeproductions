@@ -51,7 +51,7 @@ a{color:#7ee2ff}
 <p id="camOut"></p>
 <button id="chooseBtn">📁 Choose song</button><input type="file" id="fileInput" accept="audio/*,.mp3,.wav,.flac,.m4a">
 <p id="fileInfo"></p><canvas id="canvas" width="1280" height="720"></canvas>
-<button id="preview" disabled>▶ Preview</button><button id="record" disabled>● Record video</button><button id="stop" disabled class="secondary">■ Stop &amp; download</button>
+<button id="preview" disabled>▶ Preview</button><button id="record" disabled>● Record video</button><button id="stop" disabled class="secondary">■ Stop &amp; download</button><button id="saveFrame" class="secondary">🖼 Save frame as PNG</button>
 <div class="status" id="out"></div><video id="outVideo" controls style="display:none;margin-top:12px"></video></div><button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
 <div style="font-weight:800">Rokdabus Prhyme <span style="font-weight:400;color:#9ca3af"></span></div>
@@ -421,6 +421,7 @@ function stopRec(){ if(!recording) return; recording=false; try{rec.stop();}catc
 document.getElementById('preview').onclick=()=>start(false);
 document.getElementById('record').onclick=()=>{ start(true); document.getElementById('record').disabled=true; document.getElementById('stop').disabled=false; };
 document.getElementById('stop').onclick=stopRec;
+document.getElementById('saveFrame').onclick=()=>{ const c=document.getElementById('canvas'); const a=document.createElement('a'); a.href=c.toDataURL('image/png'); a.download='praime-video-frame.png'; a.click(); document.getElementById('out').textContent='Frame saved: praime-video-frame.png — the current canvas frame (preview or record first to fill the canvas).'; };
 draw();
 
 // ---- Rokdabus Prhyme widget ----
