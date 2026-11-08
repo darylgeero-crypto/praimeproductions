@@ -81,7 +81,7 @@ a{color:#7ee2ff}
   }
   window.praimeRefreshKitStates=refreshKitStates;
   document.addEventListener('DOMContentLoaded', refreshKitStates);
-  div.innerHTML=kits.map(function(k,i){ return '<div class="card"><b>'+k.name+'</b> — $'+k.price+'<br>'+k.desc+' <button data-kit="'+i+'">Add to cart — Live PayPal</button> <button data-prev="'+i+'">▶ Preview kit</button></div>'; }).join('');
+  div.innerHTML=kits.map(function(k,i){ return '<div class="card"><b>'+k.name+'</b> — $'+k.price+'<br>'+k.desc+' <button data-kit="'+i+'">Add to cart — Live PayPal</button> <button data-prev="'+i+'">▶ Preview kit</button> <button data-kitlink="'+i+'" class="secondary">⧉ Copy kit link</button></div>'; }).join('');
   div.querySelectorAll('[data-kit]').forEach(function(btn){ btn.onclick=function(){
     var k=kits[parseInt(btn.dataset.kit)];
     if(!k) return;
@@ -100,6 +100,17 @@ a{color:#7ee2ff}
     document.getElementById('kitOut').textContent='Previewing ALL '+list.length+' sounds in '+kits[kitIdx].name+' — playing in order, one after another.';
     function next(){ if(window.__praimeKitStopped) return; if(i>=list.length){ document.getElementById('kitOut').textContent='Preview finished — all '+list.length+' sounds in '+kits[kitIdx].name+' played.'; window.__praimeKitAudio=null; return; } var a=new Audio(list[i]); window.__praimeKitAudio=a; i++; a.onended=next; a.onerror=next; a.play().catch(next); }
     next();
+  };});
+  div.querySelectorAll('[data-kitlink]').forEach(function(btn){ btn.onclick=function(){
+    var k=kits[parseInt(btn.dataset.kitlink)];
+    if(!k) return;
+    var out=document.getElementById('kitOut');
+    if(!(window.PraimeShare&&window.PraimeShare.makeLink)){ out.textContent='Sharing is not available in this browser — the store page is still fully usable.'; return; }
+    var link=window.PraimeShare.makeLink(k.name);
+    function done(){ out.textContent='Kit link copied: '+link+' — share it; a purchase from it earns you share credit.'; }
+    function fail(){ out.textContent='Copy failed — clipboard is not available in this browser. The kit link is '+link+'.'; }
+    function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); if(ok) done(); else fail(); }catch(e){ fail(); } }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done,fallback); } else fallback();
   };});})();
 </script>
 <h3>Cart</h3><div id="cart"></div><p id="total"></p>
