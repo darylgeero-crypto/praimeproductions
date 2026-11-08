@@ -71,7 +71,7 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 <p><small>On Daryl's device, the 6 launch ads are pre-listed below as a starting point. On anyone else's device, these same rows start empty — they enter their own content's figures, and never see Daryl's numbers.</small></p>
 <div id="adTable"></div>
 <p id="adTotals" class="status"></p>
-<button id="saveAds">Save ad numbers</button></div>
+<button id="saveAds">Save ad numbers</button><button id="copyAds" class="secondary">⧉ Copy ad numbers as text</button></div>
 
 <div class="card"><h2>Your numbers — manual entry, saved locally</h2>
 <p>Enter what you see on each platform. These are saved in this browser only (localStorage), they are not sent to PrAIme's server.</p>
@@ -133,6 +133,8 @@ document.getElementById('healthBtn').onclick=loadHealth; loadHealth();
   });
   function totals(){ var v=0,c=0,s=0; ads.forEach(function(_,i){ v+=parseInt(document.getElementById('adV'+i).value||'0',10); c+=parseInt(document.getElementById('adC'+i).value||'0',10); s+=parseInt(document.getElementById('adS'+i).value||'0',10); }); document.getElementById('adTotals').textContent='Totals — views: '+v+' · link clicks: '+c+' · sales: '+s+(c? ' · click-to-sale: '+(s/c*100).toFixed(1)+'%':''); }
   document.getElementById('saveAds').onclick=function(){ ads.forEach(function(_,i){ ['V','C','S'].forEach(function(t){ localStorage.setItem('praime_ad_'+t+i, document.getElementById('ad'+t+i).value||'0'); }); }); totals(); };
+  // Copy ad numbers: per-ad views/clicks/sales plus totals as plain text (copy only — nothing saved, published or sent), mirroring copyMusicStats.
+  document.getElementById('copyAds').onclick=function(){ var v=0,c=0,s=0; var lines=['PrAIme — Ad impact (your content only)']; ads.forEach(function(name,i){ var vv=parseInt(document.getElementById('adV'+i).value||'0',10)||0; var cc=parseInt(document.getElementById('adC'+i).value||'0',10)||0; var ss=parseInt(document.getElementById('adS'+i).value||'0',10)||0; v+=vv; c+=cc; s+=ss; lines.push(name+' — views '+vv+' · clicks '+cc+' · sales '+ss); }); lines.push('Totals — views '+v+' · link clicks '+c+' · sales '+s); var text=lines.join('\n'); function done(ok){ document.getElementById('adTotals').textContent=ok?('Copied ad numbers (views '+v+' · clicks '+c+' · sales '+s+') — paste them into a log, message or notes.'):('Copy failed in this browser — totals: views '+v+' · clicks '+c+' · sales '+s+'.'); } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } };
   totals();
 })();
 try{
