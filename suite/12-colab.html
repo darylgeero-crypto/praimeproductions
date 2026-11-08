@@ -31,7 +31,7 @@ a{color:#7ee2ff}
 <div class="card"><h2>Build together — local board + JSON handoff</h2><p>This is the Co-Lab from the Full 12 iteration: start a session, share a code, build the arrangement together on a local board, then export it as JSON and send that file to your collaborator yourself. It is <b>not</b> live shared sync — nothing here updates across devices on its own. That is exactly how Full 12 labelled it, and I am keeping that label honest here.</p>
 <label>Project name</label><input id="proj" value="Untitled collab">
 <label>Session code (share this code with your collaborator)</label><input id="code" readonly>
-<button id="newCode">New session code</button>
+<button id="newCode">New session code</button> <span id="sessionTimer" style="font-size:14px;color:#9ca3af;margin-left:8px">Session: 00:00</span>
 <label>Member name</label><input id="member" placeholder="e.g. Daryl">
 <button id="addMember">Add member</button><p id="members"></p>
 <label>Section</label><select id="section"><option>Intro</option><option>Verse 1</option><option>Hook</option><option>Verse 2</option><option>Bridge</option><option>Hook 2</option><option>Outro</option></select>
@@ -55,8 +55,12 @@ a{color:#7ee2ff}
 <script>
 let members=[], sections=[], notes=[];
 function code(){ return 'PRAIME-'+Math.random().toString(36).slice(2,8).toUpperCase(); }
+var sessStart=null, sessInt=null;
+function sessFmt(ms){ var s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function startSessTimer(){ if(sessInt) clearInterval(sessInt); sessStart=Date.now(); var el=document.getElementById('sessionTimer'); if(el) el.textContent='Session: 00:00'; sessInt=setInterval(function(){ var t=document.getElementById('sessionTimer'); if(t&&sessStart!==null) t.textContent='Session: '+sessFmt(Date.now()-sessStart); },1000); }
 document.getElementById('code').value=code();
-document.getElementById('newCode').onclick=()=>{ document.getElementById('code').value=code(); };
+startSessTimer();
+document.getElementById('newCode').onclick=()=>{ document.getElementById('code').value=code(); startSessTimer(); };
 function render(){ document.getElementById('members').textContent='Members: '+(members.join(', ')||'—'); var b=document.getElementById('board'); b.innerHTML='<h3>Arrangement</h3><p>'+(sections.join(' · ')||'—')+'</p><h3>Notes</h3>'+(notes.length?'':'<p>No notes yet.</p>'); notes.forEach(function(n,i){ var d=document.createElement('div'); d.className='card'; var s=document.createElement('span'); s.textContent=n.role+(n.timestamp?' · '+n.timestamp:'')+': '+n.text; d.appendChild(s); var del=document.createElement('button'); del.className='secondary'; del.textContent='Delete'; del.style.marginLeft='8px'; del.onclick=function(){ notes.splice(i,1); render(); document.getElementById('out').textContent='Note deleted.'; }; d.appendChild(del); b.appendChild(d); }); }
 document.getElementById('addMember').onclick=()=>{ const v=document.getElementById('member').value.trim(); if(v){ members.push(v); document.getElementById('member').value=''; render(); } };
 document.getElementById('addSection').onclick=()=>{ sections.push(document.getElementById('section').value); render(); };
