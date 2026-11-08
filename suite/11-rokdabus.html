@@ -18,10 +18,12 @@ a{color:#7ee2ff}
 #rokBtn{position:fixed;right:16px;bottom:16px;z-index:9999;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);color:#fff;font-size:28px;border:2px solid #fff;cursor:pointer;box-shadow:0 0 20px rgba(157,78,221,.6)}
 #rokPanel{position:fixed;right:16px;bottom:92px;z-index:9999;width:min(360px,92vw);max-height:70vh;overflow:auto;background:rgba(15,20,32,.97);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:14px;display:none}
 #rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
+@media print{header,button,#rokBtn,#rokPanel{display:none!important}body{background:#fff;color:#000}.card{background:#fff;color:#000;border-color:#999}}
 #rokPanel input{margin-top:8px}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header>
 <main>
 <h1>Rokdabus Prhyme — Guide</h1>
+<button id="printKB" class="secondary">🖨 Print knowledge base</button>
 <div class="card" style="text-align:center">
   <img src="rokdabus.jpg" alt="Rokdabus Prhyme — Mascot of PrAIme Productions" style="width:100%;max-width:640px;border-radius:20px;border:2px solid #00f3ff">
   <h2 style="margin:8px 0 4px">Rokdabus Prhyme — Mascot of PrAIme Productions</h2>
@@ -271,6 +273,7 @@ a{color:#7ee2ff}
   // Expose for DAW auto-master to report back
   window.rokdabusSay=say;
 })();</script><script>
+document.getElementById('printKB').onclick=function(){ window.print(); };
 // PrAIme floating music notes — background, randomly generated, 1.5s float + dissolve
 (function(){
   var reduced=false; try{ reduced=!!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }catch(e){}
