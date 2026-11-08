@@ -25,6 +25,7 @@ a{color:#7ee2ff}
 .gate-in{max-width:640px;padding:40px 20px;text-align:center}
 .disc{width:160px;height:160px;margin:20px auto;border-radius:50%;background:radial-gradient(circle at 50% 50%, #9d4edd 0 20%, #07090e 21% 45%, #00f3ff 46% 48%, #07090e 49%);animation:spin 4s linear infinite;box-shadow:0 0 30px rgba(0,243,255,.4)}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media print{header,button,#rokBtn,#rokPanel,input,select,textarea,label,small{display:none!important}body{background:#fff;color:#000}.card{background:#fff;color:#000;border-color:#999}.card ~ .card{display:none!important}.status{background:#fff;color:#000;border-color:#999}}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main>
 <h1>Separate &amp; Re-Beat</h1>
 <div class="card"><h2>1. Load a song or a recorded vocal</h2>
@@ -33,7 +34,7 @@ a{color:#7ee2ff}
 <p id="fileInfo"></p>
 <button id="testLoadBtn" class="secondary">Load test song (stereo test, from Beats)</button><button id="sepBtn" disabled>Separate vocal &amp; backing</button>
 <button id="playOrig" disabled>▶ Play original</button><button id="playVocal" disabled>▶ Play vocal (centre)</button><button id="playBack" disabled>▶ Play backing (centre-removed)</button>
-<button id="dlVocal" disabled>Download vocal WAV</button><button id="dlBack" disabled>Download backing WAV</button>
+<button id="dlVocal" disabled>Download vocal WAV</button><button id="dlBack" disabled>Download backing WAV</button><button id="printSep" class="secondary">🖨 Print separation summary</button>
 <div class="status" id="sepOut"></div></div>
 
 <div class="card"><h2>2. Analyse it</h2>
@@ -93,6 +94,7 @@ document.getElementById('playVocal').onclick=function(){ playBuf(vocalBuf); };
 document.getElementById('playBack').onclick=function(){ playBuf(backBuf); };
 document.getElementById('dlVocal').onclick=function(){ dl(vocalBuf,'praime-vocal-centre.wav'); };
 document.getElementById('dlBack').onclick=function(){ dl(backBuf,'praime-backing-centre-removed.wav'); };
+document.getElementById('printSep').onclick=function(){ window.print(); };
 document.getElementById('anaBtn').onclick=async function(){ if(!orig){ document.getElementById('anaOut').textContent='Load a song first — tap Choose song, or Load test song.'; return; } let s=stats(orig); let low=await bandRMS(orig,'lowpass',250), mid=await bandRMS(orig,'bandpass',1000), high=await bandRMS(orig,'highpass',4000); let bpm=estimateTempo(orig); document.getElementById('bpm').value=bpm; let mood=moodFrom(document.getElementById('lyrics').value, low, mid, high); document.getElementById('mood').value=mood.indexOf('Dark')>=0?'Dark':mood.indexOf('Hype')>=0?'Hype':mood.indexOf('Smooth')>=0?'Smooth':'Chill'; document.getElementById('anaOut').textContent='Peak '+s.peak.toFixed(2)+' · RMS '+s.rms.toFixed(3)+' · crest '+s.crest.toFixed(1)+' dB · low '+low.toFixed(3)+' mid '+mid.toFixed(3)+' high '+high.toFixed(3)+' · estimated tempo '+bpm+' BPM (best guess, override if it feels wrong) · mood suggestion: '+mood; document.getElementById('beatBtn').disabled=false; };
 function kickAt(c,t){ let o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(45,t+0.12); g.gain.setValueAtTime(0.9,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.25); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.3); }
 function snareAt(c,t){ let len=Math.floor(c.sampleRate*0.18), b=c.createBuffer(1,len,c.sampleRate), d=b.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len); let s=c.createBufferSource(); s.buffer=b; let g=c.createGain(); g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.18); s.connect(g); g.connect(c.destination); s.start(t); }
