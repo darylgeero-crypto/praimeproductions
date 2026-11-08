@@ -66,12 +66,29 @@ a{color:#7ee2ff}
   };
   var div=document.getElementById('soundkits');
   if(!div) return;
+  // Kit 'In cart' state, mirroring the beat cards: a kit already in the cart shows
+  // 'In cart ✓' disabled instead of 'Add to cart'. Refresh-in-place (no innerHTML
+  // rebuild) so the preview handlers bound below survive; cart is declared in the
+  // later beats script, so the first refresh runs on DOMContentLoaded, after the
+  // cart has been restored from localStorage.
+  function refreshKitStates(){
+    div.querySelectorAll('[data-kit]').forEach(function(btn){
+      var k=kits[parseInt(btn.dataset.kit)];
+      var inCart=k && cart.some(function(c){ return c && c.name===k.name; });
+      btn.disabled=!!inCart;
+      btn.textContent=inCart?'In cart ✓':'Add to cart — Live PayPal';
+    });
+  }
+  window.praimeRefreshKitStates=refreshKitStates;
+  document.addEventListener('DOMContentLoaded', refreshKitStates);
   div.innerHTML=kits.map(function(k,i){ return '<div class="card"><b>'+k.name+'</b> — $'+k.price+'<br>'+k.desc+' <button data-kit="'+i+'">Add to cart — Live PayPal</button> <button data-prev="'+i+'">▶ Preview kit</button></div>'; }).join('');
   div.querySelectorAll('[data-kit]').forEach(function(btn){ btn.onclick=function(){
     var k=kits[parseInt(btn.dataset.kit)];
     if(!k) return;
+    if(cart.some(function(c){ return c && c.name===k.name; })){ document.getElementById('kitOut').textContent=k.name+' is already in your cart.'; return; }
     cart.push({name:k.name, price:k.price});
     renderCart();
+    refreshKitStates();
     document.getElementById('kitOut').textContent=k.name+' added to cart — $'+k.price+'.';
   };});
   div.querySelectorAll('[data-prev]').forEach(function(btn){ btn.onclick=function(){
@@ -112,7 +129,7 @@ const beats=[
 let cart=[],ctx=null,timer=null,step=0; try{ var _pi=JSON.parse(localStorage.getItem('praime_cart_items')||'[]'); _pi.forEach(function(it){ cart.push({name:it.name, price:it.price}); }); if(localStorage.getItem('praime_lifetime_cart')==='1' && !cart.some(function(c){return c.name.indexOf('Lifetime')>=0;})) cart.push({name:'Lifetime Access Pass — All Access', price:4999}); }catch(e){} document.addEventListener('DOMContentLoaded', function(){ var _lb=document.getElementById('addLifetimeBeatStore'); if(_lb) _lb.onclick=function(){ if(!cart.some(function(c){return c.name.indexOf('Lifetime')>=0;})) cart.push({name:'Lifetime Access Pass — All Access', price:4999}); renderCart(); }; });
 function render(){ const div=document.getElementById('beats'); div.innerHTML=beats.map(b=>{ var inCart=cart.some(function(c){ return c && c.name===b.name; }); return '<div class="card"><b>'+b.name+'</b> — '+b.genre+' · '+b.bpm+' BPM · $'+b.price+' <button data-play="'+b.id+'">▶ Preview</button> <button data-add="'+b.id+'"'+(inCart?' disabled':'')+'>'+(inCart?'In cart ✓':'Add to cart')+'</button></div>'; }).join(''); div.querySelectorAll('[data-play]').forEach(btn=>btn.onclick=()=>preview(parseInt(btn.dataset.play))); div.querySelectorAll('[data-add]').forEach(btn=>btn.onclick=()=>{ var b=beats.find(function(x){ return x.id===parseInt(btn.dataset.add); }); if(b && !cart.some(function(c){ return c && c.name===b.name; })) cart.push(b); render(); }); renderCart(); }
 try{ var sm=localStorage.getItem('praime_merchant_id'); if(sm) document.getElementById('merchant').value=sm; var sc=localStorage.getItem('praime_paypal_client_id'); if(sc && document.getElementById('clientId')) document.getElementById('clientId').value=sc; }catch(e){}
-function renderCart(){ document.getElementById('cart').innerHTML=cart.length?cart.map((b,i)=>b.name+' — $'+b.price+' <button data-del="'+i+'">Remove</button>').join('<br>'):'Cart is empty.'; document.getElementById('cart').querySelectorAll('[data-del]').forEach(btn=>btn.onclick=()=>{ cart.splice(parseInt(btn.dataset.del),1); render(); }); const total=cart.reduce((s,b)=>s+b.price,0); document.getElementById('total').textContent='Total: $'+total.toFixed(2); document.getElementById('checkout').disabled=!(cart.length && document.getElementById('merchant').value.trim()); }
+function renderCart(){ document.getElementById('cart').innerHTML=cart.length?cart.map((b,i)=>b.name+' — $'+b.price+' <button data-del="'+i+'">Remove</button>').join('<br>'):'Cart is empty.'; document.getElementById('cart').querySelectorAll('[data-del]').forEach(btn=>btn.onclick=()=>{ cart.splice(parseInt(btn.dataset.del),1); render(); if(window.praimeRefreshKitStates) window.praimeRefreshKitStates(); }); const total=cart.reduce((s,b)=>s+b.price,0); document.getElementById('total').textContent='Total: $'+total.toFixed(2); document.getElementById('checkout').disabled=!(cart.length && document.getElementById('merchant').value.trim()); }
 document.getElementById('merchant').oninput=renderCart;
 function snd(type,t,baseFreq){ if(!ctx._master){ ctx._master=ctx.createGain(); ctx._master.gain.value=0.6; var lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=4500; ctx._master.connect(lp); lp.connect(ctx.destination); } const o=ctx.createOscillator(),g=ctx.createGain(); if(type==='kick'){o.frequency.setValueAtTime(baseFreq||120,t); o.frequency.exponentialRampToValueAtTime(40,t+0.15); g.gain.setValueAtTime(0.7,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.25);} else if(type==='snare'){o.type='triangle'; o.frequency.value=180; g.gain.setValueAtTime(0.25,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.15);} else if(type==='bass'){o.type='sine'; o.frequency.value=baseFreq||55; g.gain.setValueAtTime(0.4,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.3);} else {o.type='triangle'; o.frequency.value=5500; g.gain.setValueAtTime(0.06,t); g.gain.exponentialRampToValueAtTime(0.01,t+0.04);} o.connect(g); g.connect(ctx._master); o.start(t); o.stop(t+0.3); }
 async function preview(id){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume(); if(timer) clearInterval(timer); const beat=beats.find(b=>b.id===id); const spb=60/beat.bpm/4; step=0; var genreMap={'Boom Bap':'boom','Trap':'trap','Lo-Fi':'boom','Rave':'four'}; var tmpl=genreMap[beat.genre]||'four'; var pat=null; try{ if(window.praimeBeatEngine) pat=window.praimeBeatEngine.patternFor(tmpl); }catch(e){} if(!pat) pat={kick:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],hat:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],patternName:tmpl}; var kickPitch = beat.genre==='Trap'?150:(beat.genre==='Rave'?130:(beat.genre==='Lo-Fi'?100:120)); var bassNotes=[55,55,65.4,49]; setTimeout(()=>{ if(timer) clearInterval(timer); timer=null; try{ if(ctx) ctx.suspend(); }catch(e){} document.getElementById('out').textContent='Preview stopped automatically after 30 seconds. Tap Preview again to hear it again.'; },30000); timer=setInterval(()=>{ const t=ctx.currentTime; var s=step%16; if(pat.kick[s]) snd('kick',t,kickPitch); if(pat.snare[s]) snd('snare',t); if(pat.hat[s]) snd('hat',t); if(s%8===0) snd('bass',t,bassNotes[(step/8)%4|0]); step=(step+1)%16; },spb*1000); document.getElementById('out').textContent='Previewing '+beat.name+' at '+beat.bpm+' BPM, pattern '+pat.patternName+'. Tap Stop preview to stop it — hats are now softer, no 8000 Hz square tone.'; }
