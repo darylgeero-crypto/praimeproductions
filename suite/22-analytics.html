@@ -35,7 +35,7 @@ small{color:#9ca3af} a{color:#7ee2ff}
 <label>ReverbNation plays (total)</label><input id="musicRN" type="number" placeholder="0">
 <label>YouTube views (total)</label><input id="musicYT" type="number" placeholder="0">
 <label>Spotify streams (total)</label><input id="musicSP" type="number" placeholder="0">
-<button id="saveMusic">Save my music stats</button><button id="copyMusicStats" class="secondary">⧉ Copy music stats as text</button>
+<button id="saveMusic">Save my music stats</button><button id="copyMusicStats" class="secondary">⧉ Copy music stats as text</button><button id="dlMusicStats" class="secondary">⬇ Download music stats .JSON</button>
 <p id="musicTotals" class="status"></p></div>
 
 <div class="card" id="siteStatsCard" style="display:none"><h2>Site stats — owner view</h2>
@@ -115,6 +115,12 @@ document.getElementById('healthBtn').onclick=loadHealth; loadHealth();
   var btn=document.getElementById('copyMusicStats'); if(!btn) return;
   var labels={musicSC:'SoundCloud',musicSClick:'SoundClick',musicRN:'ReverbNation',musicYT:'YouTube',musicSP:'Spotify'};
   btn.onclick=function(){ var mt=document.getElementById('musicTotals'); var lines=['PrAIme — My music stats (Rapmosfieryk)']; var tot=0; ['musicSC','musicSClick','musicRN','musicYT','musicSP'].forEach(function(k){ var el=document.getElementById(k); var v=el?parseInt(el.value||'0',10)||0:0; tot+=v; lines.push(labels[k]+' — '+v); }); lines.push('Total plays/streams — '+tot); var text=lines.join('\n'); function done(ok){ if(mt) mt.textContent=ok?('Copied music stats (total '+tot+') — paste them into a log, message or notes.'):('Copy failed in this browser — total plays/streams: '+tot+'.'); } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } };
+})();
+// Download music stats: the same five platform totals plus the computed total, as JSON for backup.
+(function(){
+  var btn=document.getElementById('dlMusicStats'); if(!btn) return;
+  var labels={musicSC:'soundcloud',musicSClick:'soundclick',musicRN:'reverbnation',musicYT:'youtube',musicSP:'spotify'};
+  btn.onclick=function(){ var mt=document.getElementById('musicTotals'); var platforms={}, tot=0; ['musicSC','musicSClick','musicRN','musicYT','musicSP'].forEach(function(k){ var el=document.getElementById(k); var v=el?parseInt(el.value||'0',10)||0:0; tot+=v; platforms[labels[k]]=v; }); var data={platforms:platforms,total:tot,exportedAt:new Date().toISOString()}; var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-music-stats.json'; a.click(); if(mt) mt.textContent='Downloaded music stats as praime-music-stats.json (total '+tot+').'; };
 })();
 (function(){
   var ads=['Introducing','All-In Kit $49.99','Instrument Kit $29.99','Beats $9.99','Prime Your Music','Ultimate Mastering Suite'];
