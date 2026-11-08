@@ -14,6 +14,7 @@ input[type=range]{padding:0} label{font-weight:600;display:block;margin-top:10px
 .status{background:#07090e;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:12px;white-space:pre-wrap}
 small{color:#9ca3af} canvas,video{width:100%;background:#07090e;border-radius:14px;border:1px solid rgba(255,255,255,.1)}
 a{color:#7ee2ff}
+mark{background:#f59e0b;color:#111827;border-radius:3px;padding:0 2px}
 @media print{header,button,#rokBtn,#rokPanel{display:none!important}body{background:#fff;color:#000}.card{background:#fff;color:#000;border-color:#999}a{color:#000}}
 
 #rokBtn{position:fixed;right:16px;bottom:16px;z-index:9999;width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#00f3ff,#9d4edd,#f72585);color:#fff;font-size:28px;border:2px solid #fff;cursor:pointer;box-shadow:0 0 20px rgba(157,78,221,.6)}
@@ -45,7 +46,8 @@ const catalog=[
  {name:'S.O.S. — example track',type:'Track (example)',link:'02-daw-master.html',tags:'sos'},
  {name:'We Don\'t Know — example track',type:'Track (example)',link:'02-daw-master.html',tags:'we dont know'},
 ];
-function search(){ const q=document.getElementById('q').value.toLowerCase().trim(); const res=catalog.filter(c=>(c.name+' '+c.tags).toLowerCase().includes(q)); const div=document.getElementById('results'); div.innerHTML=res.length?res.map(c=>'<div class="card"><b>'+c.name+'</b> — '+c.type+' — <a href="'+c.link+'">Open</a></div>').join(''):'<p>No local results. Try: master, beat, video, lyrics.</p>'; document.getElementById('out').textContent=res.length+' result(s) for "'+q+'" in local catalog. External platform search is not included — it would need API keys.'; }
+function hl(t,q){ if(!q) return t; var lq=q.toLowerCase(),lt=t.toLowerCase(),out='',i=0,j; while((j=lt.indexOf(lq,i))>=0){ out+=t.slice(i,j)+'<mark>'+t.slice(j,j+q.length)+'</mark>'; i=j+q.length; } return out+t.slice(i); }
+function search(){ const q=document.getElementById('q').value.toLowerCase().trim(); const res=catalog.filter(c=>(c.name+' '+c.tags).toLowerCase().includes(q)); const div=document.getElementById('results'); div.innerHTML=res.length?res.map(c=>'<div class="card"><b>'+hl(c.name,q)+'</b> — '+hl(c.type,q)+' — <a href="'+c.link+'">Open</a><br><small>'+hl(c.tags,q)+'</small></div>').join(''):'<p>No local results. Try: master, beat, video, lyrics.</p>'; document.getElementById('out').textContent=res.length+' result(s) for "'+q+'" in local catalog. External platform search is not included — it would need API keys.'; }
 document.getElementById('go').onclick=search; document.getElementById('printResultsBtn').onclick=function(){ window.print(); }; document.getElementById('q').onkeydown=e=>{ if(e.key==='Enter') search(); };
 let searchTimer=null; document.getElementById('q').addEventListener('input',()=>{ clearTimeout(searchTimer); searchTimer=setTimeout(search,250); });
 search();
