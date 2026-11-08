@@ -24,7 +24,7 @@ a{color:#7ee2ff}
 <button id="chooseBtn">📁 Add files</button><input type="file" id="fileInput" multiple accept="audio/*,video/*,image/*,.txt,.json">
 <input id="filter" placeholder="Filter library by name...">
 <select id="sortSel" title="Sort library"><option value="upload">Upload order</option><option value="name">Name (A–Z)</option><option value="size">Size (largest first)</option></select>
-<div id="list"></div><button id="manifest">Download manifest .JSON</button><button id="printList" class="secondary">🖨 Print library list</button><div class="status" id="manifestOut"></div>
+<div id="list"></div><button id="manifest">Download manifest .JSON</button><button id="dlLibCsv" class="secondary">Download library list (.CSV)</button><button id="printList" class="secondary">🖨 Print library list</button><div class="status" id="manifestOut"></div>
 <div class="status" id="out"></div><audio id="player" controls style="width:100%;margin-top:12px"></audio>
 <div class="card"><h2>Music Player — 5-band equalizer</h2><p>Restored from the original Full suite player. The five bands run through Web Audio peaking filters on the player above, so they really change what you hear — not just a display. EQ is set up on first Play (a user gesture, which browsers require for audio).</p>
 <label>60 Hz <span id="eq60Val">0 dB</span></label><input type="range" id="eq60" min="-12" max="12" step="0.5" value="0">
@@ -54,6 +54,7 @@ document.getElementById('fileInput').onchange=e=>{ [...e.target.files].forEach(f
 document.getElementById('filter').oninput=render;
 document.getElementById('sortSel').onchange=render;
 document.getElementById('manifest').onclick=()=>{ const blob=new Blob([JSON.stringify(files.map(f=>({name:f.name,size:f.size,type:f.type})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-manifest.json'; a.click(); document.getElementById('manifestOut').textContent='Manifest downloaded: praime-library-manifest.json ('+files.length+' files).'; };
+document.getElementById('dlLibCsv').onclick=()=>{ if(!files.length){ document.getElementById('manifestOut').textContent='No local files in library yet to export.'; return; } function cell(v){ v=(v==null?'':String(v)); return (/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v); } var lines=['Filename,Size (KB),Type']; files.forEach(function(f){ lines.push([cell(f.name),cell(Math.round(f.size/1024)),cell(f.type||'')].join(',')); }); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-list.csv'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); document.getElementById('manifestOut').textContent='Library list downloaded: praime-library-list.csv ('+files.length+' files).'; };
 document.getElementById('printList').onclick=()=>{ window.print(); };
 render();
 
