@@ -250,6 +250,9 @@ function obRenderTakes(){
   obTakes.forEach(function(t){
     let row=document.createElement('div'); row.style.cssText='border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin:8px 0';
     let head=document.createElement('div'); head.textContent=t.name+' — '+t.stamp+' — '+t.duration.toFixed(1)+'s'; row.appendChild(head);
+    let rn=document.createElement('button'); rn.className='secondary'; rn.textContent='Rename take';
+    rn.onclick=function(){ var nn=prompt('Rename take:', t.name); if(nn && nn.trim()){ t.name=nn.trim(); obRenderTakes(); } };
+    row.appendChild(rn);
     let au=document.createElement('audio'); au.controls=true; au.src=t.url; au.style.width='100%'; row.appendChild(au);
     let vol=document.createElement('input'); vol.type='range'; vol.min=0; vol.max=100; vol.value=Math.round(t.volume*100);
     vol.oninput=function(){ t.volume=vol.value/100; };
