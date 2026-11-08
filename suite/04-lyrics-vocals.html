@@ -39,7 +39,7 @@ a{color:#7ee2ff}
 <div class="status" id="obOut">Load a beat, press Play beat, then Record take over beat. Takes appear below, one lane each.</div>
 <h3>Takes</h3><div class="status" id="obList">No takes yet.</div>
 <p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). The beat itself is always in the mix at full volume.</p>
-<button id="obMix" disabled>⬇ Mix beat + takes &amp; download WAV</button><button id="obPlayMix" disabled class="secondary">▶ Play mix preview</button>
+<button id="obMix" disabled>⬇ Mix beat + takes &amp; download WAV</button><button id="obPlayMix" disabled class="secondary">▶ Play mix preview</button><button id="copyObMix" disabled class="secondary">⧉ Copy overdub mix summary</button>
 <div class="status" id="obMixOut"></div>
 <p style="font-size:12px;color:#9ca3af">Honest limits: this mixes in the browser, offline, from the files you loaded — it does not auto-tune, time-stretch, or quantise takes, and it does not remove beat bleed if you recorded through speakers. A take that starts mid-beat is placed at that beat time in the mix; takes recorded in different sessions on this page are kept only until you leave or reload the page (they are not saved to the server).</p></div>
 <div class="card"><h2>Generate unique lyrics — never the same twice</h2>
@@ -245,7 +245,7 @@ document.getElementById('genLyricBtn').onclick=function(){ if(window.praimeRapEn
 document.getElementById('genLyricSave').onclick=function(){ let t=document.getElementById('genLyricOut').value; if(!t) return; let ta=document.querySelector('textarea'); if(ta) ta.value=t; document.getElementById('genLyricStatus').textContent='Lyrics copied into the notepad area — save it there as usual.'; };
 
 // ---- Record vocals over a beat (restored Vocal Studio) ----
-let obBeat=null, obTakes=[], obRec=null, obChunks=[], obMixed=null, obTakeSeq=0;
+let obBeat=null, obTakes=[], obRec=null, obChunks=[], obMixed=null, obMixedActive=0, obTakeSeq=0;
 function obBpmVal(){ let v=parseFloat(document.getElementById('obBpm').value); return (v>0)?v:92; }
 function obStamp(startSec){ let secPerBar=(60/obBpmVal())*4; let bar=Math.floor(startSec/secPerBar)+1; let sec=document.getElementById('obSection').value; return sec+' · bar '+bar+' · '+startSec.toFixed(1)+'s into beat'; }
 function obRenderTakes(){
@@ -357,16 +357,17 @@ async function obBuildMix(){
 document.getElementById('obMix').onclick=async function(){
   let out=document.getElementById('obMixOut'); out.textContent='Mixing beat + takes… (offline render; a long song takes a moment)';
   try{
-    let m=await obBuildMix(); obMixed=m.buffer;
+    let m=await obBuildMix(); obMixed=m.buffer; obMixedActive=m.active; document.getElementById('copyObMix').disabled=false;
     let a=document.createElement('a'); a.href=URL.createObjectURL(micWav(m.buffer)); a.download='praime-beat-plus-vocals.wav'; a.click();
     out.textContent='Downloaded praime-beat-plus-vocals.wav — beat + '+m.active+' take(s), normalised to 0.89 peak. Takes are placed at their recorded beat times.';
   }catch(err){ out.textContent='Mix failed: '+err.message; }
 };
 document.getElementById('obPlayMix').onclick=async function(){
   let out=document.getElementById('obMixOut'); out.textContent='Rendering mix preview…';
-  try{ let m=await obBuildMix(); obMixed=m.buffer; micPlay(m.buffer); out.textContent='Playing mix preview — beat + '+m.active+' take(s).'; }
+  try{ let m=await obBuildMix(); obMixed=m.buffer; obMixedActive=m.active; document.getElementById('copyObMix').disabled=false; micPlay(m.buffer); out.textContent='Playing mix preview — beat + '+m.active+' take(s).'; }
   catch(err){ out.textContent='Mix preview failed: '+err.message; }
 };
+document.getElementById('copyObMix').onclick=function(){ var out=document.getElementById('obMixOut'); if(!obMixed){ out.textContent='No overdub mix yet — load a beat, record a take, then mix.'; return; } var bi=document.getElementById('obBeatInfo').textContent.trim(); var n=obMixedActive; var txt='Beat: '+(bi||'—')+'\nOverdub mix: beat + '+n+' active take'+(n===1?'':'s')+', peak capped at 0.89\nLength: '+obMixed.duration.toFixed(1)+'s · '+obMixed.sampleRate+' Hz · '+obMixed.numberOfChannels+'ch'; function done(ok){ out.textContent=ok?'Overdub mix summary copied — paste it into a message or notes.':'Copy failed — clipboard is not available in this browser. Download the mix WAV instead.'; } function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); };
 
 let micOrig=null, micMastered=null, micCtx=null, micSrc=null;
 function micCtxFn(){ if(!micCtx) micCtx=new (window.AudioContext||window.webkitAudioContext)(); if(micCtx.state==='suspended') micCtx.resume(); return micCtx; }
