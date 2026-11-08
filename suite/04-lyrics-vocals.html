@@ -21,6 +21,8 @@ a{color:#7ee2ff}
 #rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
 #rokPanel input{margin-top:8px}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main><h1>Lyrics & Vocals</h1><p><span class="badge">Separate page 4 of 10</span></p><div class="card"><h2>Lyrics notepad — saved</h2><p>Lyrics are saved to localStorage and to the bus, so Freestyle can add words here and you can download them as a real TXT file, or print them (Save as PDF in the print dialog).</p>
+<div style="display:flex;gap:8px;align-items:center;margin:10px 0 6px"><input type="text" id="rhymeQuery" placeholder="Type a word to find rhymes..." style="flex:1"><button id="findRhymesBtn" class="secondary">Find rhymes</button></div>
+<div class="status" id="rhymeResults"></div>
 <textarea id="lyrics" rows="12" placeholder="Write lyrics here..."></textarea>
 <button id="save">Save lyrics</button><button id="dl">Download lyrics .TXT</button><button id="load" class="secondary">Load saved lyrics</button><button id="importLyrics" class="secondary">⬆ Import lyrics .TXT</button><input type="file" id="importLyricsFile" accept=".txt,text/plain" style="display:none"><button id="printLyrics" class="secondary">🖨 Print lyrics / PDF</button><button id="dictateLyrics" class="secondary">🎤 Dictate lyrics</button>
 <div class="status" id="out"></div></div>
@@ -85,6 +87,28 @@ document.getElementById('save').onclick=()=>{ localStorage.setItem('praime_lyric
 document.getElementById('load').onclick=()=>{ ta.value=localStorage.getItem('praime_lyrics')||getBus().lyrics||''; document.getElementById('out').textContent='Lyrics loaded.'; };
 let lyricTimer=null; ta.addEventListener('input',()=>{ clearTimeout(lyricTimer); lyricTimer=setTimeout(()=>{ try{ localStorage.setItem('praime_lyrics',ta.value); setBus({lyrics:ta.value}); }catch(e){} document.getElementById('out').textContent='Auto-saved '+new Date().toLocaleTimeString()+' ('+ta.value.length+' characters).'; },500); });
 document.getElementById('dl').onclick=()=>{ const blob=new Blob([ta.value],{type:'text/plain'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-lyrics.txt'; a.click(); document.getElementById('out').textContent='Lyrics TXT downloaded.'; };
+// ---- Rhyme finder (reads the rap engine dictionary only: same-key siblings + multisyllabic groups; nothing generated, nothing invented) ----
+function findRhymes(){
+  var out=document.getElementById('rhymeResults');
+  var q=(document.getElementById('rhymeQuery').value||'').trim().toLowerCase();
+  if(!q){ out.textContent='Type a word first, then tap Find rhymes.'; return; }
+  var e=window.praimeRapEngine;
+  if(!e||!e.parsedPool||!e.rhymeMap){ out.textContent='Rhyme dictionary is still loading — try again in a moment.'; return; }
+  var found=null;
+  for(var i=0;i<e.parsedPool.length;i++){ if(e.parsedPool[i].word===q){ found=e.parsedPool[i]; break; } }
+  if(!found){ out.textContent='No rhymes for \''+q+'\' in the PrAIme rhyme dictionary — try another word.'; return; }
+  var sibs=(e.rhymeMap[found.key]||[]).map(function(w){ return w.word; }).filter(function(w){ return w!==q; });
+  var multi=[];
+  (e.multiGroups||[]).forEach(function(g){
+    var low=g.map(function(x){ return x.toLowerCase(); });
+    if(low.indexOf(q)>=0){ g.forEach(function(x){ if(x.toLowerCase()!==q && multi.indexOf(x)<0) multi.push(x); }); }
+  });
+  var all=sibs.concat(multi.filter(function(x){ return sibs.indexOf(x)<0; }));
+  if(!all.length){ out.textContent='No rhymes for \''+q+'\' in the PrAIme rhyme dictionary — try another word.'; return; }
+  out.textContent='Rhymes for \''+q+'\': '+all.join(', ')+'.';
+}
+document.getElementById('findRhymesBtn').onclick=findRhymes;
+document.getElementById('rhymeQuery').addEventListener('keydown',function(ev){ if(ev.key==='Enter'){ findRhymes(); } });
 // ---- Import lyrics from a local .TXT file (same pattern as Taste/DAW/Co-Lab imports; nothing uploaded) ----
 document.getElementById('importLyrics').onclick=()=>document.getElementById('importLyricsFile').click();
 document.getElementById('importLyricsFile').onchange=function(e){ var f=(e.target.files||[])[0]; if(!f) return; var r=new FileReader(); r.onload=function(){ var t=r.result||''; ta.value=t; ta.dispatchEvent(new Event('input')); document.getElementById('out').textContent='Imported '+t.length+' characters from '+f.name+' — auto-save will pick it up.'; }; r.onerror=function(){ document.getElementById('out').textContent='Could not read '+f.name+' — try a plain .TXT file.'; }; r.readAsText(f); e.target.value=''; };

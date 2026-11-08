@@ -70,6 +70,7 @@
   Object.keys(seen).forEach(function(k){ items.push(seen[k]); });
   function UnifiedRapEngine(){
     this.parsedPool = []; this.rhymeMap = {}; this.activeQueue = []; this.used = {};
+    this.multiGroups = MULTI; // exposed for the Lyrics rhyme finder (read-only lookup; generation untouched)
     var self = this;
     items.forEach(function(it){
       if(!self.rhymeMap[it.key]) self.rhymeMap[it.key] = [];

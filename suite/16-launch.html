@@ -44,7 +44,7 @@ a{color:#7ee2ff}
 <label><input type="checkbox" id="launchChk6" style="width:auto;margin-right:8px">7) Submit to Play / App Store with listings, screenshots, and policy links</label>
 <label><input type="checkbox" id="launchChk7" style="width:auto;margin-right:8px">8) Release social plan: teaser, hook videos, lyric video, reply to comments</label>
 <label>Target release date</label><input id="launchTargetDate" type="date">
-<button id="launchReset" class="secondary">Reset tracker</button>
+<button id="launchReset" class="secondary">Reset tracker</button> <button id="nextUnfinishedBtn" class="secondary">Go to next unfinished step</button>
 <div class="status" id="launchTrackOut">0 of 8 steps done. No target date set.</div></div>
 <script>
 // ---- Pre-release tracker (local only — no share-engine.js, no submission, no generated codes) ----
@@ -62,6 +62,22 @@ a{color:#7ee2ff}
   boxes().forEach(function(b,i){ if(b){ b.checked=!!st.checks[i]; b.onchange=save; } });
   var d=document.getElementById('launchTargetDate'); if(d){ d.value=st.date; d.onchange=save; }
   document.getElementById('launchReset').onclick=function(){ try{ localStorage.removeItem(KEY); }catch(e){} boxes().forEach(function(b){ if(b) b.checked=false; }); if(d) d.value=''; save(); };
+  // ---- Go to next unfinished step (navigation aid only; tracker state and date untouched) ----
+  // Step numbers are 1-based; checkbox indices are 0-based: step 1 = index 0 (DAW), step 3 = index 2 (Beat Store),
+  // step 4 = index 3 (Terms), step 8 = index 7 (Video). Steps 2/5/6/7 have no separate suite page, so scroll to them here.
+  document.getElementById('nextUnfinishedBtn').onclick=function(){
+    var b=boxes(); var out=document.getElementById('launchTrackOut');
+    var pages={0:'02-daw-master.html',2:'09-beat-store.html',3:'18-tos.html',7:'05-video.html'};
+    for(var i=0;i<8;i++){
+      if(b[i] && !b[i].checked){
+        var label=(b[i].parentNode?b[i].parentNode.textContent:'Step '+(i+1)).trim();
+        if(pages[i]){ out.textContent='Next unfinished step: '+label+' — opening the page for it.'; window.location.href=pages[i]; }
+        else { b[i].scrollIntoView({behavior:'smooth',block:'center'}); out.textContent='Next unfinished step: '+label+' — see the notes on this page.'; }
+        return;
+      }
+    }
+    out.textContent='All 8 launch steps are done.';
+  };
   save();
 })();
 </script>
