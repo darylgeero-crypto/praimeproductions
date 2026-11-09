@@ -93,6 +93,13 @@ a{color:#7ee2ff}
 <label>Label</label><input id="relLabel" placeholder="e.g. PrAIme Productions">
 <label>Writer split — one writer per line, e.g. "Rapmosfieryk — 100%"</label><textarea id="relWriters" rows="3" placeholder="Rapmosfieryk — 100%"></textarea>
 <button id="relGenerate">Generate release package</button><button id="relSheet" class="secondary">⬇ Release sheet (.txt)</button><button id="relCsv" class="secondary">⬇ Tracking codes (.csv)</button><button id="relJson" class="secondary">⬇ Manifest (.json)</button>
+<h3 style="margin:18px 0 4px">Cover art — 3000×3000 PNG, drawn in your browser</h3>
+<p><small>Uses the title, artist, genre and label above. The artwork is a plain image file drawn locally from those details — it is not a submission, and it does not register anything. Upload the PNG yourself in your distributor account.</small></p>
+<label>Cover style</label><select id="relCoverStyle"><option value="rings">Orbit rings</option><option value="bars">Diagonal bars</option><option value="grid">Grid blocks</option></select>
+<label>Accent colour</label><select id="relCoverAccent"><option value="#00f3ff">Cyan</option><option value="#ff7a1a">Orange</option><option value="#f72585">Pink</option><option value="#ffd60a">Gold</option><option value="#9d4edd">Purple</option></select>
+<button id="relCoverPreview">Preview cover art</button><button id="relCoverDl" class="secondary">⬇ Cover art (.png, 3000×3000)</button>
+<canvas id="relCoverCanvas" width="300" height="300" style="width:100%;max-width:300px;height:auto;margin-top:10px"></canvas>
+<div class="status" id="relCoverOut">Pick a style and accent, then tap Preview cover art. The download is a 3000×3000 PNG.</div>
 <div class="status" id="relOut">Fill in title and artist, then press Generate release package. The three downloads use exactly the details above — nothing is sent anywhere.</div></div>
 <button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
 <div id="rokPanel">
@@ -146,6 +153,81 @@ a{color:#7ee2ff}
   document.getElementById('relSheet').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-release-sheet.txt', sheet(m), 'text/plain'); };
   document.getElementById('relCsv').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-tracking-codes.csv', csv(m), 'text/csv'); };
   document.getElementById('relJson').onclick=function(){ var m=generate(); if(m) download(baseName(m)+'-manifest.json', JSON.stringify({release:m, note:'Prepared in the browser by PrAIme. Not submitted to any store or distributor. UPC/ISRC/ISWC are user-entered only; PrAIme does not generate them.'}, null, 2), 'application/json'); };
+  // ---- Cover art (3000x3000 PNG, drawn locally from the details above — not a submission) ----
+  function hashSeed(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+  function rng(seed){ var a=seed>>>0; return function(){ a=(a+0x6D2B79F5)|0; var t=a; t=Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296; }; }
+  function wrapLines(ctx, text, maxW){
+    var words=String(text||'').split(/\s+/).filter(Boolean), lines=[], cur='';
+    words.forEach(function(w){ var t=cur?cur+' '+w:w; if(ctx.measureText(t).width>maxW && cur){ lines.push(cur); cur=w; } else { cur=t; } });
+    if(cur) lines.push(cur); return lines;
+  }
+  function drawCover(cv, size, m, style, accent){
+    var ctx=cv.getContext('2d'); if(!ctx) return false;
+    cv.width=size; cv.height=size;
+    var R=rng(hashSeed(m.title+'|'+m.artist+'|'+style+'|'+accent));
+    var i, x, y;
+    ctx.fillStyle='#0b0d12'; ctx.fillRect(0,0,size,size);
+    var g=ctx.createLinearGradient(0,0,size,size); g.addColorStop(0,'rgba(0,243,255,0.10)'); g.addColorStop(1,'rgba(157,78,221,0.16)');
+    ctx.fillStyle=g; ctx.fillRect(0,0,size,size);
+    if(style==='rings'){
+      var cx=size*(0.30+R()*0.40), cy=size*(0.28+R()*0.30);
+      for(i=0;i<5;i++){ ctx.beginPath(); ctx.strokeStyle=accent; ctx.globalAlpha=0.22+0.14*i; ctx.lineWidth=size*0.012; ctx.arc(cx,cy,size*(0.12+0.09*i),0,Math.PI*2); ctx.stroke(); }
+      ctx.globalAlpha=1; ctx.beginPath(); ctx.fillStyle=accent; ctx.arc(cx,cy,size*0.05,0,Math.PI*2); ctx.fill();
+    } else if(style==='bars'){
+      ctx.save(); ctx.translate(size/2,size/2); ctx.rotate(-0.5);
+      for(i=-6;i<7;i++){ ctx.fillStyle=(i%2===0)?accent:'#1e293b'; ctx.globalAlpha=(i%2===0)?0.8:0.9; ctx.fillRect(i*size*0.16,-size,size*0.08,size*2); }
+      ctx.restore(); ctx.globalAlpha=1;
+    } else {
+      var n=4, cell=size/n;
+      for(i=0;i<n*n;i++){ x=(i%n)*cell; y=Math.floor(i/n)*cell; if(R()<0.45){ ctx.fillStyle=accent; ctx.globalAlpha=0.25+R()*0.55; ctx.fillRect(x+cell*0.08,y+cell*0.08,cell*0.84,cell*0.84); } }
+      ctx.globalAlpha=1;
+    }
+    ctx.fillStyle='#ffffff';
+    var dots=Math.floor(size/2);
+    for(i=0;i<dots;i++){ ctx.globalAlpha=0.02+R()*0.05; ctx.fillRect(R()*size,R()*size,1+size*0.002,1+size*0.002); }
+    ctx.globalAlpha=1;
+    // dark scrim so the title stays readable over any style
+    var scrim=ctx.createLinearGradient(0,size*0.40,0,size); scrim.addColorStop(0,'rgba(7,9,14,0)'); scrim.addColorStop(1,'rgba(7,9,14,0.72)');
+    ctx.fillStyle=scrim; ctx.fillRect(0,size*0.40,size,size*0.60);
+    var pad=size*0.08, maxW=size-pad*2;
+    var titleSize=size*0.11;
+    ctx.font='800 '+Math.round(titleSize)+'px Arial, sans-serif';
+    var lines=wrapLines(ctx, m.title.toUpperCase(), maxW);
+    while(lines.length>2 && titleSize>size*0.05){ titleSize*=0.85; ctx.font='800 '+Math.round(titleSize)+'px Arial, sans-serif'; lines=wrapLines(ctx, m.title.toUpperCase(), maxW); }
+    var lh=titleSize*1.08;
+    var sub=[m.genre, m.label].filter(Boolean).join('  \u2022  ');
+    var afterTitle=size*0.94-(sub ? size*0.118 : size*0.075);
+    var ty=afterTitle-lines.length*lh;
+    ctx.fillStyle='#f3f4f6';
+    lines.forEach(function(ln){ ctx.fillText(ln, pad, ty); ty+=lh; });
+    ctx.fillStyle=accent; ctx.fillRect(pad, afterTitle+size*0.012, size*0.16, size*0.008);
+    var aSize=size*0.045;
+    ctx.fillStyle='#e8eef4'; ctx.font='700 '+Math.round(aSize)+'px Arial, sans-serif';
+    while(ctx.measureText(m.artist.toUpperCase()).width>maxW && aSize>size*0.025){ aSize*=0.9; ctx.font='700 '+Math.round(aSize)+'px Arial, sans-serif'; }
+    ctx.fillText(m.artist.toUpperCase(), pad, afterTitle+size*0.075);
+    if(sub){ ctx.fillStyle='#9ca3af'; ctx.font='400 '+Math.round(size*0.032)+'px Arial, sans-serif'; ctx.fillText(sub, pad, afterTitle+size*0.118); }
+    return true;
+  }
+  document.getElementById('relCoverPreview').onclick=function(){
+    var m=generate(); if(!m) return;
+    var style=document.getElementById('relCoverStyle').value, accent=document.getElementById('relCoverAccent').value;
+    var cv=document.getElementById('relCoverCanvas'), out=document.getElementById('relCoverOut');
+    if(!drawCover(cv,300,m,style,accent)){ out.textContent='Canvas is not available in this browser.'; return; }
+    out.textContent='Preview drawn for "'+m.title+'" by '+m.artist+' ('+style+'). Download gives the same art at 3000\u00d73000 PNG.';
+  };
+  document.getElementById('relCoverDl').onclick=function(){
+    var m=generate(); if(!m) return;
+    var style=document.getElementById('relCoverStyle').value, accent=document.getElementById('relCoverAccent').value;
+    var out=document.getElementById('relCoverOut');
+    var cv=document.createElement('canvas');
+    if(!drawCover(cv,3000,m,style,accent)){ out.textContent='Canvas is not available in this browser.'; return; }
+    if(!cv.toBlob){ out.textContent='PNG export is not available in this browser.'; return; }
+    cv.toBlob(function(b){
+      if(!b){ out.textContent='PNG export failed in this browser.'; return; }
+      var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=baseName(m)+'-cover-3000.png'; a.click();
+      out.textContent='Cover art downloaded: '+a.download+' (3000\u00d73000 PNG). Upload it yourself in your distributor account \u2014 PrAIme has not submitted anything.';
+    }, 'image/png');
+  };
 })();
 </script><script>// ---- Rokdabus Prhyme widget ----
 (function(){
