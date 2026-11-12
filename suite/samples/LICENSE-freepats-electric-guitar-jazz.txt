@@ -1,0 +1,58 @@
+FreePats — Electric Guitar FSBS (jazz)
+Source: https://github.com/freepats/electric-guitar-FSBS-jazz
+(FreePats project, https://freepats.zenvoid.org/)
+
+Licence: CC0 1.0 Universal — the repository LICENSE.txt is the full
+CC0 1.0 legal code (7,048 bytes, same size as dist1's/dist2's), and
+the repository README states: "Published under the terms of
+Creative Commons CC0 public domain dedication". Verified 2026-11-12
+by direct fetch of the repo LICENSE.txt and README.txt, the SFZ file,
+and the GitHub repo page (which shows "CC0-1.0 license"). The GitHub
+API licence field could not be confirmed this run (API rate limit
+exhausted, as in the previous runs) — CC0 status here rests on the
+README dedication statement plus the full CC0 legal code in
+LICENSE.txt, both fetched directly, plus the repo page licence field.
+
+Files used in PrAIme: bridge-pickup jazz samples from the main SFZ
+mapping "EGuitarFSBS-jazz bridge 20260807.sfz" (120 regions, 19
+distinct sampled pitches, MIDI 35-86 — the SFZ group layout is
+identical to dist1's/dist2's, including the C5 key=72 group and
+ampeg_release 0.4). The README states the bank was made "by direct
+sampling a Fender electric guitar (basic model) using an audio
+interface with dedicated instrument inputs" and the samples were
+"processed through an amplifier and effects rack to create a
+'jazz' guitar variant". 52 chromatic notes MIDI 35-86 (B1-D6), one
+per semitone, each derived from the nearest sampled pitch in the SFZ
+zones (max 2 semitones pitch-shift, done locally with ffmpeg
+asetrate; MIDI 72 IS sampled in this SFZ — C5_s6_01.flac, key=72
+group — so it uses its own sample at 0 semitones). Converted
+locally to 44.1 kHz mono OGG (samples/kits/jazz-guitar-01..52.ogg),
+trimmed to 4.3 s with a 0.15 s fade-out, level-matched to the
+existing PrAIme banks (all 19 source samples peak at 0.0 dB, so a
+uniform -18.5 dB gain). Pitches verified by FFT after conversion
+(strongest spectral peak is an integer harmonic of the expected
+fundamental, within 25 cents, on all 52 notes). Tone genuinely
+different from the distorted variants, measured: spectral centroid
+mean 1608 Hz (range 442-2496 Hz) vs dist1 mean 2380 Hz (range
+1719-2905 Hz) and dist2 mean 3419 Hz (range 2463-4268 Hz); jazz is
+darker than dist1 on all 52 notes (mean per-note ratio 0.65) and
+darker than dist2 on all 52 notes (mean per-note ratio 0.45),
+confirming a distinct clean, warm, mellow jazz profile rather than
+a near-identical clone. Notes 50-52 are 2.91-3.27 s, not 4.3 s,
+because their source sample (C#6) is only 3.08 s long; notes 43-44
+are 3.83-4.06 s because the F5 source is 4.06 s; no audible content
+is truncated. SFZ quirk noted: the hard-velocity D5 group's 4th
+region references D5_s6_soft_01.flac instead of a D5_s6_04.flac
+(which does not exist in the SFZ); only the _01 take is used, so
+this does not affect the bank — same quirk as dist1/dist2.
+
+Note on Gemini's answer this run: Gemini confirmed the repo URL,
+CC0 status, and the jazz tone in general terms, but again invented
+details — it claimed "bridge and neck pickup SFZ mapping files"
+(the repo holds exactly one SFZ, the bridge file, plus a "small"
+variant; no neck-pickup SFZ exists), gave no region/pitch counts,
+and claimed samples are "available in both FLAC and WAV" (the SFZ
+references FLAC only). All facts in this note were verified by
+direct read of the repo files, not from Gemini.
+
+Use in tracks; do not resell the raw samples as a kit.

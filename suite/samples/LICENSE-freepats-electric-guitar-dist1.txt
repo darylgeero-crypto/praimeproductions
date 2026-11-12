@@ -10,7 +10,7 @@ Universal (CC0-1.0)". Verified 2026-11-12 by direct fetch of the
 repo LICENSE.txt, README.txt, and the GitHub API licence field.
 
 Files used in PrAIme: bridge-pickup distorted samples from the main
-SFZ mapping "EGuitarFSBS-dist1 bridge 20220911.sfz" (120 regions, 18
+SFZ mapping "EGuitarFSBS-dist1 bridge 20220911.sfz" (120 regions, 19
 distinct sampled pitches, MIDI 35-86). The README states the bank
 was made "by direct sampling a Fender electric guitar (basic model)
 using an audio interface with dedicated instrument inputs" and the
@@ -18,9 +18,11 @@ samples were "processed through an amplifier and effects rack to
 create a distorted, overdriven, and powerful guitar sound". 52
 chromatic notes MIDI 35-86 (B1-D6), one per semitone, each derived
 from the nearest sampled pitch in the SFZ zones (max 2 semitones
-pitch-shift, done locally with ffmpeg asetrate; MIDI 72 is unmapped
-in the SFZ, so it uses the B4 sample shifted up 1 semitone, as in
-the clean bank). Converted locally to 44.1 kHz mono OGG
+pitch-shift, done locally with ffmpeg asetrate; MIDI 72 IS sampled
+in this SFZ — C5_s6_01.flac, key=72 group — but note 38 was built
+from the B4 sample shifted up 1 semitone before the C5 sample was
+noticed, as in the clean bank; it is pitch-correct (FFT-verified)
+and was left as-is rather than re-pushing the bank for one take). Converted locally to 44.1 kHz mono OGG
 (samples/kits/dist-guitar-01..52.ogg), trimmed to 4.3 s with a
 0.15 s fade-out, level-matched to the existing PrAIme banks (peaks
 -18.1 to -19.1 dB, mean -18.6 dB). Pitches verified by FFT after
