@@ -1,0 +1,134 @@
+FreePats Spanish Classical Guitar — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats spanish-classical-guitar).
+
+SOURCE
+- Repo: https://github.com/freepats/spanish-classical-guitar (default branch main)
+- Current commit at fetch time: 6f4eb1b092acc88f5448cea1a0001bd07b971af8
+  ("Merge pull request #1 from freepats/feature/updates", 2022-07-23).
+- Files in repo root: LICENSE (7,048 bytes), README.md (660 bytes),
+  "SpanishClassicalGuitar-20190618.sfz" (2,450 bytes),
+  SpanishClassicalGuitar-20190618.flac (single-file version of the
+  instrument, NOT used — the bank uses the samples/ files),
+  SpanishClassicalGuitar-20190618.jpg, plugins.json.
+- Samples: https://raw.githubusercontent.com/freepats/spanish-classical-guitar/main/samples/
+  (48 FLAC files).
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.md states: "Sound samples recorded from a Spanish classical
+  guitar on 2008. Created by roberto@zenvoid.org for the FreePats
+  project." "Recorded with an AKG Perception 120 microphone and
+  processed using free software tools. The recording conditions were
+  far from ideal, so several filters have been applied to reduce noise
+  and improve sound." and "Published under the terms of Creative
+  Commons CC0 public domain dedication:
+  https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE is the full CC0 1.0 legal code (7,048 bytes, same size as
+  the FSBS guitar / timpani / ukulele / ocarina / hang / bagpipe /
+  tubular-bells / old-piano / fm-piano1 / fm-piano2 / upright-piano-KW
+  repos' CC0 licences).
+
+AUTHENTICITY — a real Spanish classical guitar, not a runtime oscillator
+- The source is a multi-sampled recording of a real Spanish classical
+  (nylon-string) guitar — captured as audio files, NOT a Web Audio
+  oscillator generated at runtime in the app.
+- This is a DIFFERENT guitar from the existing nylonGuitar bank (60
+  notes, Meta source) and from the steel / clean / distorted / jazz
+  electric guitar banks: a Spanish classical guitar recorded in 2008
+  by roberto@zenvoid.org with an AKG Perception 120, so it is a
+  separate bank, not a duplicate — the same precedent as the three
+  separate piano banks (VSCO piano, old piano FB honky-tonk, upright
+  piano KW living-room).
+- All 48 source FLACs are 44.1 kHz MONO 16-bit; durations 0.89-16.08 s
+  (low notes ring longest, top notes decay in under a second). No
+  downmix was needed (already mono).
+- Pitch probe (measure_spanishguitar.py, settled 0.5 s window,
+  harmonic-sum FFT + h2 cross-check on notes below MIDI 45): every
+  note sits within -4..+16 cents of its keycenter (mean +4.1) — the
+  guitar is in tune at A440, so NO pitch correction was applied
+  (SFZ has no tune= opcodes). The h2 readings agree with the
+  harmonic-sum readings on the low notes (e.g. G1 6.0 vs 6.2 cents,
+  A1 -2.0 vs -2.4). Largest single deviation is C#4 at +16 cents —
+  ordinary guitar intonation scatter, kept as recorded. Sources peak
+  at about -0.1 dBFS (hot, normalised).
+
+SFZ FACTS (read directly from "SpanishClassicalGuitar-20190618.sfz")
+- 1 global (ampeg_release=1.5), 1 group (loop_mode=no_loop),
+  48 regions total. No tune= opcodes anywhere. No velocity layers
+  (no lovel/hivel).
+- Keycenters (48, the notes used): G1 31, G#1 32, A1 33, A#1 34,
+  B1 35, C2 36, C#2 37, D2 38, D#2 39, E2 40, F2 41, G2 43, A2 45,
+  B2 47, C3 48, D3 50, E3 52, F3 53, F#3 54, G3 55, G#3 56, A3 57,
+  A#3 58, B3 59, C4 60, C#4 61, D4 62, D#4 63, E4 64, F4 65, F#4 66,
+  G4 67, A4 69, A#4 70, B4 71, C5 72, C#5 73, D5 74, D#5 75, E5 76,
+  F5 77, F#5 78, G5 79, G#5 80, A5 81, A#5 82, B5 83, C6 84
+  (MIDI 31-84, G1-C6).
+- The SFZ stretches 6 samples over neighbouring keys (G1 29-31,
+  G2 42-43, A2 44-45, B2 46-47, D3 49-50, E3 51-52, A4 68-69,
+  C6 84-88), but the bank does NOT pitch-shift-fill missing
+  semitones (same rule as the hang/bagpipe/tubular-bells/old-piano/
+  fm-piano1/fm-piano2/upright-piano-KW runs). The 6 missing
+  keycenters inside the range are 42 (F#2), 44 (G#2), 46 (A#2),
+  49 (C#3), 51 (D#3), 68 (G#4).
+
+BUILD RECIPE (build_spanishguitar.py)
+- 48 notes: suite/samples/kits/spanish-guitar-01..48.ogg (note01 =
+  MIDI 31 G1, 02 = 32 G#1, 03 = 33 A1, 04 = 34 A#1, 05 = 35 B1,
+  06 = 36 C2, 07 = 37 C#2, 08 = 38 D2, 09 = 39 D#2, 10 = 40 E2,
+  11 = 41 F2, 12 = 43 G2, 13 = 45 A2, 14 = 47 B2, 15 = 48 C3,
+  16 = 50 D3, 17 = 52 E3, 18 = 53 F3, 19 = 54 F#3, 20 = 55 G3,
+  21 = 56 G#3, 22 = 57 A3, 23 = 58 A#3, 24 = 59 B3, 25 = 60 C4,
+  26 = 61 C#4, 27 = 62 D4, 28 = 63 D#4, 29 = 64 E4, 30 = 65 F4,
+  31 = 66 F#4, 32 = 67 G4, 33 = 69 A4, 34 = 70 A#4, 35 = 71 B4,
+  36 = 72 C5, 37 = 73 C#5, 38 = 74 D5, 39 = 75 D#5, 40 = 76 E5,
+  41 = 77 F5, 42 = 78 F#5, 43 = 79 G5, 44 = 80 G#5, 45 = 81 A5,
+  46 = 82 A#5, 47 = 83 B5, 48 = 84 C6).
+- From the 48 FLACs. No pitch shift (sources are already 44.1 kHz;
+  no tune= exists to apply). Already mono. 44.1 kHz mono OGG q5.
+  No trim, no fade.
+- Level: per-file gain so each built file peaks at the library
+  -18.5 dB target (sources peak about -0.1 dBFS). NO Vorbis
+  compensation was needed — all 48 decoded on target first try
+  (-18.27..-18.91 dB), same as fm-piano1/fm-piano2/upright-piano-KW.
+- Download note: 16 filenames contain "#" (e.g. G#1.flac) and the
+  raw GitHub URL must encode it as %23, or curl returns 404.
+
+VERIFICATION (verify_spanishguitar.py, 2026-11-12)
+- ALL 48 files PASS: every built note matches its SOURCE pitch with
+  0.0 cents difference (built-vs-source, settled-window harmonic-sum
+  method); built peak levels -18.27 to -18.91 dB (target -18.5
+  +/- 1 dB); all decode as vorbis OGG, 44.1 kHz mono. Built
+  durations 0.89-16.08 s.
+- Kits OGG count: 1760 -> 1808.
+
+WIRING
+- suite/real-sounds.js: spanishGuitarBank (48), PraimeSoundLibrary
+  spanishGuitar:48, total 1760 -> 1808. NOT wired into SuperBeat
+  melody voices, same as the sax/guitar/bass/timpani/ukulele/ocarina/
+  hang/bagpipe/tubular-bells/old-piano/fm-piano1/fm-piano2/
+  upright-piano-KW banks — piano/steel/nylon remain the only melody
+  voices.
+- Spanish classical guitar is 48 real notes (MIDI 31-84): it stays
+  under 50 sounds. No stretching beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 13:44-13:46 MST)
+- Gemini confirmed the repo (freepats/spanish-classical-guitar),
+  CC0-1.0, the Spanish classical guitar / 2008 / AKG Perception 120 /
+  roberto@zenvoid.org origin — all confirmed as repo facts from the
+  README.
+- Gemini could NOT verify the SFZ filename, group/region counts,
+  tune= opcodes, velocity layers, keycenters, MIDI range, sample
+  count, sample rate, bit depth, or channels ("cannot verify without
+  pulling the raw file contents") — all of those were read directly
+  from the repo here.
+- Gemini gave no exact SFZ filename — the real file is
+  "SpanishClassicalGuitar-20190618.sfz".
+- Gemini's "Lossless FLAC and/or uncompressed WAV files" is WRONG
+  for the repo: the repo is FLAC only (48 FLACs in samples/, no
+  WAVs); the WAV download exists only on the FreePats website
+  distribution page.
+- Gemini's raw base "https://raw.githubusercontent.com/freepats/
+  spanish-classical-guitar/" is incomplete: the samples live under
+  https://raw.githubusercontent.com/freepats/spanish-classical-guitar/main/samples/
+  (branch main; the repo's only branch). Note the "#" in 16 sample
+  filenames must be URL-encoded as %23.
