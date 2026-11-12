@@ -1,0 +1,84 @@
+FreePats Ocarina — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Ocarina).
+
+SOURCE
+- Repo: https://github.com/freepats/ocarina1 (default branch main)
+- Current commit at fetch time: 241bdfde388624d9ea598ac183c3e50071c89924 (1 commit).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (714 bytes),
+  "Ocarina 20241002.sfz", samples/ (13 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/ocarina1/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "Published under the terms of Creative Commons CC0
+  public domain dedication: https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as the
+  FSBS guitar / timpani / ukulele repos' CC0 licences).
+- README: "Version 2024-10-02. The ocarina was recorded on January 2019
+  by Xavimart, Gonzalo and Roberto, with two Zoom H1 portable recorders."
+  The bank was created from real instrument recordings, thanks to Xavimart
+  (Javier), a musician who maintains a collection of musical instruments
+  from many places around the world; he granted access to his collection
+  and helped with the performance and recording.
+
+AUTHENTICITY — real recorded ocarina, not synth
+- All 13 source FLACs are 48 kHz mono; durations 0.94-5.55 s.
+- Probe FFT (measure_ocarina.py) showed every source fundamental within
+  6 cents of its SFZ keycenter (most within 2 cents), so no pitch
+  correction was needed — the SFZ carries no tune= opcodes, consistent
+  with the probe. Sources peak at ~-0.05 dBFS (essentially full scale).
+
+SFZ FACTS (read directly from "Ocarina 20241002.sfz")
+- 1 group, 12 regions, loop_mode=loop_continuous with per-region loop
+  points; ampeg_release=0.4.
+- Pitch keycenters: 66 (F#4), 73 (C#5), 74 (D5), 76 (E5), 77 (F5),
+  78 (F#5), 79 (G5), 80 (G#5), 81 (A5), 82 (A#5), 83 (B5), 88 (E6).
+- Zones cover MIDI 60-92: 60-70->66, 71-73->73, 74-75->74, 76->76,
+  77->77, 78->78, 79->79, 80->80, 81->81, 82->82, 83-85->83, 86-92->88.
+  Max pitch shift from a sampled center: 6 semitones (MIDI 60 from 66;
+  the SFZ itself maps that zone). No tune= opcodes anywhere in the SFZ.
+- The repo also contains samples/A6.flac (5.55 s; probe measured exactly
+  1760.00 Hz, a true A6), but it is NOT referenced by any SFZ region, so
+  it was NOT used in the bank — the SFZ is the instrument definition and
+  its mapped range ends at MIDI 92. The SFZ loop points were not needed:
+  the one-shot OGGs keep the full natural sustain length (same as the
+  accordion bank).
+
+BUILD RECIPE (build_ocarina.py)
+- 33 notes, MIDI 60-92: suite/samples/kits/ocarina-01..33.ogg
+  (note01 = MIDI 60 C4 ... note33 = MIDI 92 F#6).
+- From the 12 SFZ-mapped FLACs; ffmpeg asetrate pitch-shift per SFZ zone,
+  44.1 kHz mono OGG q5. Base rate 48000 (the ukulele-run fix — the
+  sources are 48 kHz, so asetrate=48000*2^(semis/12), then
+  aresample=44100; using 44100 as the base would repeat the -147-cent
+  bug). No trim.
+- Level: uniform -18.45 dB cut (sources peak ~-0.05 dBFS) so each built
+  file peaks at the library -18.5 dB target.
+
+VERIFICATION (verify_ocarina.py, 2026-11-12)
+- ALL 33 files PASS: every built note within 6 cents of its target MIDI
+  pitch (worst: C#5-derived notes at +6 cents — the source's own offset,
+  preserved by the shift); built peak levels -18.29 to -18.63 dB
+  (target -18.5 +/- 1 dB; the small spread is OGG encode loss); all
+  decode as vorbis OGG. Built durations 0.74-4.56 s.
+- Kits OGG count: 1555 -> 1588.
+
+WIRING
+- suite/real-sounds.js: ocarinaBank (33), PraimeSoundLibrary ocarina:33,
+  total 1555 -> 1588. NOT wired into SuperBeat melody voices, same as
+  the sax/guitar/bass/timpani/ukulele banks — piano/steel/nylon remain
+  the only melody voices.
+- Ocarina is range-limited by nature (MIDI 60-92, 33 notes): it stays
+  under 50 sounds, like harp (23), timpani (25), accordion (17+17) and
+  ukulele (29+2). No stretching beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 11:09-11:12 MST)
+- Gemini confirmed CC0-1.0 and the January 2019 recording by Xavimart,
+  Gonzalo and Roberto on two Zoom H1 recorders (both match the README),
+  but could NOT verify the SFZ filename, region/group counts, keycenters,
+  MIDI range, sample format/rate/count, or raw sample URLs ("cannot
+  verify without pulling the raw SFZ file") — all of those were read
+  directly from the repo here.
+- Gemini's "Standard FreePats format conventions for wind instruments
+  utilize lossless FLAC and/uncompressed WAV files" is a guess, not a
+  repo fact: this repo is FLAC only (13 FLACs, no WAVs).
