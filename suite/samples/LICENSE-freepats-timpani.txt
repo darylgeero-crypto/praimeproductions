@@ -1,0 +1,102 @@
+FreePats Timpani — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Timpani).
+
+SOURCE
+- Repo: https://github.com/freepats/timpani (default branch main)
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (429 bytes),
+  "Timpani 20240809.sfz" (2,299 bytes), samples/ (22 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/timpani/main/samples/
+- FreePats listing: https://freepats.zenvoid.org/Percussion/orchestral-percussion.html
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- README.txt states: "Published under the terms of Creative Commons CC0
+  public domain dedication: https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as the
+  FSBS guitar repos' CC0 licences).
+- GitHub API licence field could NOT be confirmed this run (API rate limit
+  exhausted, as in recent runs) — CC0 status rests on the README dedication
+  + full CC0 legal code in LICENSE.txt, both fetched directly.
+- README: "Made with samples from the Versilian Community Sample Library,
+  a CC0 sample library created by Versilian Studios LLC. This sound bank is
+  assembled by roberto@zenvoid.org." Version 2024-08-10.
+
+AUTHENTICITY — real recorded timpani, not synth
+- Versilian Community Sample Library (VSCO) orchestral percussion: real
+  acoustic kettledrums. Gemini added "recorded in a rehearsal room with
+  SM57 microphones" — that detail comes from Gemini / the FreePats site,
+  NOT verified from the repo contents fetched here; the repo README only
+  credits VSCO. Treat the mic/room detail as Gemini-sourced.
+
+SFZ FACTS (read directly from "Timpani 20240809.sfz")
+- 12 groups, 24 regions, 2 round-robin takes (seq_position 1/2) per group.
+- 11 distinct pitch samples: 1B, 1C, 1D, 2A, 2B, 3A, 3B, 3C, 4A, 5A, 5B
+  (each as _v5_rr1.flac / _v5_rr2.flac, 44.1 kHz stereo FLAC, 2.26-8.18 s).
+- Pitch keycenters: 38, 39, 42, 43, 45, 46, 47, 49, 53, 55, 57.
+  Zones cover MIDI 36-60 (C2-C4): 36-38->38, 39-40->39, 41-42->42, 43->43,
+  44-45->45, 46->46, 47->47, 48-50->49, 51-54->53, 55->55, 56->57, 57-60->57.
+- Max pitch shift from a sampled center: 3 semitones (MIDI 60 from 57;
+  the SFZ itself maps 57-60 to the 5B sample). All other notes within 2.
+- SFZ quirks: key=55's second round-robin reuses the 4A sample
+  (pitch_keycenter 53, tune +20); key=56's first region is the 5B sample
+  with pitch_keycenter 57, tune +20, and its second region is the 5A
+  sample (pitch_keycenter 55, tune +50). Only the _01 (rr1) take of each
+  sample's primary region is used in the PrAIme bank, so these quirks do
+  not affect it.
+- SFZ sub-semitone tune offsets (max 60 cents: 1C -60, 2A +60, 3A +50,
+  3B -50, 3C -30, 4A +20, 5A +50, 5B +20) were NOT applied in the build:
+  probe FFT showed every source's harmonic series fits its keycenter
+  within a few cents (e.g. 1C's 2.13x/3.12x modes imply f0 77.9 Hz =
+  keycenter 39 exactly; the odd 81 Hz peak is an inharmonic partial, not
+  the fundamental), so the keycenter is the declared pitch as a sampler
+  would play it.
+
+BUILD RECIPE (build_timpani.py)
+- 25 notes, MIDI 36-60: suite/samples/kits/timpani-01..25.ogg
+  (note01 = MIDI 36 C2 ... note25 = MIDI 60 C4).
+- From the 11 rr1 FLACs; ffmpeg asetrate pitch-shift per SFZ zone,
+  44.1 kHz mono OGG q5, 4.3 s trim, 0.15 s fade-out.
+- Level: per-sample peak measured on first 4.3 s mono, gain set so each
+  built file peaks at -18.5 dB. CORRECTION FOUND THIS RUN: measuring peaks
+  with ffmpeg -ac 1 (which SUMS stereo channels) reads 3.01 dB hotter
+  than the build's pan=mono|0.5*c0+0.5*c1 (which AVERAGES); the first
+  build came out at -21.5 dB and was rebuilt with +3.01 dB gain.
+  The same probe-then-pan recipe was used for the FSBS guitar banks, so
+  those banks are probably also ~3 dB below their intended -18.5 dB
+  target (uniformly, so relative balance is unaffected) — noted, not
+  rebuilt here; out of scope for this run.
+- Notes from the short 5B source (2.26 s) are shorter as pitch rises:
+  notes 21-25 are 2.39/2.26/2.13/2.01/1.90 s; note 18 is 4.27 s (4A
+  source length). No audible content truncated.
+
+VERIFICATION (verify_timpani.py, 2026-11-12)
+- Timpani partials are inharmonic (the ~1.5x mode sits at 1.45-1.57x
+  depending on the drum), so a fixed-partial pitch test fails good notes
+  (first attempt: 10 of 25 "failed" at up to +104 cents on the naive
+  1.5x/2.0x/3.0x model). Correct check: each built note's top 6 spectral
+  peaks must match its source sample's top 6 peaks scaled by
+  2^(semis/12) within 25 cents. Result: ALL 25 pass (5-6 of 6 peaks
+  within 25 cents; worst single weak partial +76 cents on 2B's 4th peak,
+  +14 cents on 5B's 5th peak — weak/noisy partials, not the pitch).
+- Built peak levels: -18.31 to -18.99 dB (target -18.5 +/- 1 dB). All 25
+  decode as vorbis OGG.
+
+WIRING
+- suite/real-sounds.js: timpaniBank (25), PraimeSoundLibrary timpani:25,
+  total 1499 -> 1524. NOT wired into SuperBeat melody voices, same as the
+  sax/guitar/bass banks — piano/steel/nylon remain the only melody voices.
+- Timpani is range-limited by nature (C2-C4, 25 notes): it stays under 50
+  sounds, like harp (23) and accordion (17+17). No stretching beyond the
+  SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 10:22-10:24 MST)
+- Gemini confirmed CC0 + real recorded timpani, but could NOT verify the
+  SFZ filename, region/group counts, pitch centers, MIDI range, or exact
+  sample URLs ("repo not indexed in search") — all of those were read
+  directly from the repo here.
+- Gemini's "available in both FLAC and WAV formats": the GitHub repo's SFZ
+  references FLAC only; WAV is a separate archive distribution on the
+  FreePats site, not the repo.
+- Gemini declined to give a raw.githubusercontent.com base URL ("cannot
+  verify without guessing") — the working base is
+  https://raw.githubusercontent.com/freepats/timpani/main/samples/
+  (verified: all 11 FLAC downloads byte-match the API listing sizes).
