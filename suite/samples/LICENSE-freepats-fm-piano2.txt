@@ -1,0 +1,122 @@
+FreePats FM Piano 2 — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats FM Piano 2).
+
+SOURCE
+- Repo: https://github.com/freepats/fm-piano2 (default branch main)
+- Current commit at fetch time: 2e1241f5db3ff6b938b1645a2f2f82f7e510c708
+  ("Initial commit", 2024-07-28; the repo's only commit).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (716 bytes),
+  "FM-Piano2 20161112.sfz" (1,111 bytes), samples/ (12 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/fm-piano2/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "FM Synthesized Piano #2", "Sound samples and
+  sound bank made by Roberto <roberto@zenvoid.org> for the FreePats
+  project. Imitation of the Yamaha DX7 electric piano, a FM synthesis
+  instrument that was popular in the 1980s. These sound samples
+  simulate a bright variation of an electric piano patch." and
+  "Distributed under a Creative Commons CC0 1.0 license.
+  http://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as
+  the FSBS guitar / timpani / ukulele / ocarina / hang / bagpipe /
+  tubular-bells / old-piano / fm-piano1 repos' CC0 licences).
+
+AUTHENTICITY — multi-sampled DX7 electric piano, not a runtime oscillator
+- The README states the samples were "Recorded from Hexter software
+  synthesizer. Hexter is a free software program that accurately
+  models the sound generation algorithm of the original instrument."
+  So the source is a recording of a DX7 FM electric piano patch (a
+  bright variation of the patch) rendered through the Hexter model —
+  a real electronic instrument sound, captured as audio files, NOT a
+  Web Audio oscillator generated at runtime in the app. The bank is
+  labelled "FM Piano 2" honestly; it is not presented as an acoustic
+  piano. Electric piano and electronic instruments are explicitly in
+  the wanted list (keys / electronic), and this is the FreePats
+  electric piano. The standing exclusion of the FreePats synth-*
+  banks (synth-strings/brass/bass/pad) does not apply here: those are
+  synth imitations of acoustic instruments, while the DX7 electric
+  piano patch IS the electric piano itself — there is no acoustic
+  original being faked. This is the same judgement as the fm-piano1
+  run, for the same reason; FM Piano 2 is a DIFFERENT patch from FM
+  Piano 1 (bright variation vs "E. Piano 1"), so it is a separate
+  bank, not a duplicate.
+- All 12 source FLACs are 44.1 kHz mono 24-bit; durations 7.65-29.91 s
+  (long natural FM sustain, low notes ring longest).
+- Pitch probe (measure_fmpiano2.py): 11 of 12 notes within -1..+5
+  cents of keycenter (mean +1.9). F#1 (MIDI 30) reads +12 cents on the
+  0.5 s harmonic-sum scorer, but a 2 s-window per-harmonic check puts
+  its fundamental at -4.2 cents (h2 +0.5, h3 +1.6) — the +12 reading
+  is pulled up by strong inharmonic FM sidebands at h4-h6 (+13..+16
+  cents), not a mistuned fundamental. No correction applied (SFZ has
+  no tune= opcodes). Sources peak at -0.05 dBFS, uniform across all 12.
+
+SFZ FACTS (read directly from "FM-Piano2 20161112.sfz")
+- 1 global (ampeg_release=1.9), 1 group, 12 regions total. No tune=
+  opcodes anywhere. Single v80 velocity layer — unlike fm-piano1,
+  which had v60/v80/v100 layers, fm-piano2 has only the 12 v80 files.
+- Keycenters / lokey-hikey: F#1 30 (26-32), C2 36 (33-38),
+  F#2 42 (39-44), C3 48 (45-50), F#3 54 (51-56), C4 60 (57-62),
+  F#4 66 (63-68), C5 72 (69-74), F#5 78 (75-80), C6 84 (81-86),
+  F#6 90 (87-92), C7 96 (93-103).
+- The SFZ stretches each sample +/-3 semitones around its keycenter
+  (alternating C and F# every 6 semitones), but the bank does NOT
+  pitch-shift-fill missing semitones (same rule as the
+  hang/bagpipe/tubular-bells/old-piano/fm-piano1 runs).
+
+BUILD RECIPE (build_fmpiano2.py)
+- 12 notes: suite/samples/kits/fm-piano2-01..12.ogg (note01 =
+  MIDI 30 F#1, 02 = 36 C2, 03 = 42 F#2, 04 = 48 C3, 05 = 54 F#3,
+  06 = 60 C4, 07 = 66 F#4, 08 = 72 C5, 09 = 78 F#5, 10 = 84 C6,
+  11 = 90 F#6, 12 = 96 C7).
+- From the 12 v80 FLACs. No pitch shift (sources are already
+  44.1 kHz; no tune= exists to apply). 44.1 kHz mono OGG q5. No trim,
+  no fade.
+- Level: per-file gain -18.45 dB so each built file peaks at the
+  library -18.5 dB target (sources peak -0.05 dBFS). NO Vorbis
+  compensation was needed — unlike the hang bank (overshoot) and the
+  tubular-bells C5 (undershoot), these decoded on target first try,
+  same as fm-piano1.
+
+VERIFICATION (verify_fmpiano2.py, 2026-11-12)
+- ALL 12 files PASS: every built note matches its SOURCE pitch within
+  0-1 cent (built-vs-source difference); built peak levels -18.14 to
+  -18.73 dB (target -18.5 +/- 1 dB); all decode as vorbis OGG,
+  44.1 kHz mono. Built durations 7.65-29.91 s.
+- Kits OGG count: 1712 -> 1724.
+
+WIRING
+- suite/real-sounds.js: fmPiano2Bank (12), PraimeSoundLibrary
+  fmPiano2:12, total 1712 -> 1724. NOT wired into SuperBeat melody
+  voices, same as the sax/guitar/bass/timpani/ukulele/ocarina/hang/
+  bagpipe/tubular-bells/old-piano/fm-piano1 banks — piano/steel/nylon
+  remain the only melody voices.
+- FM piano 2 is range-limited by nature (12 real notes F#1-C7, only C
+  and F# per octave): it stays under 50 sounds, like harp (23),
+  timpani (25), accordion (17+17), ukulele (29+2), ocarina (33),
+  hang (9), bagpipe (13+2), tubular bells (10) and fm-piano1 (12).
+  No stretching beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 13:09-13:11 MST)
+- Gemini confirmed the repo (freepats/fm-piano2), CC0-1.0, version
+  2016-11-12, and the bright-variation character vs FM Piano 1's
+  "E. Piano 1" patch — and the README itself says "bright variation
+  of an electric piano patch", so that characterisation IS a repo
+  fact (correcting last run's note, which called it Gemini's own
+  description).
+- Gemini could NOT verify the SFZ filename, group/region counts,
+  velocity layers, keycenters, MIDI range, sample count, sample rate,
+  channels, or raw sample URLs ("cannot verify without pulling the
+  raw SFZ file") — all of those were read directly from the repo
+  here.
+- Gemini's "Lossless FLAC and/or uncompressed WAV files" is WRONG
+  for the repo: the repo is FLAC only (12 FLACs in samples/, no
+  WAVs); the WAV download exists only on the FreePats website
+  distribution page.
+- Gemini's raw base "https://raw.githubusercontent.com/freepats/
+  fm-piano2/" is incomplete: the samples live under
+  https://raw.githubusercontent.com/freepats/fm-piano2/main/samples/
+  (branch main; the repo's only branch).
+- Gemini's archive-size figures (FLAC 8.7 MiB / WAV 11 MiB, plus an
+  .sf2 version) describe the FreePats website distribution, not the
+  GitHub repo — the repo has no .sf2 file and no WAVs.
