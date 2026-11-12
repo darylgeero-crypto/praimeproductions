@@ -1,0 +1,107 @@
+FreePats Ukulele — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Ukulele).
+
+SOURCE
+- Repo: https://github.com/freepats/ukulele1 (default branch main)
+- Current commit at fetch time: 86d345f6f7b79a106ace98eca0da19b087786dba (1 commit).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (2,501 bytes),
+  "Ukulele 20260811.sfz", samples/ (15 files: 13 pitched FLAC + body-tap.flac
+  + chuck.wav).
+- Samples: https://raw.githubusercontent.com/freepats/ukulele1/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub repo page itself lists "License: Creative Commons Zero v1.0
+  Universal (CC0-1.0)" — confirmed from the repo page snapshot this run
+  (no API call needed).
+- README.txt states: "Published under the terms of Creative Commons CC0
+  public domain dedication: https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as the
+  FSBS guitar / timpani repos' CC0 licences).
+- README: "Version 2026-08-11. Recorded by Mateusz Dąbrowski from a Flight
+  Fireball ukulele (tenor). Offered to FreePats on August 2026."
+
+AUTHENTICITY — real recorded tenor ukulele, not synth
+- Source: RØDE Podcaster mic, Elgato Wave XLR, captured at 96 kHz / 24-bit
+  mono, one room, one session, fixed mic position and gain throughout.
+- Processing (per README): resampled 96 kHz -> 48 kHz; 6th-order Butterworth
+  high-pass at 190 Hz on the pitched samples (fridge compressor noise at
+  105-140 Hz); trimmed to the full natural decay per note (3.25 s at the
+  bottom down to 1.10 s at the top); 150 ms fade at each tail; levels
+  matched across notes on a 300 ms window from the attack, then one global
+  gain (+5.2 dB) so the loudest peak lands at -3 dBFS. Peaks run -3.0 to
+  -8.4 dBFS — independently reproduced by this run's probe FFT
+  (measure_ukulele.py: peaks -3.00 to -8.38 dBFS), which validates the
+  measurement pipeline. The two percussive samples are each scaled to
+  -3 dBFS individually.
+- The two percussive articulations are part of how a ukulele is actually
+  played (per README): body-tap.wav — a knock on the instrument body
+  (0.31 s); chuck.wav — a strum into damped strings, the percussive "chk"
+  of a muted stroke (0.16 s). Both are included in the PrAIme bank as
+  ukulele-tap.ogg / ukulele-chuck.ogg.
+
+SFZ FACTS (read directly from "Ukulele 20260811.sfz")
+- 1 group, 15 regions: 13 pitched + body-tap (key=47) + chuck (key=48).
+- Pitch keycenters: 60, 62, 64, 66, 67, 69, 71, 73, 75, 77, 79, 81, 84
+  (C4, D4, E4, F#4, G4, A4, B4, C#5, D#5, F5, G5, A5, C6).
+- Zones cover MIDI 58-86: 58-60->60, 61-62->62, 63-64->64, 65-66->66,
+  67->67, 68-69->69, 70-71->71, 72-73->73, 74-75->75, 76-77->77, 78-79->79,
+  80-82->81, 83-86->84. Max pitch shift from a sampled center: 2 semitones
+  (MIDI 58 from 60; MIDI 86 from 84; the SFZ itself maps both).
+- SFZ sub-semitone tune offsets (-5, -8, -2, -11, -1, 0, 0, 0, +3, +4,
+  +6, +8, +4 cents) were NOT applied in the build: probe FFT showed every
+  source fundamental within 9 cents of its keycenter (max |dev| 9 cents),
+  so the keycenter is the declared pitch as a sampler would play it —
+  same rule as the timpani bank. Applying the tune values would have
+  pushed notes up to 18 cents off their keycenters.
+
+BUILD RECIPE (build_ukulele.py)
+- 29 pitched notes, MIDI 58-86: suite/samples/kits/ukulele-01..29.ogg
+  (note01 = MIDI 58 A#3/Bb3 ... note29 = MIDI 86 D6).
+- From the 13 FLACs; ffmpeg asetrate pitch-shift per SFZ zone,
+  44.1 kHz mono OGG q5, no trim (longest built note 3.59 s), sources
+  already carry a 150 ms tail fade.
+- Level: per-source peak measured mono, gain set so each built file peaks
+  at -18.5 dBFS (mono sources: volumedetect peak is unambiguous — the
+  stereo sum-vs-average 3.01 dB issue from the timpani run does not apply).
+- BUG FOUND AND FIXED IN THIS RUN: the first build used
+  asetrate=44100*2^(semis/12) on 48 kHz sources, which relabelled the
+  samples as 44.1 kHz and pitched every note 147 cents flat while
+  stretching durations by 48000/44100 (built durations were 1.0884x the
+  sources). The first verify run caught it only as boundary artefacts
+  (deviations clustering at the +/-60-cent search edge, 23 of 29 "fail").
+  Fix: asetrate=48000*2^(semis/12), then aresample=44100. The verify
+  script's search window was also widened to +/-200 cents so a systematic
+  error fails loudly instead of clamping to a boundary. NOTE FOR OTHER
+  BANKS: the FSBS guitar / bass / sax / accordion banks were built from
+  sources at other sample rates — if any of those builds used the same
+  wrong-base-rate recipe, those banks may also be flat. Worth a spot
+  check on a future run; out of scope here.
+
+VERIFICATION (verify_ukulele.py, 2026-11-12)
+- ALL 31 files PASS: 29 pitched notes within 9 cents of their target MIDI
+  pitch (worst: A5-derived notes at -9 cents — the source's own offset,
+  preserved by the shift); built peak levels -18.29 to -19.14 dB
+  (target -18.5 +/- 1 dB; the small spread is OGG encode loss); all
+  decode as vorbis OGG. Percussive: tap 0.31 s / -18.65 dB, chuck 0.16 s /
+  -18.58 dB. Durations confirm the fix (note03 = 3.20 s = C4 source
+  length; note01 = 3.59 s = 3.20 x 2^(2/12)).
+- Kits OGG count: 1524 -> 1555.
+
+WIRING
+- suite/real-sounds.js: ukuleleBank (29) + ukulelePercBank (tap, chuck),
+  PraimeSoundLibrary ukulele:29, ukulelePerc:2, total 1524 -> 1555.
+  NOT wired into SuperBeat melody voices, same as the sax/guitar/bass/
+  timpani banks — piano/steel/nylon remain the only melody voices.
+- Ukulele is range-limited by nature (MIDI 58-86, 29 notes + 2 percussive):
+  it stays under 50 sounds, like harp (23), timpani (25) and accordion
+  (17+17). No stretching beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 10:49-10:51 MST)
+- Gemini confirmed CC0-1.0 + FLAC format + an approximate C4-C6 tenor
+  layout, but could NOT verify the SFZ filename, group/region counts,
+  keycenters, MIDI range, or exact sample URLs ("cannot verify without
+  pulling the raw SFZ file") — all of those were read directly from the
+  repo here.
+- Gemini's "clean acoustic string samples with trimmed leading silence":
+  the README says samples are trimmed to natural decay; "trimmed leading
+  silence" is Gemini's phrasing, not a repo statement.
