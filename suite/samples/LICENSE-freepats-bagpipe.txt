@@ -1,0 +1,129 @@
+FreePats Bagpipe in G — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Bagpipe in G).
+
+SOURCE
+- Repo: https://github.com/freepats/bagpipe (default branch main)
+- Current commit at fetch time: 496f2f6e82f226d650e270c0f0ad5febbebec249
+  (tag 2026-08-06; created 2022-12-09, pushed 2026-08-05).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (894 bytes),
+  "Bagpipe 20260806.sfz" (3,409 bytes), "Bagpipe small 20260806.sfz"
+  (1,628 bytes), picture.jpg, samples/ (26 FLAC files) + samples/small/
+  (14 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/bagpipe/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "Published under the terms of Creative Commons CC0
+  public domain dedication: https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as the
+  FSBS guitar / timpani / ukulele / ocarina / hang repos' CC0 licences).
+- README: "Version 2026-08-06. Samples recorded on August 2020 by Gilles
+  Sadowski, on a bagpipe in G designed by Rémy Dubois and built by Olle
+  Geris. Sennheiser MKE2 Gold microphone and Audacity software on a
+  GNU/Linux laptop. All recordings were done while standing at about
+  80 cm from the microphone."
+- README on the instrument: "This bagpipe has a range from F4 to G6 and
+  2 drones (the pipes which produce a constant background sound). The
+  drones were recorded separatedly and can be played on the octaves 2
+  and 3. They are tuned to G in the original instrument, so G2
+  corresponds to the lower drone and G3 the higher one. Other notes in
+  the octaves 2 and 3 will play the drones transposed."
+
+AUTHENTICITY — real recorded bagpipe, not synth
+- All 26 source FLACs are 44.1 kHz mono; the 13 first takes used are
+  3.44-7.44 s long; the 2 drones are 2.42 s (G2) and 8.58 s (G3).
+- Probe FFT (measure_bagpipe.py) showed every used chanter source
+  fundamental FLAT vs its SFZ keycenter by -18..-62 cents (F4 -39, G4
+  -35, A4 -26, A#4 -38, B4 -38, C5 -34, C#5 -49, D5 -18, D#5 -61,
+  E5 -62, F5 -47, F#5 -46, G5 -27) — the instrument's own tuning, and
+  the deviations track the SFZ tune= values to within +0..+8 cents, so
+  the tune values are real per-sample corrections and WERE applied in
+  the build (see below). This is the opposite of the accordion run,
+  where sources sat on keycenter and tune was not applied. Drones probe
+  at +4 (G2) and +7 (G3) cents — essentially on keycenter, no shift.
+  Sources peak at ~0.00 dBFS.
+
+SFZ FACTS (read directly from "Bagpipe 20260806.sfz")
+- 1 global (ampeg_release=0.5, loop_mode=loop_continuous), 15 groups,
+  26 regions. Every region carries loop_start/loop_end (looped samples).
+- 2 drone regions: G2 pitch_keycenter=43, lokey 36-47, volume -11,
+  sample drone_G2_1.flac; G3 pitch_keycenter=55, lokey 48-59,
+  volume -3, sample drone_G3_3.flac.
+- 13 chanter groups (24 regions; each key has 2 random takes except
+  F4 and G5, which have 1): F4 keycenter 65, lokey 64-65, tune +40;
+  G4 67, lokey 66-68, tune +36/+39; A4 69, tune +30/+35; A#4 70,
+  tune +40/+41; B4 71, tune +43/+41; C5 72, tune +35/+35; C#5 73,
+  tune +50/+34; D5 74, tune +24/+25; D#5 75, tune +61/+65; E5 76,
+  tune +65/+62; F5 77, tune +51/+50; F#5 78, tune +54/+49; G5 79,
+  lokey 79-81, tune +31.
+- A second SFZ, "Bagpipe small 20260806.sfz", maps the same keys with
+  single takes from samples/small/ — the full SFZ is the canonical
+  instrument and the full-size samples were used; the small variant was
+  NOT used.
+- NOT used, and why: F#4 (MIDI 66) and G#4 (68) have NO sample — the
+  SFZ maps them to the G4 sample by pitch-shifting, and the bank does
+  NOT pitch-shift-fill missing semitones (same rule as the hang run).
+  The README claims a range "from F4 to G6", but the SFZ's highest
+  chanter note is G5 (79, hikey 81) — no G6 sample exists, so the bank
+  ends at G5. The second takes (_32) are random alternates of the same
+  13 notes, not separate notes; only the first take (_31) of each note
+  was used. The SFZ is the instrument definition.
+- SFZ drone volumes (-11 for G2, -3 for G3) are relative mix levels
+  inside the SFZ; the library convention (every bank file peak-matched
+  to -18.5 dB) was followed instead, so both drones are level-matched
+  with the rest of the library.
+
+BUILD RECIPE (build_bagpipe.py)
+- 15 notes: suite/samples/kits/bagpipe-01..13.ogg (chanter: note01 =
+  MIDI 65 F4, 02 = 67 G4, 03 = 69 A4, 04 = 70 A#4, 05 = 71 B4,
+  06 = 72 C5, 07 = 73 C#5, 08 = 74 D5, 09 = 75 D#5, 10 = 76 E5,
+  11 = 77 F5, 12 = 78 F#5, 13 = 79 G5) + bagpipe-drone-01..02.ogg
+  (drone-01 = MIDI 43 G2, drone-02 = MIDI 55 G3).
+- From the 13 _31 chanter FLACs + 2 drone FLACs. Chanter notes: SFZ
+  tune applied via asetrate=44100*2^(tune/1200), then aresample=44100
+  (sources are already 44.1 kHz, so the -147-cent bug cannot apply;
+  the asetrate step only shifts by the tune amount). Drones: no shift.
+  44.1 kHz mono OGG q5. No trim.
+- Level: per-file gain so each built file peaks at the library -18.5 dB
+  target (gains -18.35/-18.50 dB, sources peak ~0.00 dBFS). No Vorbis
+  overshoot compensation was needed: decoded OGG peaks landed on
+  target first try (see verification), unlike the transient-rich hang
+  bank — this is a sustained/tonal bank like ocarina.
+
+VERIFICATION (verify_bagpipe.py, 2026-11-12)
+- ALL 15 files PASS: every built note within +0..+8 cents of its target
+  MIDI pitch (exactly the residuals the source probe predicted after
+  the tune correction); built peak levels -18.29 to -18.57 dB (target
+  -18.5 +/- 1 dB); all decode as vorbis OGG, 44.1 kHz mono. Built
+  durations 2.42-8.58 s (chanter 3.31-7.34 s after the tune shift).
+- Kits OGG count: 1597 -> 1612.
+
+WIRING
+- suite/real-sounds.js: bagpipeBank (13) + bagpipeDroneBank (2),
+  PraimeSoundLibrary bagpipe:13, bagpipeDrone:2, total 1597 -> 1612.
+  NOT wired into SuperBeat melody voices, same as the sax/guitar/bass/
+  timpani/ukulele/ocarina/hang banks — piano/steel/nylon remain the
+  only melody voices.
+- Bagpipe is range-limited by nature (13 real chanter notes F4-G5 +
+  2 drones): it stays under 50 sounds, like harp (23), timpani (25),
+  accordion (17+17), ukulele (29+2), ocarina (33) and hang (9). No
+  stretching beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 11:39-11:40 MST)
+- Gemini confirmed the repo (freepats/bagpipe) and CC0-1.0, but could
+  NOT verify the SFZ filename, group/region counts, keycenters, MIDI
+  range, sample count, sample rate, channels, or raw sample URLs
+  ("cannot verify without pulling the raw SFZ file") — all of those
+  were read directly from the repo here.
+- Gemini's SFZ filename guess "bagpipe.sfz" is WRONG: the real files
+  are "Bagpipe 20260806.sfz" and "Bagpipe small 20260806.sfz".
+- Gemini's "Lossless FLAC and WAV audio files" is WRONG: the repo is
+  FLAC only (26 FLACs in samples/, 14 in samples/small/, no WAVs).
+- Gemini's raw base "https://raw.githubusercontent.com/freepats/bagpipe/"
+  is incomplete: the samples live under
+  https://raw.githubusercontent.com/freepats/bagpipe/main/samples/
+  (branch main; the repo's only branch).
+- Gemini's usage note (avoid extreme stretching; fixed-pitch chanter
+  timbre) is consistent with the bank's no-pitch-shift-fill rule, but
+  it is generic advice, not a repo fact — the README itself gives no
+  pitch-shifting warning (unlike the hang README).
