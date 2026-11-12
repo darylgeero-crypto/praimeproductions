@@ -1,0 +1,124 @@
+FreePats Old Piano FB — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Old Piano FB).
+
+SOURCE
+- Repo: https://github.com/freepats/old-piano-FB (default branch main)
+- Current commit at fetch time: 9707673c65d8a52d7b374af807384005564a89f2
+  ("Initial commit", 2024-08-01; the repo's only commit).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt,
+  "PianoFB 20200401.sfz", "PianoFB small 20200401.sfz", picture.jpg,
+  samples/ (78 FLAC files) + samples/small/ (fewer takes).
+- Samples: https://raw.githubusercontent.com/freepats/old-piano-FB/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "Published under the terms of Creative Commons
+  CC0 public domain dedication:
+  https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as
+  the FSBS guitar / timpani / ukulele / ocarina / hang / bagpipe /
+  tubular-bells repos' CC0 licences).
+- README: "Version 2020-04-01". Recorded by Piotr Barcz from a
+  Francis Bacon player piano — "a wonderful historic piano with an
+  authentic honky-tonk tone. The sounds were recorded in stereo with
+  a Zoom H1n sound recorder, at the approximate position where the
+  pianist's head would be, and they were sent to FreePats on
+  February 2020. The sound bank was assembled by roberto@zenvoid.org."
+
+AUTHENTICITY — real recorded piano, not synth
+- All 78 source FLACs in samples/ are 44.1 kHz stereo; durations
+  1.13-20.45 s (long natural piano decays on the low notes).
+- Pitch probe (measure_oldpiano.py): the piano's own tuning is kept
+  as recorded — scattered within +/-27 cents of keycenter, mean
+  +1.1 cents. A 2 s-window harmonic check confirmed the outliers are
+  real, not measurement noise: the bottom three notes are genuinely
+  flat (G#0 -32, A0 -28, A#0 -25 cents; the 0.5 s probe read -47/-57
+  on the bottom two because of FFT resolution at ~26 Hz) and B2 is
+  ~+26 cents sharp. That uneven tuning IS the honky-tonk character
+  of a historic player piano, so NO pitch correction was applied
+  (SFZ has no tune= opcodes). Sources peak at -0.21 to -4.08 dBFS.
+
+SFZ FACTS (read directly from "PianoFB 20200401.sfz")
+- 1 global (ampeg_release=0.9), 1 group, 78 regions. No tune=
+  opcodes anywhere. loop_mode=no_loop.
+- Keycenters (78 distinct sampled pitches, MIDI 20-107, G#0-B7):
+  20, 21, 22, 23, 24, 27, 28, 29, 30, 31, 32, 33, 36, 37, 38, 39,
+  40, 41, 44, 45, 46, 47, 48, 49, 50, 52, 53, 54, 55, 56, 57, 58,
+  59, 60, 61, 62, 63, 64, 65, 67, 68, 69, 71, 72, 73, 74, 75, 76,
+  77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
+  93, 94, 95, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107.
+  Missing semitones are 25, 26, 34, 35, 42, 43, 51, 66, 70, 100,
+  108 (plus 19 below the lowest sample).
+- A second SFZ, "PianoFB small 20200401.sfz", maps the same keys
+  with samples from samples/small/ — the full SFZ is the canonical
+  instrument and the full-size samples were used; the small variant
+  was NOT used.
+- NOT used, and why: the SFZ maps 12 gaps by stretching neighbours
+  (e.g. G#0 covers 19-20, C1 covers 24-25, E3 covers 51-52, B7
+  covers 107-108), but the bank does NOT pitch-shift-fill missing
+  semitones (same rule as the hang/bagpipe/tubular-bells runs).
+  Only the 78 real sampled pitches are in the bank.
+
+BUILD RECIPE (build_oldpiano.py)
+- 78 notes: suite/samples/kits/old-piano-01..78.ogg (note01 =
+  MIDI 20 G#0, note78 = MIDI 107 B7). From the 78 FLACs, decoded to
+  44.1 kHz mono (stereo sources downmixed; peak measured on the mono
+  WAV so the -18.5 dBFS target applies to the actual output).
+  No pitch shift (sources are already 44.1 kHz; no tune= exists to
+  apply). 44.1 kHz mono OGG q5. No trim, no fade: long decays
+  (up to 20.45 s) are real piano resonance.
+- Level: per-file gain so each built file peaks at the library -18.5
+  dB target (gains -14.42 to -18.29 dB, sources peak -0.21 to
+  -4.08 dBFS). One Vorbis compensation WAS needed: old-piano-72
+  (F7, MIDI 101) first decoded at -19.76 dB (encoder undershoot);
+  rebuilt with +1.26 dB gain and decoded at -17.89 dB, then rebuilt
+  again at -0.61 dB relative to that and decoded at -18.78 dB
+  (0.28 dB from target) — kept. Lesson carried forward from the
+  hang/tubular-bells runs: ALWAYS verify the DECODED OGG peak (as
+  verify_*.py does) and compensate per file; the encoder's peak
+  shift is not a fixed offset, so check after each rebuild.
+
+VERIFICATION (verify_oldpiano.py, 2026-11-12)
+- ALL 78 files PASS: every built note's pitch matches its SOURCE
+  pitch within 0-2 cents (built-vs-source difference; a wrong file
+  or wrong shift would show as ~100 cents and fail), decoded peaks
+  -17.82 to -19.76 dB before the F7 compensation, -17.82 to -19.31
+  dB after it with F7 at -18.78 dB (target -18.5 +/- 1 dB); all
+  decode as vorbis OGG, 44.1 kHz mono. Built durations 1.13-20.45 s.
+- Kits OGG count: 1622 -> 1700.
+
+WIRING
+- suite/real-sounds.js: oldPianoBank (78), PraimeSoundLibrary
+  oldPiano:78, total 1622 -> 1700. NOT wired into SuperBeat melody
+  voices, same as the sax/guitar/bass/timpani/ukulele/ocarina/hang/
+  bagpipe/tubular-bells banks — piano/steel/nylon remain the only
+  melody voices.
+- Old Piano is a distinct honky-tonk piano voice (detuned historic
+  player piano), not another copy of the existing piano banks: it is
+  the third piano timbre in the library after piano-vsco and Meta
+  piano, and the widest-ranged bank (MIDI 20-107).
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 12:14-12:16 MST)
+- Gemini confirmed the repo (freepats/old-piano-FB), CC0-1.0, both
+  SFZ filenames, version 2020-04-01, and the Piotr Barcz / Francis
+  Bacon player piano / honky-tonk attribution, but could NOT verify
+  the SFZ internals (group/region counts, tune=, keycenters,
+  lokey/hikey, MIDI range), the sample count/format details, or the
+  full raw sample URL ("cannot verify without pulling the raw SFZ
+  file") — all of those were read directly from the repo here.
+- Gemini's "Lossless FLAC and/or uncompressed WAV files" is WRONG
+  for the repo: the repo is FLAC only (78 FLACs in samples/, no
+  WAVs); the WAV download exists only on the FreePats website
+  distribution page, not in the GitHub repo.
+- Gemini's raw base "https://raw.githubusercontent.com/freepats/
+  old-piano-FB/" is INCOMPLETE: the samples live under
+  https://raw.githubusercontent.com/freepats/old-piano-FB/main/
+  samples/ (branch main; the repo's only branch).
+- Gemini's "No additional performer / recording session detail
+  (e.g., microphone, venue, recording date)" is WRONG: the README
+  states stereo Zoom H1n, recorded at the pianist's-head position,
+  sent to FreePats February 2020.
+- Gemini's commit metadata ("Initial commit ~2 years prior to
+  indexing", no hash) is vague: the actual commit is
+  9707673c65d8a52d7b374af807384005564a89f2, 2024-08-01, the repo's
+  only commit.
