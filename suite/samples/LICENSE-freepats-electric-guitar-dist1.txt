@@ -1,0 +1,37 @@
+FreePats — Electric Guitar FSBS (dist1)
+Source: https://github.com/freepats/electric-guitar-FSBS-dist1
+(FreePats project, https://freepats.zenvoid.org/)
+
+Licence: CC0 1.0 Universal — the repository LICENSE.txt is the full
+CC0 1.0 legal code, the repository README states: "Published under
+the terms of Creative Commons CC0 public domain dedication", and the
+GitHub repo page shows "License: Creative Commons Zero v1.0
+Universal (CC0-1.0)". Verified 2026-11-12 by direct fetch of the
+repo LICENSE.txt, README.txt, and the GitHub API licence field.
+
+Files used in PrAIme: bridge-pickup distorted samples from the main
+SFZ mapping "EGuitarFSBS-dist1 bridge 20220911.sfz" (120 regions, 18
+distinct sampled pitches, MIDI 35-86). The README states the bank
+was made "by direct sampling a Fender electric guitar (basic model)
+using an audio interface with dedicated instrument inputs" and the
+samples were "processed through an amplifier and effects rack to
+create a distorted, overdriven, and powerful guitar sound". 52
+chromatic notes MIDI 35-86 (B1-D6), one per semitone, each derived
+from the nearest sampled pitch in the SFZ zones (max 2 semitones
+pitch-shift, done locally with ffmpeg asetrate; MIDI 72 is unmapped
+in the SFZ, so it uses the B4 sample shifted up 1 semitone, as in
+the clean bank). Converted locally to 44.1 kHz mono OGG
+(samples/kits/dist-guitar-01..52.ogg), trimmed to 4.3 s with a
+0.15 s fade-out, level-matched to the existing PrAIme banks (peaks
+-18.1 to -19.1 dB, mean -18.6 dB). Pitches verified by FFT after
+conversion (strongest spectral peak is an exact integer harmonic of
+the expected fundamental, within 11 cents, on all 52 notes, with the
+fundamental itself carrying 17-100% of peak energy; the harmonic
+dominance is the distortion's own timbre, not a mapping error).
+Spectral centroid 1935-2588 Hz vs 649-2055 Hz for the clean bank at
+the same notes, confirming a genuinely distorted tone. The top note
+(dist-guitar-52, MIDI 86) is 4.18 s, not 4.3 s, because its source
+sample is only 4.43 s long and decays to near-silence by 4.0 s; no
+audible content is truncated.
+
+Use in tracks; do not resell the raw samples as a kit.
