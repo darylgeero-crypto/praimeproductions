@@ -1,0 +1,99 @@
+FreePats Hang D minor — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Hang D minor).
+
+SOURCE
+- Repo: https://github.com/freepats/hang-D-minor (default branch main)
+- Current commit at fetch time: fdeca2ec981ab374607f250bccb1452b531ac13a
+  (1 commit, 2024-08-28, "Initial commit").
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (1,388 bytes),
+  "Hang-D-minor 20220330.sfz" (3,674 bytes), picture.jpg, samples/
+  (51 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/hang-D-minor/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "Published under the terms of Creative Commons CC0
+  public domain dedication: https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as the
+  FSBS guitar / timpani / ukulele / ocarina repos' CC0 licences).
+- README: "Version 2022-03-30. ... recorded on July 2017, at the
+  Medialab-Prado auditorium in Madrid (Spain), by Gonzalo
+  <humanogonzalo@gmail.com> and Roberto <roberto@zenvoid.org>, using a
+  Zoom H1 portable recorder mounted on a tripod." Performer: Mar, who
+  let FreePats record her hang. "The Hang is a pitched percussion
+  instrument, made of steel and commonly played with the hands."
+
+AUTHENTICITY — real recorded hang, not synth
+- All 51 source FLACs are 44.1 kHz stereo; the 9 first takes used are
+  2.04-4.10 s long.
+- Probe FFT (measure_hang.py) showed every used source fundamental within
+  33 cents of its SFZ key (A3 +33, G4 +18, D4 +17, C5 +14, E4 +9, Bb4 +4,
+  F4 +3, D5 +2, A4 -4) — the instrument's own tuning, not a measurement
+  error; no pitch correction was applied, and the SFZ carries no tune=
+  opcodes, consistent with the probe. Sources peak at -0.11..-2.39 dBFS
+  (mono-mean peak).
+
+SFZ FACTS (read directly from "Hang-D-minor 20220330.sfz")
+- 1 global (ampeg_release=8), 9 groups, 51 regions, no tune= opcodes.
+- Each group is one key with random-region takes (lorand/hirand):
+  key 57 (A3, 5 takes), 62 (D4, 7), 64 (E4, 6), 65 (F4, 6), 67 (G4, 6),
+  69 (A4, 6), 70 (Bb4, 5), 72 (C5, 5), 74 (D5, 5).
+- The README lists C4 among the instrument's notes ("A3, C4, D4, E4, F4,
+  G4, A4, Bb4, C5, D5"), but NO C4 sample file exists and NO C4 group is
+  in the SFZ — so C4 was NOT used. The SFZ is the instrument definition
+  and its mapped range is the 9 keys above (same rule as the ocarina
+  run's unused A6.flac).
+- README WARNING, followed exactly: "Unlike other sound banks, we
+  shouldn't fill missing in-between semitones by varying the pitch of
+  nearby notes. When one note of the hang is played, all other notes
+  resonate in background, creating a characteristic warm compound sound
+  tuned in D minor in this particular case. If the frequency of one note
+  is shifted, its background chords would be shifted as well to random
+  scales." So the bank is the 9 real notes ONLY — no pitch-shifted
+  filler semitones. The other 42 FLACs are random alternates of the same
+  9 notes, not separate notes; only the first take (_01) of each note
+  was used.
+
+BUILD RECIPE (build_hang.py)
+- 9 notes: suite/samples/kits/hang-01..09.ogg
+  (note01 = MIDI 57 A3, 02 = 62 D4, 03 = 64 E4, 04 = 65 F4, 05 = 67 G4,
+  06 = 69 A4, 07 = 70 Bb4, 08 = 72 C5, 09 = 74 D5).
+- From the 9 _01 FLACs; NO pitch shift (see README warning above) and NO
+  asetrate step — sources are already 44.1 kHz, so the -147-cent bug
+  cannot apply. Stereo downmixed to mono, 44.1 kHz mono OGG q5. No trim.
+- Level: per-file gain so each built file peaks at the library -18.5 dB
+  target, PLUS a Vorbis-overshoot compensation found and fixed this run:
+  the first build (gain = -18.5 - source peak only) decoded at
+  -14.78..-15.87 dB — Vorbis q5 overshoots +2.63..+3.72 dB on these
+  transient-rich hang hits (a WAV render of the same chain measures
+  -18.5 exactly, so the overshoot is in the Vorbis encode, not the gain).
+  Each file was rebuilt with an extra cut equal to its own first-build
+  decoded overshoot (gains -19.69..-21.47 dB total).
+
+VERIFICATION (verify_hang.py, 2026-11-12)
+- ALL 9 files PASS: every built note tracks its source tuning
+  (-4..+33 cents vs its target MIDI pitch, same deviations as the
+  sources); built peak levels -18.20 to -19.16 dB (target -18.5 +/- 1 dB);
+  all decode as vorbis OGG, 44.1 kHz mono. Built durations 2.04-4.10 s.
+- Kits OGG count: 1588 -> 1597.
+
+WIRING
+- suite/real-sounds.js: hangBank (9), PraimeSoundLibrary hang:9,
+  total 1588 -> 1597. NOT wired into SuperBeat melody voices, same as
+  the sax/guitar/bass/timpani/ukulele/ocarina banks — piano/steel/nylon
+  remain the only melody voices.
+- Hang is range-limited by nature (9 real notes, MIDI 57-74, D minor):
+  it stays under 50 sounds, like harp (23), timpani (25), accordion
+  (17+17), ukulele (29+2) and ocarina (33). No stretching beyond the
+  SFZ range was done, per the README.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 11:24-11:26 MST)
+- Gemini confirmed the repo (freepats/hang-D-minor), CC0-1.0, and that the
+  samples are lossless FLAC of a real recorded acoustic handpan — but
+  could NOT verify the SFZ filename, group/region counts, tune= opcodes,
+  keycenters, MIDI range, sample count, sample rate, channels, or raw
+  sample URLs ("cannot verify without pulling the raw SFZ file") — all
+  of those were read directly from the repo here.
+- Gemini's raw base "with branch references such as main, master, or
+  compact" is a guess: the repo's only branch is main (verified via the
+  API); there is no master or compact branch.
