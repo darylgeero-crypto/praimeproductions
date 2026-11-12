@@ -1,0 +1,45 @@
+FreePats — Electric Bass Guitar YR (finger + pick)
+Source: https://github.com/freepats/electric-bass-YR
+(FreePats project, https://freepats.zenvoid.org/)
+
+Licence: CC0 1.0 Universal — the repository LICENSE.txt is the full
+CC0 1.0 legal code, the repository README states: "Published under
+the terms of Creative Commons CC0 public domain dedication", and the
+GitHub repo page shows "License: Creative Commons Zero v1.0
+Universal (CC0-1.0)". Verified 2026-11-12 by direct fetch of the
+repo page, LICENSE.txt, README.txt, both SFZ files, and the GitHub
+API samples listing. Gemini's reply this run named the repo correctly
+but gave the wrong SFZ filenames ("electric-bass-finger.sfz" /
+"electric-bass-pick.sfz"); the real files are "FingerBassYR
+20190930.sfz" and "PickedBassYR 20190930.sfz", and Gemini gave no
+pitch count, note range, or format — all of those were established
+here by reading the SFZ files directly, not on Gemini's word.
+
+Files used in PrAIme: clean DI samples of a Yamaha RBX bass guitar,
+recorded by Andrea Biasior, 24-bit 44.1 kHz mono FLAC. Two
+articulations, each with its own bank:
+- Finger (samples/finger/, 12 distinct pitches E1-D#2, MIDI 28-39):
+  20 chromatic notes MIDI 26-45 (D1-A2), the SFZ's own declared range
+  (E covers 26-28, D# covers 39-45), as samples/kits/
+  clean-bass-finger-01..20.ogg.
+- Pick (samples/pick/, 13 distinct pitches E1-E2, MIDI 28-40):
+  21 chromatic notes MIDI 26-46 (D1-A#2), the SFZ's own declared range
+  (E covers 26-28, E2 covers 40-46), as samples/kits/
+  clean-bass-pick-01..21.ogg.
+Each note is derived from the nearest sampled pitch (max 6 semitones
+pitch-shift on the top notes, exactly the SFZ's own stretch, done
+locally with ffmpeg asetrate; most notes are unshifted). Converted
+locally to 44.1 kHz mono OGG (q5), trimmed to 4.3 s with a 0.15 s
+fade-out, level-matched to the existing PrAIme banks (peaks -18.4
+to -18.6 dB). Pitches verified by FFT after conversion (fundamentals
+present at the expected frequencies; the lowest D1 notes show their
+2nd/3rd harmonics strongest, as in the raw source files themselves —
+the recording's own timbre, not a mapping error).
+
+Clean electric bass is still short of the 50+ bar per bank (finger 20,
+pick 21; 41 bass sounds total) — do NOT report it as "done" at 50.
+A 50+ single bank is not honest from this source alone: it records
+only 12-13 pitches in one low octave, and stretching one sample
+across 50 semitones would stop sounding like a bass.
+
+Use in tracks; do not resell the raw samples as a kit.
