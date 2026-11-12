@@ -1,0 +1,120 @@
+FreePats Tubular Bells — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats Tubular Bells).
+
+SOURCE
+- Repo: https://github.com/freepats/tubular-bells1 (default branch main)
+- Current commit at fetch time: 7809b71545dab785a424280c67642a4b8c7b1cdd
+  ("Initial commit", 2024-12-09; the repo's only commit).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (492 bytes),
+  "TubularBells 20241130.sfz" (1,995 bytes),
+  "TubularBells small 20241130.sfz" (980 bytes), samples/ (19 FLAC files)
+  + samples/small/ (10 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/tubular-bells1/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "Made with samples from the Versilian Community
+  Sample Library, a CC0 sample library created by Versilian Studios
+  LLC. Samples have been edited. This sound bank is assembled by
+  roberto@zenvoid.org for the FreePats project." and "Published under
+  the terms of Creative Commons CC0 public domain dedication:
+  https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as
+  the FSBS guitar / timpani / ukulele / ocarina / hang / bagpipe repos'
+  CC0 licences).
+- README: "Version 2024-11-30". No performer, recording date, or
+  recording-location detail is given in the README (the samples are
+  edited Versilian Community Sample Library recordings); no
+  pitch-shifting or usage warning is given either — unlike the hang
+  README, which explicitly forbids pitch-shift filling.
+
+AUTHENTICITY — real recorded tubular bells, not synth
+- All 19 source FLACs in samples/ are 44.1 kHz mono 24-bit; the 10
+  first takes used are 8.66-15.88 s long (long natural bell decays).
+- Pitch probe (measure_tubular.py): the bells are INHARMONIC — the
+  strongest partial is ~5.35x the fundamental and a harmonic-sum
+  scorer is fooled by it (it scored the C4 source at +118 cents).
+  The 2x partial sits at 2.00x the keycenter frequency for every
+  note (C4 +3.3, D4 +2.0, E4 +3.4, F#4 +3.4, G#4 +5.3, A#4 +7.5,
+  C5 +6.7, D5 +6.9, E5 +11.1, A#5 +11.2 cents), so the sources sit on
+  their keycenters — the instrument's own tuning, no correction
+  applied (SFZ has no tune= opcodes). Sources peak at ~0.00 dBFS.
+
+SFZ FACTS (read directly from "TubularBells 20241130.sfz")
+- 1 global (ampeg_release=2), 10 groups, 20 regions. 9 groups have 2
+  random takes each (lorand/hirand 0-0.5 / 0.5-1); the A#5 group has
+  2 regions pointing at the same single sample (A#5.flac).
+- Keycenters / lokey-hikey: C4 60 (57-61), D4 62 (62-63), E4 64
+  (64-65), F#4 66 (66-67), G#4 68 (68-69), A#4 70 (70-71), C5 72
+  (72-73), D5 74 (74-75), E5 76 (76-79), A#5 82 (80-85).
+- Dynamics are in the filenames: C4_f, D4/E4/G#4/A#4/C5/D5/E5_ff,
+  F#4_fff, A#5 (no dynamic suffix). No tune= opcodes anywhere.
+- A second SFZ, "TubularBells small 20241130.sfz", maps the same
+  keys with single takes from samples/small/ — the full SFZ is the
+  canonical instrument and the full-size samples were used; the
+  small variant was NOT used.
+- NOT used, and why: the SFZ maps the gaps between the 10 real notes
+  by stretching neighbours (e.g. C4 covers 57-61, E5 covers 76-79,
+  A#5 covers 80-85), but the bank does NOT pitch-shift-fill missing
+  semitones (same rule as the hang/bagpipe runs). The second takes
+  (_02) are random alternates of the same 9 notes, not separate
+  notes; only the first take (_01) of each note was used (A#5 has a
+  single file). The SFZ is the instrument definition.
+
+BUILD RECIPE (build_tubular.py)
+- 10 notes: suite/samples/kits/tubular-bells-01..10.ogg (note01 =
+  MIDI 60 C4, 02 = 62 D4, 03 = 64 E4, 04 = 66 F#4, 05 = 68 G#4,
+  06 = 70 A#4, 07 = 72 C5, 08 = 74 D5, 09 = 76 E5, 10 = 82 A#5).
+- From the 9 _01 FLACs + A#5.flac. No pitch shift (sources are
+  already 44.1 kHz, so the -147-cent bug cannot apply; no tune=
+  exists to apply). 44.1 kHz mono OGG q5. No trim.
+- Level: per-file gain so each built file peaks at the library -18.5
+  dB target (gains -18.50/-18.49 dB, A#5 -18.43 dB, sources peak
+  ~0.00 dBFS). One Vorbis compensation WAS needed: C5 first decoded
+  at -19.51 dB (encoder undershoot, the reverse of the hang bank's
+  overshoot) and was rebuilt with +1.01 dB (gain -17.49 dB); it then
+  decoded at -18.02 dB. Lesson carried forward from the hang run:
+  ALWAYS verify the DECODED OGG peak (as verify_*.py does) and
+  compensate per file — tonal bells can undershoot as well as
+  overshoot.
+
+VERIFICATION (verify_tubular.py, 2026-11-12)
+- ALL 10 files PASS: every built note's 2x partial within +2.0..+11.2
+  cents of its target MIDI pitch (exactly the residuals the source
+  probe predicted — no shift applied); built peak levels -18.02 to
+  -18.81 dB (target -18.5 +/- 1 dB); all decode as vorbis OGG,
+  44.1 kHz mono. Built durations 8.66-15.88 s.
+- Kits OGG count: 1612 -> 1622.
+
+WIRING
+- suite/real-sounds.js: tubularBellsBank (10), PraimeSoundLibrary
+  tubularBells:10, total 1612 -> 1622. NOT wired into SuperBeat
+  melody voices, same as the sax/guitar/bass/timpani/ukulele/ocarina/
+  hang/bagpipe banks — piano/steel/nylon remain the only melody
+  voices.
+- Tubular bells are range-limited by nature (10 real notes C4-A#5):
+  they stay under 50 sounds, like harp (23), timpani (25),
+  accordion (17+17), ukulele (29+2), ocarina (33), hang (9) and
+  bagpipe (13+2). No stretching beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 11:56-11:58 MST)
+- Gemini confirmed the repo (freepats/tubular-bells1) and CC0-1.0
+  (Versilian Community Sample Library source), but could NOT verify
+  the SFZ filename, group/region counts, keycenters, MIDI range,
+  sample count, sample rate, channels, or raw sample URLs
+  ("cannot verify without pulling the raw SFZ file") — all of those
+  were read directly from the repo here.
+- Gemini's SFZ filename guess ("tubular-bells.sfz" or
+  "tubular-bells1.sfz") is WRONG: the real files are
+  "TubularBells 20241130.sfz" and "TubularBells small 20241130.sfz".
+- Gemini's "Lossless FLAC and/or uncompressed WAV files" is WRONG:
+  the repo is FLAC only (19 FLACs in samples/, 10 in samples/small/,
+  no WAVs).
+- Gemini's raw base "https://raw.githubusercontent.com/freepats/
+  tubular-bells1/" is incomplete: the samples live under
+  https://raw.githubusercontent.com/freepats/tubular-bells1/main/
+  samples/ (branch main; the repo's only branch).
+- Gemini gave no usage warning, recording detail, performer, or date
+  — correctly, because the README contains none of those (unlike
+  the hang README's pitch-shift warning); the "Zenvoid Studio"
+  attribution in its reply is the FreePats site, not a repo fact.
