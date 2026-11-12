@@ -1,0 +1,22 @@
+Karoryfer Samples — Bear Sax (1926 Conn Baritone Saxophone)
+Source: https://github.com/sfzinstruments/karoryfer.bear-sax
+(SFZ Instruments / Karoryfer Samples, open source instrument.)
+
+Licence: CC0 1.0 Universal — the repository LICENSE file is the full
+CC0 1.0 legal code, and the repository README states: "Royalty-free
+for all commercial and non-commercial use." Copyright 2017 Karoryfer
+Lecolds. Verified 2026-11-12: GitHub repo page shows
+"License: Creative Commons Zero v1.0 Universal (CC0-1.0)".
+
+Files used in PrAIme: solo sustain (looped, forte) samples from
+Programs/1-solo-mono.sfz -> Programs/legato/dynfade_legato_first_map.sfz,
+33 chromatic keys MIDI 36-68 (concert C2-Ab4). The SFZ maps one sample
+per key except MIDI 36 and 38, which share d1_looped_f.wav (pitch
+keycenter 38); the MIDI 36 file was pitch-shifted down 2 semitones
+locally so its sounding pitch is C2.
+Converted locally to 44.1 kHz mono OGG
+(samples/kits/bari-sax-01..33.ogg), level-matched to the existing
+PrAIme banks (peak about -18 dB). Pitches verified by FFT after
+conversion (C2 65.4 Hz through Ab4 415.3 Hz).
+
+Use in tracks; do not resell the raw samples as a kit.
