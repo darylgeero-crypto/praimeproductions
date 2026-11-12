@@ -1,0 +1,126 @@
+FreePats FM Piano 1 — CC0 licence note (PrAIme Productions real-sounds library)
+Added 2026-11-12 (Gemini upgrades run, focused prompt: verify FreePats FM Piano 1).
+
+SOURCE
+- Repo: https://github.com/freepats/fm-piano1 (default branch main)
+- Current commit at fetch time: 89a92d10b47a
+  ("Initial commit", 2024-07-24; the repo's only commit).
+- Files in repo root: LICENSE.txt (7,048 bytes), README.txt (781 bytes),
+  "FM-Piano1 20190916.sfz" (3,212 bytes), samples/ (36 FLAC files).
+- Samples: https://raw.githubusercontent.com/freepats/fm-piano1/main/samples/
+
+LICENCE — CC0-1.0, verified directly (not taken on Gemini's word)
+- GitHub API licence field: CC0-1.0.
+- README.txt states: "FM Synthesized Piano #1", "Version 2019-09-16",
+  "Sound samples and sound bank made by Roberto <roberto@zenvoid.org>
+  for the FreePats project. Imitation of the Yamaha DX7 electric
+  piano, a FM synthesis instrument that was popular in the 1980s.
+  These sound samples simulate the \"E. Piano 1\" patch of the DX7,
+  used in many 1980s popular songs." and "Published under the terms
+  of Creative Commons CC0 public domain dedication:
+  https://creativecommons.org/publicdomain/zero/1.0/"
+- LICENSE.txt is the full CC0 1.0 legal code (7,048 bytes, same size as
+  the FSBS guitar / timpani / ukulele / ocarina / hang / bagpipe /
+  tubular-bells / old-piano repos' CC0 licences).
+
+AUTHENTICITY — multi-sampled DX7 electric piano, not a runtime oscillator
+- The README states the samples were "Recorded from Hexter software
+  synthesizer. Hexter is a free software program that accurately
+  models the sound generation algorithm of the original instrument."
+  So the source is a recording of a DX7 FM electric piano patch
+  (the "E. Piano 1" patch) rendered through the Hexter model — a real
+  electronic instrument sound, captured as audio files, NOT a Web
+  Audio oscillator generated at runtime in the app. The bank is
+  labelled "FM Piano" honestly; it is not presented as an acoustic
+  piano. Electric piano and electronic instruments are explicitly in
+  the wanted list (keys / electronic), and this is the FreePats
+  electric piano. The standing exclusion of the FreePats synth-*
+  banks (synth-strings/brass/bass/pad) does not apply here: those are
+  synth imitations of acoustic instruments, while the DX7 E. Piano 1
+  patch IS the electric piano itself — there is no acoustic original
+  being faked.
+- All 12 v80 source FLACs used are 44.1 kHz mono; durations 7.23-24.88 s
+  (long natural FM sustain, low notes ring longest).
+- Pitch probe (measure_fmpiano.py): all 12 v80 notes within -1..+2
+  cents of keycenter (mean +0.3) — exact Hexter/DX7-model tuning, no
+  correction applied (SFZ has no tune= opcodes). Sources peak at
+  -0.05 dBFS, uniform across all 12.
+
+SFZ FACTS (read directly from "FM-Piano1 20190916.sfz")
+- 3 globals (ampeg_release=0.4): v60 hivel=69, v80 lovel=70 hivel=109,
+  v100 lovel=110. 3 groups, 36 regions total (12 per velocity layer).
+  No tune= opcodes anywhere.
+- Keycenters / lokey-hikey (same in all three layers): F#1 30 (27-32),
+  C2 36 (33-38), F#2 42 (39-44), C3 48 (45-50), F#3 54 (51-56),
+  C4 60 (57-62), F#4 66 (63-68), C5 72 (69-74), F#5 78 (75-80),
+  C6 84 (81-86), F#6 90 (87-92), C7 96 (93-98).
+- The SFZ stretches each sample +/-3 semitones around its keycenter
+  (alternating C and F# every 6 semitones), but the bank does NOT
+  pitch-shift-fill missing semitones (same rule as the
+  hang/bagpipe/tubular-bells/old-piano runs).
+- NOT used, and why: the v60 and v100 layers are alternate velocity
+  takes of the same 12 notes, not separate notes — only the middle
+  v80 layer (velocity 70-109) was used, one file per note, same
+  convention as the other banks (cf. unused _02 takes in the
+  tubular-bells run). This is the library's first bank with real
+  velocity layers available; the v60/v100 files were not downloaded
+  into the bank, but they exist in the repo if a multi-velocity bank
+  is ever wanted.
+
+BUILD RECIPE (build_fmpiano.py)
+- 12 notes: suite/samples/kits/fm-piano-01..12.ogg (note01 =
+  MIDI 30 F#1, 02 = 36 C2, 03 = 42 F#2, 04 = 48 C3, 05 = 54 F#3,
+  06 = 60 C4, 07 = 66 F#4, 08 = 72 C5, 09 = 78 F#5, 10 = 84 C6,
+  11 = 90 F#6, 12 = 96 C7).
+- From the 12 v80 FLACs. No pitch shift (sources are already
+  44.1 kHz, so the -147-cent bug cannot apply; no tune= exists to
+  apply). 44.1 kHz mono OGG q5. No trim, no fade.
+- Level: per-file gain -18.45 dB so each built file peaks at the
+  library -18.5 dB target (sources peak -0.05 dBFS). NO Vorbis
+  compensation was needed — unlike the hang bank (overshoot) and the
+  tubular-bells C5 (undershoot), these decoded on target first try.
+
+VERIFICATION (verify_fmpiano.py, 2026-11-12)
+- ALL 12 files PASS: every built note matches its SOURCE pitch within
+  0-1 cent (built-vs-source difference); built peak levels -17.88 to
+  -18.93 dB (target -18.5 +/- 1 dB); all decode as vorbis OGG,
+  44.1 kHz mono. Built durations 7.23-24.88 s.
+- Kits OGG count: 1700 -> 1712.
+
+WIRING
+- suite/real-sounds.js: fmPianoBank (12), PraimeSoundLibrary
+  fmPiano:12, total 1700 -> 1712. NOT wired into SuperBeat melody
+  voices, same as the sax/guitar/bass/timpani/ukulele/ocarina/hang/
+  bagpipe/tubular-bells/old-piano banks — piano/steel/nylon remain
+  the only melody voices.
+- FM piano is range-limited by nature (12 real notes F#1-C7, only C
+  and F# per octave): it stays under 50 sounds, like harp (23),
+  timpani (25), accordion (17+17), ukulele (29+2), ocarina (33),
+  hang (9), bagpipe (13+2) and tubular bells (10). No stretching
+  beyond the SFZ range was done.
+
+GEMINI-ERROR NOTES (this run's reply, 2026-11-12 12:40-12:47 MST)
+- Gemini confirmed the repo (freepats/fm-piano1) and CC0-1.0, but
+  could NOT verify the SFZ filename, group/region counts, keycenters,
+  MIDI range, sample count, sample rate, channels, or raw sample URLs
+  ("cannot verify without pulling the raw SFZ file") — all of those
+  were read directly from the repo here.
+- Gemini's SFZ filename guess ("fm-piano1.sfz") is WRONG: the real
+  file is "FM-Piano1 20190916.sfz".
+- Gemini's "Lossless FLAC and/or uncompressed WAV files" is WRONG:
+  the repo is FLAC only (36 FLACs in samples/, no WAVs).
+- Gemini's raw base "https://raw.githubusercontent.com/freepats/
+  fm-piano1/" is incomplete: the samples live under
+  https://raw.githubusercontent.com/freepats/fm-piano1/main/samples/
+  (branch main; the repo's only branch).
+- Gemini's "advise against extreme artificial pitch-shifting"
+  warning is a paraphrase of FreePats standards, NOT a README
+  statement — the README gives no usage warning; no pitch-shift
+  fill was done anyway.
+- Gemini's FM Piano 1 vs 2 characterisation ("classic, bright
+  4-operator FM electric piano patch" vs "alternate preset...
+  warmer pad-style... or harder tine texture") is Gemini's own
+  description, not a repo fact — the README only says DX7
+  "E. Piano 1" imitation via Hexter. FM Piano 2 was NOT verified
+  this run; its repo name ("freepats/fm-piano2 or similar") was
+  given as a guess and remains unconfirmed.
