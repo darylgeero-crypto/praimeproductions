@@ -1,0 +1,24 @@
+Button Accordion HN — FreePats
+===============================
+Source: https://github.com/freepats/button-accordion-HN
+Licence: Creative Commons Zero v1.0 Universal (CC0-1.0) — public domain dedication.
+Verified 2026-11-12: GitHub API licence field CC0-1.0; README.txt states
+"Published under the terms of Creative Commons CC0 public domain dedication".
+
+SFZ: "PRESET Button Accordion HN tuned.sfz" — 17 sustain regions on MIDI
+keys 47-79 (B3-G6), each pitched across a small lokey/hikey span, plus 17
+release-trigger regions in rel/. Recorded from a real Hohner accordion by
+Jeff Stauffer, November 2023; bank processed by michael02022. Sources are
+44.1 kHz stereo 16-bit FLAC (sustain 1.35-2.47 s, release 0.26-0.57 s).
+
+PrAIme files (34 OGGs, 44.1 kHz mono, q5, peak level-matched to -18.5 dB):
+- samples/kits/accordion-01..17.ogg — sustain samples, pitch order B3 D4 F#4
+  G4 A4 B4 C5 D5 E5 F#5 G5 A5 B5 C6 D6 E6 G6 (MIDI 47 50 54 55 57 59 60 62
+  64 66 67 69 71 72 74 76 79)
+- samples/kits/accordion-rel-01..17.ogg — key-release samples, same pitch order
+Wired in real-sounds.js as accordionBank (17) + accordionRelBank (17).
+Note: accordion is still short of the 50+ sounds bar as a category (34
+sounds across 17 notes + releases) — the first accordion sounds in the
+library, not a completed 50+ bank. The picture.jpg in the source repo was
+NOT used. The SFZ loop points (loop_mode=loop_continuous) were not needed:
+the one-shot OGGs keep the full natural sustain length.
