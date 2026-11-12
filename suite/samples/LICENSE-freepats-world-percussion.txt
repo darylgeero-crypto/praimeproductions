@@ -1,0 +1,24 @@
+World Percussion — FreePats
+===========================
+Source: https://github.com/freepats/world-percussion
+Licence: Creative Commons Zero v1.0 Universal (CC0-1.0) — public domain dedication.
+Verified 2026-11-12: GitHub API licence field CC0-1.0; LICENSE.txt in the repo
+is the full CC0 1.0 legal code; README.txt states "Published under the terms
+of Creative Commons CC0 public domain dedication".
+
+SFZ: "WorldPercussion 20200905.sfz" — 24 instruments on MIDI keys 48-71,
+235 regions over 195 FLAC + 45 WAV source files (48 kHz mono; FLAC 16-bit,
+WAV 24-bit). Recorded from real instruments (cajon, bongos, darbuka, congas,
+maracas, castanets, claves, tambourine, egg shaker, hand clap) by Xavimart /
+Gonzalo / Roberto, Jan-Jun 2019; claves and conga samples from the Versilian
+Community Sample Library (CC0).
+
+PrAIme files (48 OGGs, 44.1 kHz mono, q5, peak level-matched to -18.5 dB):
+- samples/kits/world-perc-01..24.ogg — first SFZ region per key (note1 = MIDI 48
+  Cajon flamenco 1 ... note24 = MIDI 71 Darbuka pa)
+- samples/kits/world-perc-alt-01..24.ogg — second SFZ region per key
+  (round-robin alternate hit for the same 24 instruments)
+Wired in real-sounds.js as worldPercBank (24) + worldPercAltBank (24).
+Note: the SFZ maps key 63 to LowConga and key 64 to HighConga, while the
+README lists them the other way round; the SFZ file mapping was followed.
+The picture.jpg in the source repo is CC-BY-4.0 and was NOT used.
