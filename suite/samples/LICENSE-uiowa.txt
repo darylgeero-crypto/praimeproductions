@@ -1,0 +1,16 @@
+University of Iowa Musical Instrument Samples (MIS)
+Source: http://theremin.music.uiowa.edu/MIS.html
+Created by Lawrence Fritts, Director of the Electronic Music Studios,
+Professor of Composition at the University of Iowa.
+
+Licence statement from the source site: "Since 1997, these recordings
+have been freely available on this website and may be downloaded and
+used for any projects, without restrictions."
+
+Files used in PrAIme: Eb Alto Saxophone, vibrato, ff dynamic, 32 notes
+Db3-Ab5, from the post-2012 single-note files
+("sound files/MIS Pitches - 2014/Woodwinds/Eb Alto Saxophone/").
+Converted locally to 44.1 kHz mono OGG (samples/kits/alto-sax-01..32.ogg),
+level-matched to the existing PrAIme banks (peak about -18 dB).
+
+Use in tracks; do not resell the raw samples as a kit.
