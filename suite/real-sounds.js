@@ -31,10 +31,12 @@
     harpBank: Object.fromEntries(Array.from({length:23},(_,i)=>['note'+(i+1), 'samples/kits/harp-'+String(i+1).padStart(2,'0')+'.ogg'])),
     altoSaxBank: Object.fromEntries(Array.from({length:32},(_,i)=>['note'+(i+1), 'samples/kits/alto-sax-'+String(i+1).padStart(2,'0')+'.ogg'])),
     bariSaxBank: Object.fromEntries(Array.from({length:33},(_,i)=>['note'+(i+1), 'samples/kits/bari-sax-'+String(i+1).padStart(2,'0')+'.ogg'])),
-    cleanGuitarBank: Object.fromEntries(Array.from({length:52},(_,i)=>['note'+(i+1), 'samples/kits/clean-guitar-'+String(i+1).padStart(2,'0')+'.ogg']))
+    cleanGuitarBank: Object.fromEntries(Array.from({length:52},(_,i)=>['note'+(i+1), 'samples/kits/clean-guitar-'+String(i+1).padStart(2,'0')+'.ogg'])),
+      cleanBassFingerBank: Object.fromEntries(Array.from({length:20},(_,i)=>['note'+(i+1), 'samples/kits/clean-bass-finger-'+String(i+1).padStart(2,'0')+'.ogg'])),
+      cleanBassPickBank: Object.fromEntries(Array.from({length:21},(_,i)=>['note'+(i+1), 'samples/kits/clean-bass-pick-'+String(i+1).padStart(2,'0')+'.ogg']))
   };
-  // Library counts (2026-11-12): total 1220 = playable OGG files in samples/kits/ — piano 60 + steel 60 + nylon 60 + VSCO banks 15x60 + harp 23 + alto sax 32 (UIOWA MIS, Db3-Ab5, vibrato ff) + baritone sax 33 (Karoryfer Bear Sax CC0, concert C2-Ab4, solo sustain ff) + clean electric guitar 52 (FreePats FSBS clean CC0, Fender bridge pickup, MIDI 35-86), all 44.1k mono OGG, level-matched to existing banks. Drums (12) and instruments (6) are separate WAVs, not counted in the total.
-  window.PraimeSoundLibrary = { drums:12, instruments:6, piano:60, steelGuitar:60, nylonGuitar:60, trumpet:60, horn:60, trombone:60, tuba:60, cello:60, viola:60, violinSection:60, violinSolo:60, contrabass:60, flute:60, clarinet:60, oboe:60, bassoon:60, pianoVsco:60, organ:60, harp:23, altoSax:32, bariSax:33, cleanGuitar:52, total:1220 };
+    // Library counts (2026-11-12): total 1261 = playable OGG files in samples/kits/ — piano 60 + steel 60 + nylon 60 + VSCO banks 15x60 + harp 23 + alto sax 32 (UIOWA MIS, Db3-Ab5, vibrato ff) + baritone sax 33 (Karoryfer Bear Sax CC0, concert C2-Ab4, solo sustain ff) + clean electric guitar 52 (FreePats FSBS clean CC0, Fender bridge pickup, MIDI 35-86) + clean electric bass finger 20 + pick 21 (FreePats electric-bass-YR CC0, Yamaha RBX, MIDI 26-45 finger / 26-46 pick), all 44.1k mono OGG, level-matched to existing banks. Drums (12) and instruments (6) are separate WAVs, not counted in the total.
+    window.PraimeSoundLibrary = { drums:12, instruments:6, piano:60, steelGuitar:60, nylonGuitar:60, trumpet:60, horn:60, trombone:60, tuba:60, cello:60, viola:60, violinSection:60, violinSolo:60, contrabass:60, flute:60, clarinet:60, oboe:60, bassoon:60, pianoVsco:60, organ:60, harp:23, altoSax:32, bariSax:33, cleanGuitar:52, cleanBassFinger:20, cleanBassPick:21, total:1261 };
   var cache = {};
   function load(ctx, url){
     if(cache[url]) return Promise.resolve(cache[url]);
