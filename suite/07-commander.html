@@ -24,6 +24,12 @@ a{color:#7ee2ff}
 <button id="chooseBtn">📁 Add files</button><input type="file" id="fileInput" multiple accept="audio/*,video/*,image/*,.txt,.json">
 <input id="filter" placeholder="Filter library by name...">
 <select id="sortSel" title="Sort library"><option value="upload">Upload order</option><option value="name">Name (A–Z)</option><option value="size">Size (largest first)</option></select>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0">
+<label style="font-weight:400;margin:0"><input type="checkbox" id="selAll" style="width:auto"> Select all</label>
+<button id="dlZip" disabled>⬇ Download selected as ZIP</button>
+<span id="zipStatus" style="font-size:13px;color:#9ca3af">Tick files to bundle them into one ZIP.</span>
+</div>
+<small>ZIP is stored (no compression) so large WAVs and WebMs bundle fast; any unzip tool opens it. Files stay in this page session only.</small>
 <div id="list"></div><button id="manifest">Download manifest .JSON</button><button id="dlLibCsv" class="secondary">Download library list (.CSV)</button><button id="printList" class="secondary">🖨 Print library list</button><div class="status" id="manifestOut"></div>
 <div class="status" id="out"></div><audio id="player" controls style="width:100%;margin-top:12px"></audio>
 <div class="card"><h2>Music Player — 5-band equalizer</h2><p>Restored from the original Full suite player. The five bands run through Web Audio peaking filters on the player above, so they really change what you hear — not just a display. EQ is set up on first Play (a user gesture, which browsers require for audio).</p>
@@ -48,15 +54,104 @@ a{color:#7ee2ff}
 </div>
 <script>
 let files=[];
-function render(){ const q=document.getElementById('filter').value.toLowerCase(); const s=document.getElementById('sortSel').value; const list=document.getElementById('list'); list.innerHTML=''; let items=files.map((f,i)=>({f:f,i:i})); if(s==='name') items.sort((a,b)=>a.f.name.toLowerCase().localeCompare(b.f.name.toLowerCase())); else if(s==='size') items.sort((a,b)=>b.f.size-a.f.size); items.forEach(it=>{ const f=it.f,i=it.i; if(q && !f.name.toLowerCase().includes(q)) return; const d=document.createElement('div'); d.style.cssText='display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)'; d.innerHTML='<span>'+f.name+' ('+Math.round(f.size/1024)+' KB)</span>'; const b1=document.createElement('button'); b1.textContent='Play'; b1.onclick=()=>{ const pl=document.getElementById('player'); pl.src=f.url; if(window.praimeEqEnsure){ window.praimeEqEnsure(); } pl.play(); }; const b2=document.createElement('button'); b2.textContent='Download'; b2.className='secondary'; b2.onclick=()=>{ const a=document.createElement('a'); a.href=f.url; a.download=f.name; a.click(); }; const b3=document.createElement('button'); b3.textContent='Delete'; b3.className='secondary'; b3.onclick=()=>{ files.splice(i,1); render(); }; d.append(b1,b2,b3); list.appendChild(d); }); document.getElementById('out').textContent=files.length+' file(s) in library.'; }
+let nextFileId=1;
+let selectedIds=new Set();
+let visibleIds=[];
+function render(){ const q=document.getElementById('filter').value.toLowerCase(); const s=document.getElementById('sortSel').value; const list=document.getElementById('list'); list.innerHTML=''; let items=files.map((f,i)=>({f:f,i:i})); if(q) items=items.filter(it=>it.f.name.toLowerCase().includes(q)); if(s==='name') items.sort((a,b)=>a.f.name.toLowerCase().localeCompare(b.f.name.toLowerCase())); else if(s==='size') items.sort((a,b)=>b.f.size-a.f.size); visibleIds=items.map(it=>it.f.id); items.forEach(it=>{ const f=it.f,i=it.i; const d=document.createElement('div'); d.style.cssText='display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)'; const cb=document.createElement('input'); cb.type='checkbox'; cb.style.width='auto'; cb.checked=selectedIds.has(f.id); cb.title='Select for ZIP export'; cb.onchange=()=>{ if(cb.checked) selectedIds.add(f.id); else selectedIds.delete(f.id); updateZipBar(); }; d.innerHTML='<span>'+f.name+' ('+Math.round(f.size/1024)+' KB)</span>'; d.insertBefore(cb,d.firstChild); const b1=document.createElement('button'); b1.textContent='Play'; b1.onclick=()=>{ const pl=document.getElementById('player'); pl.src=f.url; if(window.praimeEqEnsure){ window.praimeEqEnsure(); } pl.play(); }; const b2=document.createElement('button'); b2.textContent='Download'; b2.className='secondary'; b2.onclick=()=>{ const a=document.createElement('a'); a.href=f.url; a.download=f.name; a.click(); }; const b3=document.createElement('button'); b3.textContent='Delete'; b3.className='secondary'; b3.onclick=()=>{ selectedIds.delete(f.id); files.splice(i,1); render(); }; d.append(b1,b2,b3); list.appendChild(d); }); document.getElementById('out').textContent=files.length+' file(s) in library.'; updateZipBar(); }
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
-document.getElementById('fileInput').onchange=e=>{ [...e.target.files].forEach(f=>files.push({name:f.name,size:f.size,type:f.type,url:URL.createObjectURL(f)})); render(); };
+document.getElementById('fileInput').onchange=e=>{ [...e.target.files].forEach(f=>files.push({id:nextFileId++,name:f.name,size:f.size,type:f.type,url:URL.createObjectURL(f)})); render(); };
 document.getElementById('filter').oninput=render;
 document.getElementById('sortSel').onchange=render;
 document.getElementById('manifest').onclick=()=>{ const blob=new Blob([JSON.stringify(files.map(f=>({name:f.name,size:f.size,type:f.type})),null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-manifest.json'; a.click(); document.getElementById('manifestOut').textContent='Manifest downloaded: praime-library-manifest.json ('+files.length+' files).'; };
 document.getElementById('dlLibCsv').onclick=()=>{ if(!files.length){ document.getElementById('manifestOut').textContent='No local files in library yet to export.'; return; } function cell(v){ v=(v==null?'':String(v)); return (/[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v); } var lines=['Filename,Size (KB),Type']; files.forEach(function(f){ lines.push([cell(f.name),cell(Math.round(f.size/1024)),cell(f.type||'')].join(',')); }); const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-library-list.csv'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); document.getElementById('manifestOut').textContent='Library list downloaded: praime-library-list.csv ('+files.length+' files).'; };
 document.getElementById('printList').onclick=()=>{ window.print(); };
 render();
+
+// ---- Batch ZIP export (Gemini suggestion, assessed) ----
+// Stored (method 0) ZIP built in pure JS — no dependency, no compression
+// cost on big WAVs/WebMs. CRC-32 per file, standard PKZIP local headers +
+// central directory + EOCD. Any unzip tool opens the result.
+const CRC_TABLE=(function(){ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; } return t; })();
+function crc32(buf){ let c=0xFFFFFFFF; const b=new Uint8Array(buf); for(let i=0;i<b.length;i++) c=CRC_TABLE[(c^b[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function dosDateTime(d){ d=d||new Date(); return {time:(((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|((Math.floor(d.getSeconds()/2))&31)), date:((((d.getFullYear()-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|((d.getDate())&31))}; }
+function buildStoredZip(entries){
+  const enc=new TextEncoder();
+  const parts=[], central=[]; let offset=0;
+  const dt=dosDateTime(new Date());
+  const usedNames={};
+  entries.forEach(function(en){
+    let name=en.name;
+    if(usedNames[name]){ const n=usedNames[name]++; const dot=name.lastIndexOf('.'); name=dot>0?name.slice(0,dot)+' ('+n+')'+name.slice(dot):name+' ('+n+')'; }
+    else usedNames[name]=1;
+    const nameBytes=enc.encode(name);
+    const data=new Uint8Array(en.data);
+    const crc=crc32(en.data);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+    lh.setUint16(10,dt.time,true); lh.setUint16(12,dt.date,true); lh.setUint32(14,crc,true);
+    lh.setUint32(18,data.length,true); lh.setUint32(22,data.length,true);
+    lh.setUint16(26,nameBytes.length,true); lh.setUint16(28,0,true);
+    parts.push(lh.buffer,nameBytes,en.data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+    ch.setUint16(12,dt.time,true); ch.setUint16(14,dt.date,true); ch.setUint32(16,crc,true);
+    ch.setUint32(20,data.length,true); ch.setUint32(24,data.length,true);
+    ch.setUint16(28,nameBytes.length,true); ch.setUint16(30,0,true); ch.setUint16(32,0,true); ch.setUint16(34,0,true); ch.setUint16(36,0,true);
+    ch.setUint32(38,0,true); ch.setUint32(42,offset,true);
+    central.push(ch.buffer,nameBytes);
+    offset+=30+nameBytes.length+data.length;
+  });
+  const cdStart=offset;
+  let cdSize=0; central.forEach(function(p){ cdSize+=p.byteLength; });
+  const eocd=new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true); eocd.setUint16(4,0,true); eocd.setUint16(6,0,true);
+  eocd.setUint16(8,entries.length,true); eocd.setUint16(10,entries.length,true);
+  eocd.setUint32(12,cdSize,true); eocd.setUint32(16,cdStart,true); eocd.setUint16(20,0,true);
+  return new Blob(parts.concat(central,[eocd.buffer]),{type:'application/zip'});
+}
+function selectedFiles(){ return files.filter(function(f){ return selectedIds.has(f.id); }); }
+function updateZipBar(){
+  const sel=selectedFiles();
+  const totalKB=sel.reduce(function(a,f){ return a+Math.round(f.size/1024); },0);
+  const btn=document.getElementById('dlZip');
+  btn.disabled=sel.length===0;
+  document.getElementById('zipStatus').textContent=sel.length?sel.length+' selected ('+totalKB+' KB) — ready to ZIP':'Tick files to bundle them into one ZIP.';
+  const all=document.getElementById('selAll');
+  all.checked=visibleIds.length>0 && visibleIds.every(function(id){ return selectedIds.has(id); });
+}
+document.getElementById('selAll').onchange=function(e){
+  if(e.target.checked){ visibleIds.forEach(function(id){ selectedIds.add(id); }); }
+  else { visibleIds.forEach(function(id){ selectedIds.delete(id); }); }
+  render();
+};
+document.getElementById('dlZip').onclick=async function(){
+  const sel=selectedFiles();
+  if(!sel.length) return;
+  const st=document.getElementById('zipStatus');
+  const btn=document.getElementById('dlZip');
+  btn.disabled=true;
+  st.textContent='Zipping '+sel.length+' file(s)…';
+  try{
+    const entries=[];
+    for(const f of sel){
+      const res=await fetch(f.url);
+      if(!res.ok) throw new Error('Could not read '+f.name);
+      entries.push({name:f.name,data:await res.arrayBuffer()});
+    }
+    const blob=buildStoredZip(entries);
+    const fname='praime-bundle-'+entries.length+'-files.zip';
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=fname;
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },5000);
+    updateZipBar();
+    st.textContent='ZIP downloaded: '+fname+' ('+entries.length+' files, '+Math.round(blob.size/1024)+' KB).';
+  }catch(err){
+    updateZipBar();
+    st.textContent='ZIP failed: '+(err&&err.message?err.message:err)+' — no ZIP was downloaded. Use the single-file Download buttons instead.';
+  }
+};
 
 // ---- Commander Music Player 5-band equalizer (restored) ----
 // Real Web Audio graph: player element -> 5 peaking filters -> destination.
