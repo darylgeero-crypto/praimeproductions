@@ -109,7 +109,7 @@ a{color:#7ee2ff}
 <label><input type="checkbox" id="duChk1" style="width:auto;margin-right:8px">SoundCloud — upload the track (<a href="https://soundcloud.com/upload" target="_blank" rel="noopener">soundcloud.com/upload</a>)</label>
 <label><input type="checkbox" id="duChk2" style="width:auto;margin-right:8px">SoundClick — post the release (<a href="https://www.soundclick.com/" target="_blank" rel="noopener">soundclick.com</a>)</label>
 <label><input type="checkbox" id="duChk3" style="width:auto;margin-right:8px">ReverbNation — post the release (<a href="https://www.reverbnation.com/" target="_blank" rel="noopener">reverbnation.com</a>)</label>
-<div class="status" id="duOut">0 of 4 direct uploads done. Saved only in this browser.</div></div>
+<div class="status" id="duOut">0 of 4 direct uploads done. Saved only in this browser.</div><button id="copyDuProgress" class="secondary">⧉ Copy direct-upload progress as text</button></div>
 <script>
 // ---- Direct-upload checklist (local only — ticks record your own manual uploads, nothing is submitted) ----
 (function(){
@@ -124,6 +124,15 @@ a{color:#7ee2ff}
   }
   var st=load();
   boxes().forEach(function(b,i){ if(b){ b.checked=!!st[i]; b.onchange=save; } });
+  // Copy direct-upload progress as text — the 4 channel ticks plus the "N of 4" line, same wording as #duOut. Status goes to #duOut (rewritten by save() on the next tick change).
+  var NAMES=['YouTube','SoundCloud','SoundClick','ReverbNation'];
+  function duProgressText(){ var checks=boxes().map(function(b){ return !!(b&&b.checked); }); var done=checks.filter(Boolean).length; var lines=['Direct-upload progress — '+done+' of 4 direct uploads done']; checks.forEach(function(c,i){ lines.push((c?'[✓] ':'[ ] ')+NAMES[i]); }); return lines.join('\n'); }
+  document.getElementById('copyDuProgress').onclick=function(){
+    var txt=duProgressText();
+    function done(ok){ document.getElementById('duOut').textContent=ok?'Direct-upload progress copied — paste it into a log, message or notes.':'Copy failed in this browser — the ticks are still visible above.'; }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ done(true); },function(){ fallback(); }); } else fallback();
+    function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); done(!!ok); }catch(e){ done(false); } }
+  };
   save();
 })();
 </script>
