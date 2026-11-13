@@ -27,7 +27,7 @@ a{color:#7ee2ff}
 .prompter-bar label{margin:0;font-weight:600;font-size:13px}
 #prompterStatus{font-size:13px;color:#9ca3af;flex:1;min-width:140px}
 .prompter-goldline{position:fixed;left:0;right:0;top:calc(50% + 32px);border-top:2px solid #d4af37;opacity:.85;pointer-events:none;z-index:1}
-#prompterLines{height:calc(100vh - 61px);overflow-y:auto;scroll-behavior:smooth;padding:46vh 24px;font-size:36px;line-height:1.6;text-align:center}
+#prompterLines{box-sizing:border-box;height:calc(100vh - 61px);overflow-y:auto;scroll-behavior:smooth;padding:46vh 24px;font-size:36px;line-height:1.6;text-align:center}
 .prompter-line{padding:10px 8px;color:#6b7280;cursor:pointer}
 .prompter-line.prompter-current{color:#fff;font-weight:700;text-shadow:0 0 24px rgba(212,175,55,.45)}
 .prompter-empty{color:#9ca3af;font-size:24px}
@@ -166,7 +166,7 @@ document.getElementById('dictateLyrics').onclick=function(){ var SR=window.Speec
   function tick(){ if(cur+1>=lines.length){ stopScroll(true); return; } setCurrent(cur+1); }
   function startScroll(){
     if(!lines.length) return;
-    if(cur<0) setCurrent(0);
+    if(cur<0 || cur>=lines.length-1) setCurrent(0); // at the end, Play restarts from line 1 instead of ending at once
     playing=true; playBtn.textContent='⏸ Pause';
     clearInterval(timer); timer=setInterval(tick, lineMs());
   }
