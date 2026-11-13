@@ -58,6 +58,8 @@ a{color:#7ee2ff}
 <div style="display:flex;gap:8px;align-items:center"><input id="rokFilter" placeholder="Filter chat log — highlights matches..." style="flex:1;min-width:0"><span id="rokFilterOut" style="font-size:12px;color:#9ca3af;white-space:nowrap"></span></div>
 <div id="rokLog">Welcome to the suite, where the rhythms stay tight — we master all the audio and rock through the night! Ask me: "what does this page do?", "walk me through", "auto master", "what is LUFS?", "go to lyrics", "set BPM to 120".</div>
 <div id="rokSource" style="font-size:12px;color:#9ca3af;margin-top:8px">Last answer source: — ask me something first.</div>
+<div id="rokSession" style="font-size:12px;color:#9ca3af;margin-top:8px"></div>
+<div id="rokChips" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0"></div>
 <input id="rokInput" placeholder="Ask Rokdabus, or give a command...">
 <div><button id="rokSend">Send</button><button id="rokVoice" class="secondary">🎤 Voice</button><button id="rokWalk" class="secondary">Walk me through</button><button id="rokIntro" class="secondary">▶ Play intro</button><button id="rokAuto" class="secondary">Auto-master this song</button><button id="rokRhyme" class="secondary">🎤 Rhyme it</button><button id="rokRepeat" class="secondary">↻ Repeat last</button></div>
 <label style="font-size:12px">Ollama in Termux (optional, on your phone only)</label>
@@ -129,7 +131,7 @@ a{color:#7ee2ff}
 (function(){
   var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
   if(!btn||!panel) return;
-  btn.onclick=function(){ panel.style.display = panel.style.display==='block' ? 'none' : 'block'; };
+  btn.onclick=function(){ panel.style.display = panel.style.display==='block' ? 'none' : 'block'; if(panel.style.display==='block') rokRenderChips(); };
   var lastSpoken='';
   function say(t, src){ var rhymes=['Rokdabus in the mix, making beats that stick and tricks that click.','Eight tentacles on the decks, dropping rhythms you will not forget.','PrAIme in the place, let the bass and the rhythm set the pace.','I master every track, I never fall behind, I keep the sound refined.','From the Hub to the stage, I turn the page and set the gauge.']; var out=t; if(!/\.$/.test(out)) out+='.'; out+=' '+rhymes[Math.abs(t.length)%rhymes.length]; lastSpoken=out; if(src){ var ss=document.getElementById('rokSource'); if(ss){ ss.textContent='Last answer source: '+src; ss.style.color=(src.indexOf('Ollama')===0)?'#00f3ff':'#9ca3af'; } } log.textContent += '\n\nRokdabus: '+out; log.scrollTop=log.scrollHeight; rokApplyFilter(); try{ if(window.speechSynthesis){ window.speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(out); u.rate=1; u.pitch=1; window.speechSynthesis.speak(u); } }catch(e){} }
   function userSay(t){ log.textContent += '\n\nYou: '+t; log.scrollTop=log.scrollHeight; rokApplyFilter(); }
@@ -277,6 +279,47 @@ a{color:#7ee2ff}
     if(kb){ say(kb+' (from my built-in PrAIme knowledge — Ollama was not reachable at '+url+', so I did not fake an Ollama answer.)', 'built-in knowledge — Ollama not reachable'); return; }
     say('I can help with PrAIme and music theory: try "walk me through", "what is LUFS?", "what is compression?", "auto master" on the DAW page, or "go to lyrics". If Ollama is running in Termux, set its URL and model above and ask again — otherwise I answer from my built-in knowledge.', 'built-in knowledge');
   }
+  // Session-aware suggestion chips (narrowed slice of Gemini's bus-diagnostic
+  // idea): 3 one-tap questions built from the real praime_bus — genre and BPM
+  // only, because the bus carries no mastering profile and none is claimed.
+  // Chips call the existing ask(), so answers come from the same genre advice
+  // / knowledge base as typed questions. Re-rendered on panel open, in case
+  // the bus changed on another page. NOTE: while a bus genre is set and
+  // Ollama is unreachable, ask() answers every question with that genre's
+  // advice (pre-existing behaviour) — so chips 2-3 then return the same genre
+  // advice as chip 1; with no bus genre they return their own KB answers.
+  var rokChipsEl=document.getElementById('rokChips');
+  var rokSessionEl=document.getElementById('rokSession');
+  function rokReadBus(){ try{ return JSON.parse(localStorage.getItem('praime_bus')||'{}'); }catch(e){ return {}; } }
+  function rokRenderChips(){
+    if(!rokChipsEl) return;
+    var bus=rokReadBus();
+    var genre='';
+    if(bus.genre && typeof bus.genre==='string'){
+      if(window.PraimeRokdabus && window.PraimeRokdabus.GENRE_BPM){ genre=window.PraimeRokdabus.GENRE_BPM[bus.genre]?bus.genre:''; }
+      else { genre=bus.genre; }
+    }
+    var bpm=(bus.bpm!==undefined && bus.bpm!==null && String(bus.bpm)!=='') ? String(bus.bpm) : '';
+    var chips=[];
+    if(genre) chips.push({label:genre+' mixing', q:genre.toLowerCase()+' mixing'});
+    else chips.push({label:'Mastering order', q:'how do I master'});
+    chips.push({label:'Mix the 808', q:'mix 808'});
+    chips.push({label:'Cut mud with EQ', q:'eq'});
+    while(rokChipsEl.firstChild) rokChipsEl.removeChild(rokChipsEl.firstChild);
+    chips.forEach(function(c){
+      var b=document.createElement('button');
+      b.className='secondary'; b.type='button';
+      b.style.padding='6px 10px'; b.style.fontSize='12px'; b.style.margin='0';
+      b.textContent=c.label;
+      b.onclick=function(){ ask(c.q); };
+      rokChipsEl.appendChild(b);
+    });
+    if(rokSessionEl){
+      var parts=[]; if(genre) parts.push(genre); if(bpm) parts.push(bpm+' BPM');
+      rokSessionEl.textContent=parts.length?('Session: '+parts.join(' · ')):'No genre/BPM saved yet — set them in the Hub.';
+    }
+  }
+  rokRenderChips();
   document.getElementById('rokSend').onclick=function(){ var inp=document.getElementById('rokInput'); ask(inp.value); inp.value=''; };
   document.getElementById('rokInput').onkeydown=function(e){ if(e.key==='Enter'){ ask(e.target.value); e.target.value=''; } };
   document.getElementById('rokWalk').onclick=function(){ say(walk(), 'built-in knowledge'); };
