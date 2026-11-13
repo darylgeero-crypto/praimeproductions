@@ -92,6 +92,7 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 
 <div class="card"><h2>This device</h2>
 <p id="localStatus" class="status"></p>
+<button id="copyDevice" class="secondary">⧉ Copy this device as text</button><span id="copyDeviceOut" style="font-size:12px;color:#9ca3af;margin-left:8px"></span>
 <p><small>Terms accepted on this device: shown below if the first-run popup has been accepted here. Clearing browser data resets it, and the Terms popup will show again on first run.</small></p></div>
 
 <button id="rokBtn" title="Rokdabus Prhyme — rawk-day-bus"><img src="rokdabus.jpg" alt="Rokdabus" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></button>
@@ -152,6 +153,8 @@ try{
   var tos=localStorage.getItem('praime_tos_accepted'), at=localStorage.getItem('praime_tos_accepted_at');
   document.getElementById('localStatus').textContent='Terms accepted on this device: '+(tos==='1' ? 'Yes'+(at ? ' ('+at+')' : '') : 'No — the Terms popup will show on first run.')+'\nAnalytics visits on this device: '+(function(){ var n=parseInt(localStorage.getItem('praime_analytics_visits')||'0',10)+1; localStorage.setItem('praime_analytics_visits', String(n)); return n; })();
 }catch(e){ document.getElementById('localStatus').textContent='Local storage is not available in this browser, so manual numbers cannot be saved here.'; }
+// Copy this device: the #localStatus lines (Terms accepted + visits) as plain text (Gemini 2026-11-13, corrected) — mirrors copySnapshotHistory/copyMusicStats (clipboard with execCommand fallback, including the no-clipboard else branch Gemini omitted); status in its own #copyDeviceOut span so the device lines in #localStatus are never overwritten; persistent, no setTimeout clear. Empty text returns before any clipboard call.
+(function(){ var btn=document.getElementById('copyDevice'); if(!btn) return; btn.onclick=function(){ var o=document.getElementById('copyDeviceOut'); var el=document.getElementById('localStatus'); var text=el?(el.textContent||'').trim():''; if(!text){ if(o) o.textContent='No device status to copy yet.'; return; } function done(ok){ if(o) o.textContent=ok?('Device status copied — paste it into a log, message or notes.'):('Copy failed — clipboard is not available in this browser.'); } function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); }; })();
 // Growth check-ins: dated snapshots of the numbers you entered, with exact deltas vs the previous check-in. Local only — plain subtraction of your own entered numbers, no fetching, no projections, no averages. Owner music totals are included only when the owner card is visible on this device.
 (function(){
   var KEY='praime_analytics_snapshots', MAX=10;
