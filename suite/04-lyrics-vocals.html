@@ -53,7 +53,8 @@ a{color:#7ee2ff}
 <button id="obRec">● Record take over beat</button><button id="obStopRec" disabled class="secondary">■ Stop take</button> <label style="display:inline-block;margin-left:8px">Count-in <select id="countInBars" style="display:inline-block;width:auto"><option value="0">Off</option><option value="1" selected>1 bar</option><option value="2">2 bars</option></select></label>
 <div class="status" id="obOut">Load a beat, press Play beat, then Record take over beat. Takes appear below, one lane each.</div>
 <h3>Takes</h3><div class="status" id="obList">No takes yet.</div>
-<p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). Beat volume sets the beat's level in the mix (default 100%); it also sets the live Play beat loudness.</p>
+<div id="abBar" style="border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;margin:8px 0"><b>A/B compare</b> — tick A/B on two take lanes, then Start A/B to hear beat + one take at a time and flip between them at the same spot in the song. <span class="status" id="abStatus">A/B Compare: pick two takes.</span><br><button id="abStart" disabled>▶ Start A/B</button> <button id="abFlip" disabled class="secondary">⇄ Flip A/B</button> <button id="abStopAB" disabled class="secondary">■ Stop A/B</button></div>
+<p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). Beat volume sets the beat's level in the mix (default 100%); it also sets the live Play beat loudness. A/B compare renders one mix per take (beat + that take only) and flips between the two at the same spot, so you hear the same bar with each take.</p>
 <label>Beat volume in the mix <input id="obBeatVol" type="range" min="0" max="150" value="100" style="width:60%"> <span id="obBeatVolVal">100%</span></label>
 <button id="obMix" disabled>⬇ Mix beat + takes &amp; download WAV</button><button id="obPlayMix" disabled class="secondary">▶ Play mix preview</button><button id="copyObMix" disabled class="secondary">⧉ Copy overdub mix summary</button>
 <div class="status" id="obMixOut"></div>
@@ -359,12 +360,16 @@ document.getElementById('genLyricSave').onclick=function(){ let t=document.getEl
 // ---- Record vocals over a beat (restored Vocal Studio) ----
 let obBeat=null, obTakes=[], obRec=null, obChunks=[], obMixed=null, obMixedActive=0, obTakeSeq=0, obBeatVol=1;
 let obCountInTimers=[], obCountInActive=false, obPendingStream=null;
+// ---- A/B compare: two pre-rendered mixes (beat + one take each), flipped at the same playback spot.
+// Mixes here are rendered offline (obBuildMix), so there is no live per-take gain graph to flip in
+// real time — Start A/B renders both mixes once, then Flip swaps the playing buffer at the same offset.
+let obABSel=[], obABBufA=null, obABBufB=null, obABActive=null, obABSrc=null, obABOffset=0, obABStartedAt=0;
 function obClick(accent){ try{ let c=micCtxFn(); let o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=accent?1000:800; g.gain.setValueAtTime(0.5,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.07); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+0.08); }catch(e){} }
 function obBpmVal(){ let v=parseFloat(document.getElementById('obBpm').value); return (v>0)?v:92; }
 function obStamp(startSec){ let secPerBar=(60/obBpmVal())*4; let bar=Math.floor(startSec/secPerBar)+1; let sec=document.getElementById('obSection').value; return sec+' · bar '+bar+' · '+startSec.toFixed(1)+'s into beat'; }
 function obRenderTakes(){
   let el=document.getElementById('obList'); if(!el) return;
-  if(!obTakes.length){ el.textContent='No takes yet.'; return; }
+  if(!obTakes.length){ el.textContent='No takes yet.'; obABSel=[]; obABRefresh(); return; }
   el.innerHTML='';
   obTakes.forEach(function(t){
     let row=document.createElement('div'); row.style.cssText='border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;margin:8px 0';
@@ -388,10 +393,14 @@ function obRenderTakes(){
     let solo=document.createElement('input'); solo.type='checkbox'; solo.checked=t.solo;
     solo.onchange=function(){ t.solo=solo.checked; };
     let soloLab=document.createElement('label'); soloLab.appendChild(solo); soloLab.appendChild(document.createTextNode(' Solo')); row.appendChild(soloLab);
+    let ab=document.createElement('input'); ab.type='checkbox'; ab.checked=obABSel.indexOf(t)>=0;
+    ab.onchange=function(){ obABToggle(t, ab.checked); };
+    let abLab=document.createElement('label'); abLab.appendChild(ab); abLab.appendChild(document.createTextNode(' A/B')); row.appendChild(abLab);
     let del=document.createElement('button'); del.className='secondary'; del.textContent='Delete take';
-    del.onclick=function(){ obTakes=obTakes.filter(function(x){return x!==t;}); obRenderTakes(); document.getElementById('obMix').disabled=!obBeat||!obTakes.length; document.getElementById('obPlayMix').disabled=!obBeat||!obTakes.length; };
+    del.onclick=function(){ if(obABSel.indexOf(t)>=0){ obABStop(); obABSel=obABSel.filter(function(x){return x!==t;}); } obTakes=obTakes.filter(function(x){return x!==t;}); obRenderTakes(); document.getElementById('obMix').disabled=!obBeat||!obTakes.length; document.getElementById('obPlayMix').disabled=!obBeat||!obTakes.length; };
     row.appendChild(del); el.appendChild(row);
   });
+  obABRefresh();
 }
 document.getElementById('obBeatChoose').onclick=function(){ document.getElementById('obBeatFile').click(); };
 document.getElementById('obBeatFile').onchange=async function(e){
@@ -478,9 +487,9 @@ function obActiveTakes(){
   let anySolo=obTakes.some(function(t){ return t.solo; });
   return obTakes.filter(function(t){ if(t.mute) return false; if(anySolo && !t.solo) return false; return true; });
 }
-async function obBuildMix(){
+async function obBuildMix(onlyTakes){
   if(!obBeat || !obBeat.buffer) throw new Error('No beat loaded.');
-  let active=obActiveTakes(); if(!active.length) throw new Error('No active takes to mix (all muted, or no takes yet).');
+  let active=onlyTakes||obActiveTakes(); if(!active.length) throw new Error('No active takes to mix (all muted, or no takes yet).');
   let sr=obBeat.buffer.sampleRate, end=obBeat.buffer.duration;
   active.forEach(function(t){ end=Math.max(end, Math.max(0, t.startSec + ((t.nudgeMs||0)/1000)) + t.buffer.duration); });
   let len=Math.ceil(end*sr);
@@ -510,11 +519,75 @@ document.getElementById('obMix').onclick=async function(){
   }catch(err){ out.textContent='Mix failed: '+err.message; }
 };
 document.getElementById('obPlayMix').onclick=async function(){
+  obABStop();
   let out=document.getElementById('obMixOut'); out.textContent='Rendering mix preview…';
   try{ let m=await obBuildMix(); obMixed=m.buffer; obMixedActive=m.active; document.getElementById('copyObMix').disabled=false; micPlay(m.buffer); out.textContent='Playing mix preview — beat + '+m.active+' take(s).'; }
   catch(err){ out.textContent='Mix preview failed: '+err.message; }
 };
 document.getElementById('copyObMix').onclick=function(){ var out=document.getElementById('obMixOut'); if(!obMixed){ out.textContent='No overdub mix yet — load a beat, record a take, then mix.'; return; } var bi=document.getElementById('obBeatInfo').textContent.trim(); var n=obMixedActive; var txt='Beat: '+(bi||'—')+'\nOverdub mix: beat + '+n+' active take'+(n===1?'':'s')+', peak capped at 0.89\nLength: '+obMixed.duration.toFixed(1)+'s · '+obMixed.sampleRate+' Hz · '+obMixed.numberOfChannels+'ch'; function done(ok){ out.textContent=ok?'Overdub mix summary copied — paste it into a message or notes.':'Copy failed — clipboard is not available in this browser. Download the mix WAV instead.'; } function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); };
+
+// ---- A/B compare controller (see state vars above) ----
+function obABRefresh(){
+  let st=document.getElementById('abStatus'), s=document.getElementById('abStart'), f=document.getElementById('abFlip'), x=document.getElementById('abStopAB');
+  if(!st||!s||!f||!x) return;
+  let playing=!!obABActive;
+  s.disabled=playing||!obBeat||obABSel.length!==2;
+  f.disabled=!playing; x.disabled=!playing;
+  if(!playing){
+    if(obABSel.length<2) st.textContent='A/B Compare: pick two takes ('+obABSel.length+' picked).';
+    else st.textContent='A/B Compare: ready — '+obABSel[0].name+' (A) vs '+obABSel[1].name+' (B). Press Start A/B.';
+  }
+}
+function obABStop(){
+  if(obABSrc){ let s=obABSrc; obABSrc=null; try{ s.stop(); }catch(e){} }
+  obABBufA=null; obABBufB=null; obABActive=null;
+  let st=document.getElementById('abStatus'); if(st) st.textContent='A/B Compare: stopped — pick two takes to compare again.';
+  obABRefresh();
+}
+function obABPlay(which, offset){
+  let buf=which==='A'?obABBufA:obABBufB; if(!buf) return;
+  let c=micCtxFn();
+  if(obABSrc){ let s=obABSrc; obABSrc=null; try{ s.stop(); }catch(e){} }
+  if(micSrc){ try{ micSrc.stop(); }catch(e){} micSrc=null; }
+  offset=Math.max(0, Math.min(offset||0, buf.duration-0.05));
+  let src=c.createBufferSource(); src.buffer=buf; src.connect(c.destination);
+  let cur=src; src.onended=function(){ if(obABSrc===cur){ obABStop(); } };
+  try{ src.start(0, offset); }catch(e){ try{ src.start(0); }catch(e2){} offset=0; }
+  obABSrc=src; obABActive=which; obABOffset=offset; obABStartedAt=c.currentTime;
+  let mine=which==='A'?obABSel[0]:obABSel[1], other=which==='A'?obABSel[1]:obABSel[0];
+  let st=document.getElementById('abStatus');
+  if(st&&mine&&other) st.textContent='Now playing: '+mine.name+' ('+which+') — press Flip A/B to hear '+other.name+' ('+(which==='A'?'B':'A')+') at the same spot.';
+  obABRefresh();
+}
+function obABToggle(t, on){
+  if(obABActive) obABStop();
+  if(on){
+    if(obABSel.indexOf(t)<0){ obABSel.push(t); if(obABSel.length>2) obABSel.shift(); }
+  } else {
+    obABSel=obABSel.filter(function(x){ return x!==t; });
+  }
+  obRenderTakes();
+}
+document.getElementById('abStart').onclick=async function(){
+  if(!obBeat||obABSel.length!==2) return;
+  let st=document.getElementById('abStatus');
+  try{
+    if(st) st.textContent='Rendering A/B mixes… (offline render of beat + each take; a long song takes a moment)';
+    let au=document.getElementById('obBeatAudio'); if(au) au.pause();
+    let mA=await obBuildMix([obABSel[0]]), mB=await obBuildMix([obABSel[1]]);
+    obABBufA=mA.buffer; obABBufB=mB.buffer;
+    obABPlay('A', 0);
+  }catch(err){ if(st) st.textContent='A/B compare failed: '+err.message; obABBufA=null; obABBufB=null; obABActive=null; obABRefresh(); }
+};
+document.getElementById('abFlip').onclick=function(){
+  if(!obABActive) return;
+  let c=micCtxFn();
+  let pos=obABOffset+(c.currentTime-obABStartedAt);
+  let other=obABActive==='A'?'B':'A', otherBuf=other==='A'?obABBufA:obABBufB;
+  if(!otherBuf||pos>=otherBuf.duration){ obABStop(); let st=document.getElementById('abStatus'); if(st) st.textContent='A/B mix ended — press Start A/B to compare again.'; return; }
+  obABPlay(other, pos);
+};
+document.getElementById('abStopAB').onclick=function(){ obABStop(); };
 
 let micOrig=null, micMastered=null, micCtx=null, micSrc=null;
 function micCtxFn(){ if(!micCtx) micCtx=new (window.AudioContext||window.webkitAudioContext)(); if(micCtx.state==='suspended') micCtx.resume(); return micCtx; }
