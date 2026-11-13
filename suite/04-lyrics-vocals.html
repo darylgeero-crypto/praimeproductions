@@ -52,6 +52,12 @@ a{color:#7ee2ff}
 <label>BPM (for bar stamps — taken from the Hub bus if set)</label><input id="obBpm" type="number" value="92" min="40" max="220">
 <button id="obRec">● Record take over beat</button><button id="obStopRec" disabled class="secondary">■ Stop take</button> <label style="display:inline-block;margin-left:8px">Count-in <select id="countInBars" style="display:inline-block;width:auto"><option value="0">Off</option><option value="1" selected>1 bar</option><option value="2">2 bars</option></select></label>
 <div class="status" id="obOut">Load a beat, press Play beat, then Record take over beat. Takes appear below, one lane each.</div>
+<div id="punchBar" style="display:none;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px;margin:8px 0"><b>Punch-in</b> — <span id="punchTargetLabel">No take selected.</span><br>
+<label style="display:inline-block">From bar <input id="punchStartBar" type="number" min="1" value="1" style="display:inline-block;width:70px"></label>
+<label style="display:inline-block">To bar <input id="punchEndBar" type="number" min="2" value="5" style="display:inline-block;width:70px"></label>
+<label style="display:inline-block"><input id="punchHearOldTake" type="checkbox" checked> Hear original take during pre-roll</label><br>
+<button id="punchRecordBtn">● Record punch</button><button id="punchCancelBtn" disabled class="secondary">■ Stop punch / Cancel</button>
+<span style="font-size:12px;color:#9ca3af">Re-records only the chosen bars of the take; the rest is kept. The splice is done offline with short fades, so the take stays one file for the mix and A/B compare.</span></div>
 <h3>Takes</h3><div class="status" id="obList">No takes yet.</div>
 <div id="abBar" style="border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;margin:8px 0"><b>A/B compare</b> — tick A/B on two take lanes, then Start A/B to hear beat + one take at a time and flip between them at the same spot in the song. <span class="status" id="abStatus">A/B Compare: pick two takes.</span><br><button id="abStart" disabled>▶ Start A/B</button> <button id="abFlip" disabled class="secondary">⇄ Flip A/B</button> <button id="abStopAB" disabled class="secondary">■ Stop A/B</button></div>
 <p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). Beat volume sets the beat's level in the mix (default 100%); it also sets the live Play beat loudness. A/B compare renders one mix per take (beat + that take only) and flips between the two at the same spot, so you hear the same bar with each take.</p>
@@ -377,6 +383,9 @@ function obRenderTakes(){
     let rn=document.createElement('button'); rn.className='secondary'; rn.textContent='Rename take';
     rn.onclick=function(){ var nn=prompt('Rename take:', t.name); if(nn && nn.trim()){ t.name=nn.trim(); obRenderTakes(); } };
     row.appendChild(rn);
+    let pu=document.createElement('button'); pu.className='secondary'; pu.textContent='Punch in';
+    pu.onclick=function(){ obPunchShow(t); };
+    row.appendChild(pu);
     let au=document.createElement('audio'); au.controls=true; au.src=t.url; au.style.width='100%'; row.appendChild(au);
     let vol=document.createElement('input'); vol.type='range'; vol.min=0; vol.max=100; vol.value=Math.round(t.volume*100);
     vol.oninput=function(){ t.volume=vol.value/100; };
@@ -397,7 +406,7 @@ function obRenderTakes(){
     ab.onchange=function(){ obABToggle(t, ab.checked); };
     let abLab=document.createElement('label'); abLab.appendChild(ab); abLab.appendChild(document.createTextNode(' A/B')); row.appendChild(abLab);
     let del=document.createElement('button'); del.className='secondary'; del.textContent='Delete take';
-    del.onclick=function(){ if(obABSel.indexOf(t)>=0){ obABStop(); obABSel=obABSel.filter(function(x){return x!==t;}); } obTakes=obTakes.filter(function(x){return x!==t;}); obRenderTakes(); document.getElementById('obMix').disabled=!obBeat||!obTakes.length; document.getElementById('obPlayMix').disabled=!obBeat||!obTakes.length; };
+    del.onclick=function(){ if(obABSel.indexOf(t)>=0){ obABStop(); obABSel=obABSel.filter(function(x){return x!==t;}); } if(obPunchTarget===t){ obPunchTarget=null; let pb=document.getElementById('punchBar'); if(pb) pb.style.display='none'; } obTakes=obTakes.filter(function(x){return x!==t;}); obRenderTakes(); document.getElementById('obMix').disabled=!obBeat||!obTakes.length; document.getElementById('obPlayMix').disabled=!obBeat||!obTakes.length; };
     row.appendChild(del); el.appendChild(row);
   });
   obABRefresh();
@@ -422,6 +431,7 @@ document.getElementById('obBeatAudio').addEventListener('ended', function(){
   if(obRec && obRec.state==='recording'){ try{ obRec.stop(); }catch(e){} document.getElementById('obOut').textContent='Beat ended — take stopped automatically.'; }
 });
 document.getElementById('obRec').onclick=async function(){
+  if(obPunchActive){ document.getElementById('obOut').textContent='Finish or cancel the punch-in first.'; return; }
   if(!obBeat){ document.getElementById('obOut').textContent='Load a beat first, then record over it.'; return; }
   let au=document.getElementById('obBeatAudio');
   let restarting=!(au && !au.paused && !au.ended);
@@ -482,6 +492,160 @@ document.getElementById('obStopRec').onclick=function(){
     document.getElementById('obOut').textContent='Count-in cancelled — press Record take over beat to try again.';
   } else if(obRec && obRec.state==='recording'){ obRec.stop(); }
   document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true;
+};
+
+// ---- Punch-in: re-record one bar range of an existing take ----
+// Takes are blobs + decoded buffers mixed offline (obBuildMix), so a punch-in cannot
+// overwrite a blob in place. Instead: record the punch range, decode it, splice
+// head (old take) + punch (new) + tail (old take) in an OfflineAudioContext with
+// 10 ms fades, encode back to WAV with micWav, and replace the take's blob/buffer
+// in place. Name, volume, pan, nudge, mute/solo are kept, so obBuildMix and the
+// A/B switcher pick the patched take up with no changes. Status goes to #obOut —
+// no floating badge over the prompter (that was tried for the count-in and rejected
+// as invasive). Bar math is beat time; take-local time subtracts t.startSec, since
+// a take's buffer starts at the beat time it was recorded at.
+let obPunchTarget=null, obPunch=null, obPunchActive=false, obPunchHearTimer=null;
+function obSpliceTake(origBuf, punchBuf, localInSec, localOutSec){
+  let sr=origBuf.sampleRate, ch=origBuf.numberOfChannels;
+  let totalSec=Math.max(origBuf.duration, localInSec+punchBuf.duration);
+  let len=Math.max(1, Math.ceil(totalSec*sr));
+  let off=new OfflineAudioContext(ch, len, sr);
+  function seg(buf, offset, when, dur, fadeIn, fadeOut){
+    if(dur<=0) return;
+    let s=off.createBufferSource(); s.buffer=buf;
+    let g=off.createGain(); let f=Math.min(0.01, dur/2);
+    g.gain.setValueAtTime(fadeIn?0:1, when);
+    if(fadeIn) g.gain.linearRampToValueAtTime(1, when+f);
+    if(fadeOut){ g.gain.setValueAtTime(1, when+dur-f); g.gain.linearRampToValueAtTime(0, when+dur); }
+    s.connect(g); g.connect(off.destination);
+    s.start(when, offset, dur);
+  }
+  if(localInSec>0) seg(origBuf, 0, 0, Math.min(localInSec, origBuf.duration), false, true);
+  seg(punchBuf, 0, localInSec, punchBuf.duration, true, true);
+  let tailStart=Math.min(localOutSec, origBuf.duration);
+  if(origBuf.duration>tailStart) seg(origBuf, tailStart, localOutSec, origBuf.duration-tailStart, true, false);
+  return off.startRendering();
+}
+function obPunchShow(t){
+  if(obPunchActive){ document.getElementById('obOut').textContent='Finish or cancel the punch-in first.'; return; }
+  if(!obBeat){ document.getElementById('obOut').textContent='Load a beat first, then punch in.'; return; }
+  obABStop();
+  let secPerBar=(60/obBpmVal())*4;
+  let startBar=Math.floor(t.startSec/secPerBar)+1;
+  let bar=document.getElementById('punchBar'); bar.style.display='block';
+  document.getElementById('punchTargetLabel').textContent='Punching into: '+t.name+' (starts bar '+startBar+', '+t.duration.toFixed(1)+'s)';
+  document.getElementById('punchStartBar').value=startBar;
+  let maxBar=Math.floor(obBeat.duration/secPerBar)+1;
+  document.getElementById('punchEndBar').value=Math.min(startBar+4, Math.max(startBar+1, maxBar));
+  obPunchTarget=t;
+  document.getElementById('obOut').textContent='Punch-in ready on '+t.name+': pick the bar range to replace, then Record punch. The beat plays from one bar before the punch point.';
+}
+function obPunchStopPreview(){
+  if(obPunchHearTimer){ clearTimeout(obPunchHearTimer); obPunchHearTimer=null; }
+  let au=document.getElementById('obBeatAudio'); if(au){ try{ au.pause(); }catch(e){} }
+  if(obPunch && obPunch.previewAu){ try{ obPunch.previewAu.pause(); }catch(e){} obPunch.previewAu=null; }
+}
+function obPunchFinish(){
+  obPunch=null; obPunchActive=false; obPunchTarget=null;
+  let bar=document.getElementById('punchBar'); if(bar) bar.style.display='none';
+  document.getElementById('punchRecordBtn').disabled=false; document.getElementById('punchCancelBtn').disabled=true;
+  document.getElementById('obRec').disabled=false;
+}
+function obPunchCancel(msg){
+  if(obPunch){
+    obPunch.timers.forEach(function(x){ clearTimeout(x); });
+    if(obPunch.rec && obPunch.rec.state==='recording'){
+      // Stop early: keep what was sung — onstop splices up to the actual end,
+      // and the old tail resumes from there, so there is no dead-air gap.
+      try{ obPunch.rec.stop(); }catch(e){}
+    } else {
+      obPunch.cancelled=true;
+      if(obPunch.stream){ try{ obPunch.stream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){} }
+    }
+    obPunchStopPreview();
+  }
+  obPunchFinish();
+  if(msg) document.getElementById('obOut').textContent=msg;
+}
+document.getElementById('punchCancelBtn').onclick=function(){
+  if(obPunch && obPunch.rec && obPunch.rec.state==='recording') obPunchCancel('Punch stopped early — splicing what was sung…');
+  else obPunchCancel('Punch-in cancelled — the take is unchanged.');
+};
+function obPunchHearBack(t, preRollSec, punchInSec, punchOutSec, secPerBar){
+  if(obPunchHearTimer){ clearTimeout(obPunchHearTimer); obPunchHearTimer=null; }
+  let au=document.getElementById('obBeatAudio'); if(!au) return;
+  au.currentTime=preRollSec; au.volume=Math.min(1,obBeatVol);
+  let pv=null, off=Math.max(0, preRollSec - t.startSec);
+  if(off < t.duration){ pv=new Audio(); pv.src=t.url; pv.currentTime=off; try{ let pp=pv.play(); if(pp&&pp.catch) pp.catch(function(){}); }catch(e){} }
+  try{ let pp2=au.play(); if(pp2&&pp2.catch) pp2.catch(function(){}); }catch(e){}
+  let ms=Math.max(0,(punchOutSec-preRollSec+secPerBar))*1000;
+  obPunchHearTimer=setTimeout(function(){ try{ au.pause(); }catch(e){} if(pv){ try{ pv.pause(); }catch(e){} } obPunchHearTimer=null; }, ms);
+}
+document.getElementById('punchRecordBtn').onclick=async function(){
+  let out=document.getElementById('obOut');
+  if(!obPunchTarget){ out.textContent='Pick a take first — press Punch on its lane.'; return; }
+  if(obPunchActive){ out.textContent='A punch-in is already running.'; return; }
+  if(obRec && obRec.state==='recording'){ out.textContent='Finish the current take first, then punch in.'; return; }
+  if(!obBeat){ out.textContent='Load a beat first, then punch in.'; return; }
+  let secPerBar=(60/obBpmVal())*4;
+  let fromBar=parseInt(document.getElementById('punchStartBar').value,10), toBar=parseInt(document.getElementById('punchEndBar').value,10);
+  if(!(fromBar>=1) || !(toBar>fromBar)){ out.textContent='Punch-in needs a From bar (1 or higher) and a To bar after it.'; return; }
+  let punchInSec=(fromBar-1)*secPerBar, punchOutSec=(toBar-1)*secPerBar;
+  let t=obPunchTarget;
+  if(punchInSec < t.startSec - 0.001){ let sb=Math.floor(t.startSec/secPerBar)+1; out.textContent='Punch must start at or after bar '+sb+', where '+t.name+' begins.'; return; }
+  if(punchOutSec > obBeat.duration + 0.001){ out.textContent='Punch-out bar '+toBar+' is past the end of the beat ('+obBeat.duration.toFixed(1)+'s).'; return; }
+  if(punchInSec >= obBeat.duration){ out.textContent='Punch-in bar '+fromBar+' is past the end of the beat.'; return; }
+  let preRollSec=punchInSec>0 ? Math.max(0, punchInSec-secPerBar) : 0;
+  let hearOld=document.getElementById('punchHearOldTake').checked;
+  try{
+    // Mic permission first, as with the count-in: a prompt must not eat the pre-roll.
+    let stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    obABStop(); obPunchStopPreview();
+    obPunchActive=true;
+    let rec=new MediaRecorder(stream), chunks=[];
+    rec.ondataavailable=function(e){ if(e.data.size) chunks.push(e.data); };
+    let p={take:t, stream:stream, rec:rec, chunks:chunks, timers:[], punchInSec:punchInSec, punchOutSec:punchOutSec, preRollSec:preRollSec, cancelled:false, previewAu:null};
+    obPunch=p;
+    rec.onstop=async function(){
+      try{ stream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){}
+      if(p.cancelled){ return; }
+      let blob=new Blob(chunks,{type:'audio/webm'});
+      try{
+        let punchBuf=await micCtxFn().decodeAudioData(await blob.arrayBuffer());
+        if(!punchBuf || punchBuf.duration<=0){ out.textContent='Punch-in recorded nothing — try again.'; obPunchFinish(); return; }
+        let localIn=Math.max(0, punchInSec - t.startSec);
+        let localOut=punchInSec + punchBuf.duration; // actual end; auto-stop makes this about punchOutSec
+        let spliced=await obSpliceTake(t.buffer, punchBuf, localIn, localOut);
+        let wav=micWav(spliced);
+        try{ URL.revokeObjectURL(t.url); }catch(e){}
+        t.blob=wav; t.url=URL.createObjectURL(wav); t.buffer=spliced; t.duration=spliced.duration;
+        obRenderTakes();
+        out.textContent='Punch-in saved on '+t.name+': bars '+fromBar+'–'+(toBar-1)+' replaced ('+punchBuf.duration.toFixed(1)+'s). Hearing it back from one bar before the punch…';
+        obPunchHearBack(t, preRollSec, punchInSec, punchOutSec, secPerBar);
+      }catch(err){ out.textContent='Punch-in could not be spliced: '+err.message+' — the take is unchanged.'; }
+      obPunchFinish();
+    };
+    let au=document.getElementById('obBeatAudio');
+    au.currentTime=preRollSec; au.volume=Math.min(1,obBeatVol);
+    try{ let pp=au.play(); if(pp&&pp.catch) pp.catch(function(){}); }catch(e){}
+    if(hearOld && preRollSec < t.startSec + t.duration){
+      let pv=new Audio(); pv.src=t.url; pv.currentTime=Math.max(0, preRollSec - t.startSec); pv.volume=1; p.previewAu=pv;
+      try{ let pp2=pv.play(); if(pp2&&pp2.catch) pp2.catch(function(){}); }catch(e){}
+    }
+    document.getElementById('punchRecordBtn').disabled=true; document.getElementById('punchCancelBtn').disabled=false; document.getElementById('obRec').disabled=true;
+    out.textContent='Punch-in armed on '+t.name+' — pre-roll from bar '+(Math.floor(preRollSec/secPerBar)+1)+'… (Stop punch cancels)';
+    p.timers.push(setTimeout(function(){
+      if(p.cancelled) return;
+      if(p.previewAu){ try{ p.previewAu.pause(); }catch(e){} }
+      try{ rec.start(); }catch(err){ out.textContent='Could not start the punch recording: '+err.message; obPunchCancel('Punch-in failed to start — the take is unchanged.'); return; }
+      out.textContent='Punching in on '+t.name+' — recording bars '+fromBar+'–'+(toBar-1)+'… (Stop punch ends early and keeps the tail)';
+    }, Math.max(0,(punchInSec-preRollSec))*1000));
+    p.timers.push(setTimeout(function(){
+      if(p.cancelled) return;
+      if(rec.state==='recording'){ try{ rec.stop(); }catch(e){} }
+      if(au){ try{ au.pause(); }catch(e){} }
+    }, Math.max(0,(punchOutSec-preRollSec))*1000));
+  }catch(err){ out.textContent='Microphone failed: '+err.message+' — allow microphone access in your browser.'; }
 };
 function obActiveTakes(){
   let anySolo=obTakes.some(function(t){ return t.solo; });
