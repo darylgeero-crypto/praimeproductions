@@ -39,7 +39,7 @@ a{color:#7ee2ff}
 <label>Your email (for a live server claim — the token is bound to this email)</label><input id="serverEmail" placeholder="you@example.com">
 <button id="claimServer">Claim via live server</button>
 <label>Verification code (sent to your email — 6 digits, expires in 15 minutes)</label><input id="verifyCode" placeholder="123456">
-<button id="verifyCodeBtn">Verify code &amp; get token</button>
+<button id="verifyCodeBtn">Verify code &amp; get token</button><button id="copyServerToken" disabled class="secondary">⧉ Copy token</button><span id="copyServerTokenOut" style="font-size:12px;color:#9ca3af;margin-left:8px"></span>
 <div class="status" id="serverOut">Live server: this page on praimeproductions.onrender.com. Tap Check server / count first.</div>
 <p style="font-size:12px;color:#9ca3af">Server tokens look like PRAIME-F-001-&lt;32 hex random&gt;-&lt;32 hex signature&gt;. The plain token is shown once — copy it now, it is not stored in plain text anywhere.</p></div>
 
@@ -296,10 +296,13 @@ document.getElementById('verifyCodeBtn').onclick=async function(){
   var email=document.getElementById('serverEmail').value.trim(); var code=document.getElementById('verifyCode').value.trim();
   if(!email || !code){ document.getElementById('serverOut').textContent='Enter your email and the 6-digit code first.'; return; }
   try{ var d=await postJson('/api/token/verify-code', {email:email, code:code});
-    if(d.ok){ document.getElementById('serverOut').textContent='LIVE SERVER TOKEN — COPY IT NOW, it is shown once and only its hash is stored on the server:\n'+d.token+'\nFounder #'+d.number+' · Claimed: '+d.claimed+' / 100 · This token only verifies with the email you just used.'; }
+    if(d.ok){ document.getElementById('serverOut').textContent='LIVE SERVER TOKEN — COPY IT NOW, it is shown once and only its hash is stored on the server:\n'+d.token+'\nFounder #'+d.number+' · Claimed: '+d.claimed+' / 100 · This token only verifies with the email you just used.'; lastServerToken=d.token; document.getElementById('copyServerToken').disabled=false; }
     else document.getElementById('serverOut').textContent='Code verification failed: '+(d.error||'unknown error'); }
   catch(e){ document.getElementById('serverOut').textContent='Live server not reachable. Check your connection, then try again.'; }
 };
+// ---- Copy the just-issued server token: copies the token stored at issue time, never parses #serverOut (which also holds error/status text). Disabled until a token is issued; a fresh page load starts disabled with no token stored. ----
+var lastServerToken=null;
+document.getElementById('copyServerToken').onclick=function(){ var out=document.getElementById('copyServerTokenOut'); if(!lastServerToken){ out.textContent='No server token issued yet — claim one first.'; return; } function done(ok){ out.textContent=ok?('Server token copied — paste it somewhere safe now, it is shown once.'):('Copy failed — clipboard is not available in this browser. The token is still shown above.'); } function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=lastServerToken; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(lastServerToken).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); };
 document.getElementById('claimLocal').onclick=async function(){
   var s=loadLocal();
   if(s.nextNumber>100){ document.getElementById('localOut').textContent='First 100 already claimed in this local browser.'; return; }
