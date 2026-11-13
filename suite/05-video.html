@@ -29,10 +29,13 @@ a{color:#7ee2ff}
 <label>Graphics intensity</label><input type="range" id="gfxIntensity" min="0.5" max="2" step="0.1" value="1">
 <p style="font-size:12px;color:#9ca3af">⚡ Near-zero latency graphics: the visuals read your song straight from the browser's AnalyserNode every animation frame — no upload, no server round-trip — so bars, rings and bursts react within a frame of the sound. Smoothing is set low (0.12) on purpose, so it does not lag behind the beat. Not literally zero milliseconds — nothing on a screen is — but frame-level, on-device.</p>
 <label>Transition</label><select id="transition"><option value="cut">Cut — no transition</option><option value="fade">Fade in</option><option value="slide">Slide in</option><option value="wipe">Wipe in</option></select>
+<label>Background camera motion — visuals only (title, lyrics, watermark and footer stay fixed)</label><select id="camMotion"><option value="none" selected>None — static camera</option><option value="punch">Sub-Bass Punch — zoom + shake on the kick</option><option value="kenburns">Slow Ken Burns Push — gentle zoom in while playing</option></select>
+<label>Punch intensity (Sub-Bass Punch only)</label><input type="range" id="punchIntensity" min="0" max="100" step="5" value="50">
 <label>Fingerprint prompt — words that change the palette, particles and shapes (deterministic, no AI: the words are hashed, the same words always give the same look)</label><input id="fingerprint" placeholder="e.g. midnight city neon rain">
 <label><input type="checkbox" id="uniqueBg" checked style="width:auto"> Unique backgrounds — each background is used once, then gone</label>
 <button id="newBgBtn" class="secondary">🎲 New unique background</button><p id="bgOut" style="font-size:12px;color:#9ca3af">Unique background ready — not used before, and once a video is recorded with it, it will never come back.</p>
 <label>Lyrics for video — syllable-synced</label><textarea id="videoLyrics" rows="3" placeholder="Paste lyrics here, one line per line. Each syllable highlights in time with the song."></textarea>
+<button id="pullLyricsBtn" class="secondary">⬇ Pull lyrics from the Lyrics page</button>
 <label><input type="checkbox" id="syllableSync" checked style="width:auto"> Syllable-synced lyrics on the video</label>
 <p style="font-size:12px;color:#9ca3af">Honest timing: this is NOT AI forced-alignment and it does not hear the words — syllables are split by a vowel-group heuristic and spread evenly across the song's length, so the current syllable lights up in yellow as the song plays. Best for a steady flow; it will drift on songs with long pauses or ad-libs.</p>
 <button id="subSrtBtn" class="secondary">⬇ Generate subtitles (.srt — line by line)</button><button id="subVttBtn" class="secondary">⬇ Generate subtitles (.vtt — syllable by syllable)</button><button id="dlLyricsTxtBtn" class="secondary">⬇ Download video lyrics (.txt)</button><p id="subOut" style="font-size:12px;color:#9ca3af">Subtitles are generated from the lyrics above + the loaded song's length. Load a song first, then download the .srt or .vtt to use with the video in any player / editor. Timing is the same even-distribution estimate as the on-canvas syllables — not AI alignment — so check it against the song and edit the file if a line lands early or late.</p>
@@ -196,7 +199,7 @@ function generateAIBackground(){
   img.onerror=function(){ out.textContent='AI generation failed or rate-limited (402/503 when busy on the free tier). Wait about 45 seconds and try again — no fake image was substituted.'; };
   img.src=url;
 }
-let prevBass=0, lastBeat=0, beatPulse=0, bursts=[];
+let prevBass=0, lastBeat=0, beatPulse=0, bursts=[], camImpulse=0;
 function audioMetrics(d){
   if(!d) return {bass:0, mid:0, high:0, energy:0};
   function avg(a,b){ var s=0,n=0; for(var i=a;i<b&&i<d.length;i++){ s+=d[i]/255; n++; } return n?s/n:0; }
@@ -223,6 +226,25 @@ function draw(){
   const trans=document.getElementById('transition').value;
   if(te<800){ const f=te/800; if(trans==='fade') alpha=f; else if(trans==='slide') tx=(1-f)*c.width; else if(trans==='wipe') wipeW=c.width*f; }
   g.save(); g.globalAlpha=alpha; g.beginPath(); g.rect(0,0,wipeW,c.height); g.clip(); g.translate(-tx,0);
+  // ---- Background camera motion (visuals only) ----
+  // The transform wraps the background + visualizer layers below and is
+  // restored before the lyric words / syllable lyrics / title / footer /
+  // watermark are drawn, so those stay anchored. Punch reads the sub-bass
+  // envelope (audioMetrics bass = lowest analyser bins) with a
+  // fast-attack, exponential-decay spring, the same shape as beatPulse.
+  const camMode=(document.getElementById('camMotion')||{}).value||'none';
+  const punchAmt=parseFloat((document.getElementById('punchIntensity')||{}).value||50)/100;
+  g.save();
+  if(camMode==='punch'){
+    const s=1+camImpulse*0.06*punchAmt;
+    g.translate(c.width/2,c.height/2); g.scale(s,s);
+    g.translate(Math.sin(now/1000*37)*camImpulse*8*punchAmt, Math.cos(now/1000*31)*camImpulse*8*punchAmt);
+    g.translate(-c.width/2,-c.height/2);
+  } else if(camMode==='kenburns' && analyser && playStart){
+    const el=Math.min(30,(now-playStart)/1000);
+    const s=1+el*0.001;
+    g.translate(c.width/2,c.height/2); g.scale(s,s); g.translate(-c.width/2,-c.height/2);
+  }
   const gr=g.createLinearGradient(0,0,c.width,c.height); gr.addColorStop(0,'#07090e'); gr.addColorStop(1,'#1a0f2e'); g.fillStyle=gr; g.fillRect(0,0,c.width,c.height);
   const bgImg=aiBgImg||camFrame||photoImg;
   // AI background behind the visuals (selfie/collage draw it themselves below).
@@ -259,6 +281,7 @@ function draw(){
   if(analyser){
     d=new Uint8Array(analyser.frequencyBinCount); analyser.getByteFrequencyData(d);
     metrics=audioMetrics(d);
+    camImpulse=Math.max(metrics.bass, camImpulse*0.86);
     beatPulse*=0.92;
     if(metrics.bass>0.55 && metrics.bass>prevBass+0.15 && now-lastBeat>250){
       lastBeat=now; beatPulse=1;
@@ -306,6 +329,7 @@ function draw(){
     const t=now/1000, speed=1+metrics.energy*3;
     for(const pt of particles){ const x=((pt.x+ t*0.02*pt.sp*speed)%1)*c.width, y=((pt.y+Math.sin(t+pt.ph)*0.02)%1+1)%1*c.height; g.fillStyle=cols[0]; g.globalAlpha=0.7; g.beginPath(); const shape=fpSeed%3; const rad=pt.rad*(1+metrics.bass*0.8+beatPulse*0.5); if(shape===1){ g.moveTo(x,y-rad); g.lineTo(x-rad,y+rad); g.lineTo(x+rad,y+rad); g.closePath(); g.fill(); } else if(shape===2){ g.fillRect(x-rad,y-rad,rad*2,rad*2); } else { g.arc(x,y,rad,0,6.283); g.fill(); } g.globalAlpha=1; }
   }
+  g.restore(); // end background camera motion — lyric words, syllable lyrics, title, footer and watermark below stay fixed
   if(type==='lyric'){
     const words=(document.getElementById('title').value||'').split(/\s+/).filter(Boolean);
     if(words.length){ const idx=analyser?Math.min(words.length-1,Math.floor((now-playStart)/1000)%words.length):0; g.fillStyle='#fff'; g.font='800 64px system-ui'; g.textAlign='center'; g.fillText(words[idx],c.width/2,c.height-120); g.textAlign='left'; }
@@ -390,6 +414,7 @@ document.getElementById('subSrtBtn').onclick=()=>generateSubtitles('srt');
 document.getElementById('subVttBtn').onclick=()=>generateSubtitles('vtt');
 function downloadVideoLyricsTxt(){ var out=document.getElementById('subOut'); var t=(document.getElementById('videoLyrics')||{}).value||''; if(!t.trim()){ out.textContent='Paste lyrics first — there is nothing to download yet.'; return; } downloadText('praime-video-lyrics.txt', t); out.textContent='Video lyrics TXT downloaded.'; }
 document.getElementById('dlLyricsTxtBtn').onclick=downloadVideoLyricsTxt;
+document.getElementById('pullLyricsBtn').onclick=function(){ var out=document.getElementById('subOut'); var t=''; try{ t=(getBus().lyrics||'').trim(); }catch(e){} if(!t){ out.textContent='No lyrics saved on the Lyrics & Vocals page yet — write or save lyrics there first (they autosave to the bus).'; return; } document.getElementById('videoLyrics').value=t; out.textContent='Lyrics pulled from the Lyrics page ('+t.split(/\n/).filter(Boolean).length+' lines).'; };
 document.getElementById('aiBgBtn').onclick=generateAIBackground;
 document.getElementById('aiBgDlBtn').onclick=()=>{
   var out=document.getElementById('aiBgOut');
