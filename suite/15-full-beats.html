@@ -31,10 +31,63 @@ a{color:#7ee2ff}
 <div class="card"><h2>Daily Track — today's prompt</h2>
 <p id="dailyText">Loading today's prompt…</p>
 <p style="font-size:12px;color:#9ca3af">Same prompt on every device today — it comes from the date, not a server. No submissions are sent anywhere; use it as a starting point, then render and approve the beat yourself before any sale.</p>
+<p id="dailyStreak" style="font-size:14px;margin:6px 0">Streak: —</p>
 <button id="dailyUse">Use today's prompt</button>
+<button id="dailyHistBtn" class="secondary">Past prompts (0/7)</button>
+<div id="dailyHist" style="display:none;margin-top:8px"></div>
 <div class="status" id="dailyOut"></div></div>
 <script>
-(function(){ var d=new Date(); var y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate(); var seed=y*10000+m*100+day; var gsel=document.getElementById('genre'); var msel=document.getElementById('mood'); if(!gsel||!msel) return; var gi=seed%gsel.options.length; var mi=Math.floor(seed/gsel.options.length)%msel.options.length; var genre=gsel.options[gi].value; var bpmM=gsel.options[gi].text.match(/(\d+)\s*BPM/); var bpm=bpmM?parseInt(bpmM[1],10):120; var mood=msel.options[mi].text; var dateStr=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}); var prompt=mood.toLowerCase()+' '+genre+' beat at '+bpm+' bpm — Daily Track '+y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0'); document.getElementById('dailyText').textContent='Today, '+dateStr+': '+genre+' · '+bpm+' BPM · '+mood+' — "'+prompt+'"'; document.getElementById('dailyUse').onclick=function(){ gsel.value=genre; msel.value=mood; document.getElementById('bpm').value=bpm; document.getElementById('prompt').value=prompt; document.getElementById('dailyOut').textContent='Today\u2019s prompt loaded into card 1 — press Parse prompt, then Render.'; }; })();
+// ---- Daily Track: date-seeded prompt + local streak & archive.
+// Runs on DOMContentLoaded: the #genre/#mood selects live in card 1, AFTER this
+// card in the document, so running at parse time found them null and the prompt
+// never displayed (bug fixed 2026-11-13). Everything is local-only: the prompt
+// comes from the date, the streak and the last 7 accepted prompts live in
+// localStorage on this device, nothing is uploaded or shared.
+document.addEventListener('DOMContentLoaded',function(){
+  function dailyISO(dt){ return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+  function dailyLoad(key){ try{ return JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ return null; } }
+  function dailySave(key,val){ try{ localStorage.setItem(key,JSON.stringify(val)); }catch(e){} }
+  var d=new Date(); var y=d.getFullYear(), m=d.getMonth()+1, day=d.getDate(); var seed=y*10000+m*100+day; var gsel=document.getElementById('genre'); var msel=document.getElementById('mood'); if(!gsel||!msel) return; var gi=seed%gsel.options.length; var mi=Math.floor(seed/gsel.options.length)%msel.options.length; var genre=gsel.options[gi].value; var bpmM=gsel.options[gi].text.match(/(\d+)\s*BPM/); var bpm=bpmM?parseInt(bpmM[1],10):120; var mood=msel.options[mi].text; var dateStr=d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'}); var prompt=mood.toLowerCase()+' '+genre+' beat at '+bpm+' bpm — Daily Track '+y+'-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  var todayISO=dailyISO(d); var yest=new Date(d); yest.setDate(yest.getDate()-1); var yestISO=dailyISO(yest);
+  document.getElementById('dailyText').textContent='Today, '+dateStr+': '+genre+' · '+bpm+' BPM · '+mood+' — "'+prompt+'"';
+  function loadPrompt(en){ gsel.value=en.genre; msel.value=en.mood; document.getElementById('bpm').value=en.bpm; document.getElementById('prompt').value=en.prompt; }
+  function streakText(){
+    var st=dailyLoad('praime_daily_streak');
+    if(!st||!st.count) return 'No streak yet — accept today\u2019s prompt to start one.';
+    var n=st.count+' Day'+(st.count===1?'':'s');
+    if(st.lastDate===todayISO) return '🔥 Streak: '+n+' — checked in today.';
+    if(st.lastDate===yestISO) return '🔥 Streak: '+n+' — accept today\u2019s prompt to keep it going.';
+    return 'Streak ended at '+n+' — accept today\u2019s prompt to start a new one.';
+  }
+  function renderStreak(){ document.getElementById('dailyStreak').textContent=streakText(); }
+  function renderHist(){
+    var h=dailyLoad('praime_daily_history')||[];
+    document.getElementById('dailyHistBtn').textContent='Past prompts ('+h.length+'/7)';
+    var box=document.getElementById('dailyHist');
+    box.innerHTML='';
+    if(!h.length){ var p=document.createElement('p'); p.style.cssText='font-size:13px;color:#9ca3af'; p.textContent='No accepted prompts yet — use today\u2019s prompt and it will be saved here.'; box.appendChild(p); return; }
+    h.forEach(function(en){
+      var row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;margin:6px 0;font-size:13px';
+      var t=document.createElement('span'); t.style.cssText='flex:1'; t.textContent=en.date+' — '+en.prompt;
+      var b=document.createElement('button'); b.className='secondary'; b.style.cssText='margin:0;padding:6px 10px'; b.textContent='Use';
+      b.onclick=function(){ loadPrompt(en); document.getElementById('dailyOut').textContent='Prompt from '+en.date+' loaded into card 1 — press Parse prompt, then Render.'; };
+      row.appendChild(t); row.appendChild(b); box.appendChild(row);
+    });
+  }
+  document.getElementById('dailyUse').onclick=function(){
+    loadPrompt({genre:genre,mood:mood,bpm:bpm,prompt:prompt});
+    var st=dailyLoad('praime_daily_streak')||{count:0,lastDate:''};
+    if(st.lastDate!==todayISO){ st.count=(st.lastDate===yestISO)?st.count+1:1; st.lastDate=todayISO; dailySave('praime_daily_streak',st); }
+    var h=dailyLoad('praime_daily_history')||[];
+    h=h.filter(function(en){ return en.date!==todayISO; });
+    h.unshift({date:todayISO,genre:genre,mood:mood,bpm:bpm,prompt:prompt});
+    dailySave('praime_daily_history',h.slice(0,7));
+    renderStreak(); renderHist();
+    document.getElementById('dailyOut').textContent='Today\u2019s prompt loaded into card 1 — press Parse prompt, then Render.';
+  };
+  document.getElementById('dailyHistBtn').onclick=function(){ var box=document.getElementById('dailyHist'); box.style.display=(box.style.display==='none')?'block':'none'; };
+  renderStreak(); renderHist();
+});
 </script>
 <div class="card"><h2>1. Prompt — this drives everything</h2>
 <p>Type it like you would say it: genre, mood, tempo, structure, anything. The beat is varied by <b>genre × tempo × beat structure × prompt × every option below</b> — change any one of them and you get a different beat, with a different fingerprint. Same prompt + same options = same fingerprint, so you can rebuild it exactly.</p>
