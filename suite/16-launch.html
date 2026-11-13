@@ -136,6 +136,7 @@ a{color:#7ee2ff}
 <div><button id="promoScCopy" class="secondary">Copy SoundCloud bio &amp; tags</button> <small id="promoScCount"></small></div>
 <label>Short-form post (X / Instagram / TikTok) — kept under 280 characters</label><textarea id="promoShort" rows="3" readonly></textarea>
 <div><button id="promoShortCopy" class="secondary">Copy short post</button> <small id="promoShortCount"></small></div>
+<div><button id="promoDlDeck" class="secondary">⬇ Download promo deck as TXT</button></div>
 <div class="status" id="promoOut">Fill in the track title and artist in the Distro Release Package above — the three copy blocks build themselves from those details.</div></div>
 <script>
 // ---- Launch Day Promo Copy Deck (local only — builds paste-ready text from the release details above; nothing is posted) ----
@@ -148,8 +149,8 @@ a{color:#7ee2ff}
   function tag(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
   function yt(m){
     var L=[];
-    L.push((m.title||'(title not entered)')+' — '+(m.artist||'(artist not entered)'));
-    var spec=[m.genre, m.bpm?m.bpm+' BPM':null, m.key?('Key: '+m.key):null].filter(Boolean).join('  •  ');
+    L.push((m.title||'(title not entered)')+' \u2014 '+(m.artist||'(artist not entered)'));
+    var spec=[m.genre, m.bpm?m.bpm+' BPM':null, m.key?('Key: '+m.key):null].filter(Boolean).join('  \u2022  ');
     if(spec) L.push(spec);
     if(m.releaseDate) L.push('Out: '+m.releaseDate);
     if(m.url) L.push('Listen: '+m.url);
@@ -161,8 +162,8 @@ a{color:#7ee2ff}
     var L=[];
     var head=(m.title||'(title not entered)')+' by '+(m.artist||'(artist not entered)');
     var spec=[m.genre, m.bpm?m.bpm+' BPM':null, m.key].filter(Boolean).join(', ');
-    if(spec) head+=' — '+spec;
-    if(m.releaseDate) head+=' — out '+m.releaseDate;
+    if(spec) head+=' \u2014 '+spec;
+    if(m.releaseDate) head+=' \u2014 out '+m.releaseDate;
     L.push(head+'.');
     if(m.url) L.push(m.url);
     var tags=[];
@@ -177,8 +178,8 @@ a{color:#7ee2ff}
     var tail=hash.join(' ');
     var title=m.title||'(title not entered)';
     function build(t, withSpec){
-      var s='🎵 '+t+' — '+(m.artist||'(artist not entered)')+' is out'+(m.releaseDate?' '+m.releaseDate:'')+'!';
-      if(withSpec){ var spec=[m.genre, m.bpm?m.bpm+' BPM':null, m.key].filter(Boolean).join(' • '); if(spec) s+=' '+spec; }
+      var s='🎵 '+t+' \u2014 '+(m.artist||'(artist not entered)')+' is out'+(m.releaseDate?' '+m.releaseDate:'')+'!';
+      if(withSpec){ var spec=[m.genre, m.bpm?m.bpm+' BPM':null, m.key].filter(Boolean).join(' \u2022 '); if(spec) s+=' '+spec; }
       if(m.url) s+=' '+m.url;
       return s+' '+tail;
     }
@@ -190,18 +191,18 @@ a{color:#7ee2ff}
     // Probe with a 1-character title to measure the fixed part exactly (emoji counts as 2 units).
     var probe=build('~', false);
     var maxTitle=280-(probe.length-1)-1; // fixed part + 1 for the ellipsis
-    if(maxTitle>=4){ return build(title.slice(0, maxTitle-1)+'…', false); }
-    return text.slice(0, 279)+'…';
+    if(maxTitle>=4){ return build(title.slice(0, maxTitle-1)+'\u2026', false); }
+    return text.slice(0, 279)+'\u2026';
   }
   function setCount(id, n, limit){
     var el=document.getElementById(id); if(!el) return;
-    el.textContent=n+' characters'+(limit?(' / '+limit):'')+(limit && n>limit ? ' — over '+limit+', shorten the title' : '');
+    el.textContent=n+' characters'+(limit?(' / '+limit):'')+(limit && n>limit ? ' \u2014 over '+limit+', shorten the title' : '');
   }
   function copyText(textId, btn, label){
     var el=document.getElementById(textId); if(!el) return;
     var txt=el.value;
     function done(ok){
-      btn.textContent=ok?'Copied ✓':label;
+      btn.textContent=ok?'Copied \u2713':label;
       setTimeout(function(){ btn.textContent=label; }, 1500);
     }
     if(typeof navigator!=='undefined' && navigator.clipboard && navigator.clipboard.writeText){
@@ -218,12 +219,12 @@ a{color:#7ee2ff}
     var ytEl=document.getElementById('promoYt'), scEl=document.getElementById('promoSc'), shEl=document.getElementById('promoShort');
     if(!ytEl || !scEl || !shEl) return;
     if(!m.title && !m.artist){
-      var hint='Fill in the track title and artist in the Distro Release Package above — the promo copy builds itself from those details.';
+      var hint='Fill in the track title and artist in the Distro Release Package above \u2014 the promo copy builds itself from those details.';
       ytEl.value=hint; scEl.value=hint; shEl.value=hint;
-      if(out) out.textContent='Fill in the track title and artist in the Distro Release Package above — the three copy blocks build themselves from those details.';
+      if(out) out.textContent='Fill in the track title and artist in the Distro Release Package above \u2014 the three copy blocks build themselves from those details.';
     } else {
       ytEl.value=yt(m); scEl.value=sc(m); shEl.value=shortPost(m);
-      if(out) out.textContent='Promo copy ready for "'+(m.title||'(no title)')+'" by '+(m.artist||'(no artist)')+'. Tap Copy on a block, then paste it yourself on that channel — PrAIme does not post anything.';
+      if(out) out.textContent='Promo copy ready for "'+(m.title||'(no title)')+'" by '+(m.artist||'(no artist)')+'. Tap Copy on a block, then paste it yourself on that channel \u2014 PrAIme does not post anything.';
     }
     setCount('promoYtCount', ytEl.value.length);
     setCount('promoScCount', scEl.value.length);
@@ -247,6 +248,23 @@ a{color:#7ee2ff}
   wireCopy('promoYtCopy', 'promoYt', 'Copy YouTube description');
   wireCopy('promoScCopy', 'promoSc', 'Copy SoundCloud bio & tags');
   wireCopy('promoShortCopy', 'promoShort', 'Copy short post');
+  // ---- Download promo deck as TXT (Gemini 2026-11-13, corrected): all three
+  // promo blocks in one file, local only — the per-block Copy buttons stay for
+  // pasting one block. Guarded like the release package: no title/artist means
+  // the blocks hold only the hint text, so nothing is downloaded. Gemini's
+  // as-stated class "secondary-btn" does not exist on this page (page
+  // convention is "secondary"); its "PRAIME" header is a typo; the filename
+  // uses the page's title-slug convention so decks for different releases do
+  // not overwrite each other in Downloads.
+  var dlDeckBtn=document.getElementById('promoDlDeck');
+  if(dlDeckBtn) dlDeckBtn.addEventListener('click', function(){
+    var m=meta(), out=document.getElementById('promoOut');
+    if(!m.title && !m.artist){ if(out) out.textContent='Fill in the track title and artist in the Distro Release Package above — the promo deck builds itself from those details.'; return; }
+    var parts=['PrAIme Productions — Release Promo Deck','========================================','','Title: '+(m.title||'(not entered)'),'Artist: '+(m.artist||'(not entered)'),'','[1. YouTube description]','',v('promoYt'),'','----------------------------------------','','[2. SoundCloud bio & tags]','',v('promoSc'),'','----------------------------------------','','[3. Short social post]','',v('promoShort'),''];
+    var fn='praime-promo-deck'+(m.title?'-'+tag(m.title):'')+'.txt';
+    var blob=new Blob([parts.join('\n')], {type:'text/plain;charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; a.click();
+    if(out) out.textContent='Promo deck downloaded as '+fn+' — all three blocks in one file.';
+  });
   update();
   if(typeof window!=='undefined' && window.addEventListener) window.addEventListener('load', update);
 })();
@@ -345,7 +363,7 @@ a{color:#7ee2ff}
     var lines=wrapLines(ctx, m.title.toUpperCase(), maxW);
     while(lines.length>2 && titleSize>size*0.05){ titleSize*=0.85; ctx.font='800 '+Math.round(titleSize)+'px Arial, sans-serif'; lines=wrapLines(ctx, m.title.toUpperCase(), maxW); }
     var lh=titleSize*1.08;
-    var sub=[m.genre, m.label].filter(Boolean).join('  •  ');
+    var sub=[m.genre, m.label].filter(Boolean).join('  \u2022  ');
     var afterTitle=size*0.94-(sub ? size*0.118 : size*0.075);
     var ty=afterTitle-lines.length*lh;
     ctx.fillStyle='#f3f4f6';
@@ -363,7 +381,7 @@ a{color:#7ee2ff}
     var style=document.getElementById('relCoverStyle').value, accent=document.getElementById('relCoverAccent').value;
     var cv=document.getElementById('relCoverCanvas'), out=document.getElementById('relCoverOut');
     if(!drawCover(cv,300,m,style,accent)){ out.textContent='Canvas is not available in this browser.'; return; }
-    out.textContent='Preview drawn for "'+m.title+'" by '+m.artist+' ('+style+'). Download gives the same art at 3000×3000 PNG.';
+    out.textContent='Preview drawn for "'+m.title+'" by '+m.artist+' ('+style+'). Download gives the same art at 3000\u00d73000 PNG.';
   };
   document.getElementById('relCoverDl').onclick=function(){
     var m=generate(); if(!m) return;
@@ -375,7 +393,7 @@ a{color:#7ee2ff}
     cv.toBlob(function(b){
       if(!b){ out.textContent='PNG export failed in this browser.'; return; }
       var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=baseName(m)+'-cover-3000.png'; a.click();
-      out.textContent='Cover art downloaded: '+a.download+' (3000×3000 PNG). Upload it yourself in your distributor account — PrAIme has not submitted anything.';
+      out.textContent='Cover art downloaded: '+a.download+' (3000\u00d73000 PNG). Upload it yourself in your distributor account \u2014 PrAIme has not submitted anything.';
     }, 'image/png');
   };
   // ---- Prefill BPM / Key / Genre from the Hub bus when this page's fields are empty ----
