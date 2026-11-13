@@ -81,7 +81,7 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 <label>TikTok followers — @daryl.jackson.rap</label><input id="tt" type="number" placeholder="0">
 <label>Beat / kit sales to date</label><input id="sales" type="number" placeholder="0">
 <label>Total sales value (USD)</label><input id="rev" type="number" placeholder="0">
-<button id="saveAnalytics">Save my numbers</button>
+<button id="saveAnalytics">Save my numbers</button><button id="dlYourNumbers" class="secondary">⬇ Download your numbers .JSON</button>
 <p id="analyticsStatus" class="status">Not saved yet on this device.</p></div>
 
 <div class="card"><h2>Growth check-ins — dated snapshots</h2>
@@ -147,6 +147,8 @@ try{
   var keys=['ig','x','fb','tt','sales','rev'];
   keys.forEach(function(k){ var v=localStorage.getItem('praime_analytics_'+k); if(v!==null) document.getElementById(k).value=v; });
   document.getElementById('saveAnalytics').onclick=function(){ keys.forEach(function(k){ localStorage.setItem('praime_analytics_'+k, document.getElementById(k).value||'0'); }); document.getElementById('analyticsStatus').textContent='Saved locally on this device at '+new Date().toLocaleString()+'.'; };
+  // Download your numbers: the same six follower/sales figures as JSON for backup, mirroring dlMusicStats.
+  document.getElementById('dlYourNumbers').onclick=function(){ var st=document.getElementById('analyticsStatus'); var labels={ig:'Instagram followers',x:'X followers',fb:'Facebook followers',tt:'TikTok followers',sales:'Beat / kit sales to date',rev:'Total sales value (USD)'}; var data={exportedAt:new Date().toISOString()}; keys.forEach(function(k){ var v=k==='rev'?parseFloat(document.getElementById(k).value||'0'):parseInt(document.getElementById(k).value||'0',10); data[labels[k]]=isNaN(v)?0:v; }); var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-your-numbers.json'; a.click(); if(st) st.textContent='Downloaded your numbers as praime-your-numbers.json.'; };
   var tos=localStorage.getItem('praime_tos_accepted'), at=localStorage.getItem('praime_tos_accepted_at');
   document.getElementById('localStatus').textContent='Terms accepted on this device: '+(tos==='1' ? 'Yes'+(at ? ' ('+at+')' : '') : 'No — the Terms popup will show on first run.')+'\nAnalytics visits on this device: '+(function(){ var n=parseInt(localStorage.getItem('praime_analytics_visits')||'0',10)+1; localStorage.setItem('praime_analytics_visits', String(n)); return n; })();
 }catch(e){ document.getElementById('localStatus').textContent='Local storage is not available in this browser, so manual numbers cannot be saved here.'; }
