@@ -43,14 +43,14 @@ a{color:#7ee2ff}
 <button id="rec">● Record vocal</button><button id="stopRec" disabled class="secondary">■ Stop &amp; download</button>
 <audio id="player" controls style="width:100%;margin-top:12px"></audio><div class="status" id="recOut"></div></div>
 <div class="card"><h2>Record vocals over a beat — takes on lanes</h2>
-<p>Restored from the original Full Beats Vocal Studio. Load a beat, press Play beat, then Record while it plays. <b>Wear headphones</b> — the beat must come through headphones only, or it will bleed through speakers into your mic take. The mic is recorded only (it is not played live through speakers), so there is no feedback loop.</p>
+<p>Restored from the original Full Beats Vocal Studio. Load a beat, press Play beat, then Record while it plays. <b>Wear headphones</b> — the beat must come through headphones only, or it will bleed through speakers into your mic take. The mic is recorded only (it is not played live through speakers), so there is no feedback loop. Count-in (default 1 bar) clicks the beat in before recording starts, so your first word lands on the downbeat instead of being clipped.</p>
 <p style="font-size:12px;color:#9ca3af">How takes are stamped: each take records the beat time it started at, plus the section you picked and the bar it falls on (bar = beat time ÷ (60 ÷ BPM × 4 beats), starting at bar 1). Takes are mixed at their recorded start time, so a take recorded over the hook stays over the hook in the mix.</p>
 <button id="obBeatChoose">📁 Choose beat file</button><input type="file" id="obBeatFile" accept="audio/*,.mp3,.wav,.flac,.m4a,.ogg" style="display:none">
 <button id="obBeatPlay" disabled>▶ Play beat</button><button id="obBeatStop" disabled class="secondary">■ Stop beat</button>
 <audio id="obBeatAudio" style="width:100%;margin-top:12px" preload="auto"></audio><div class="status" id="obBeatInfo">No beat loaded yet.</div>
 <label>Section for the next take</label><select id="obSection"><option value="Auto">Auto — follow the beat</option><option value="Intro">Intro</option><option value="Verse">Verse</option><option value="Hook">Hook</option><option value="Bridge">Bridge</option><option value="Outro">Outro</option></select>
 <label>BPM (for bar stamps — taken from the Hub bus if set)</label><input id="obBpm" type="number" value="92" min="40" max="220">
-<button id="obRec">● Record take over beat</button><button id="obStopRec" disabled class="secondary">■ Stop take</button>
+<button id="obRec">● Record take over beat</button><button id="obStopRec" disabled class="secondary">■ Stop take</button> <label style="display:inline-block;margin-left:8px">Count-in <select id="countInBars" style="display:inline-block;width:auto"><option value="0">Off</option><option value="1" selected>1 bar</option><option value="2">2 bars</option></select></label>
 <div class="status" id="obOut">Load a beat, press Play beat, then Record take over beat. Takes appear below, one lane each.</div>
 <h3>Takes</h3><div class="status" id="obList">No takes yet.</div>
 <p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). Beat volume sets the beat's level in the mix (default 100%); it also sets the live Play beat loudness.</p>
@@ -358,6 +358,8 @@ document.getElementById('genLyricSave').onclick=function(){ let t=document.getEl
 
 // ---- Record vocals over a beat (restored Vocal Studio) ----
 let obBeat=null, obTakes=[], obRec=null, obChunks=[], obMixed=null, obMixedActive=0, obTakeSeq=0, obBeatVol=1;
+let obCountInTimers=[], obCountInActive=false, obPendingStream=null;
+function obClick(accent){ try{ let c=micCtxFn(); let o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=accent?1000:800; g.gain.setValueAtTime(0.5,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.07); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+0.08); }catch(e){} }
 function obBpmVal(){ let v=parseFloat(document.getElementById('obBpm').value); return (v>0)?v:92; }
 function obStamp(startSec){ let secPerBar=(60/obBpmVal())*4; let bar=Math.floor(startSec/secPerBar)+1; let sec=document.getElementById('obSection').value; return sec+' · bar '+bar+' · '+startSec.toFixed(1)+'s into beat'; }
 function obRenderTakes(){
@@ -413,16 +415,18 @@ document.getElementById('obBeatAudio').addEventListener('ended', function(){
 document.getElementById('obRec').onclick=async function(){
   if(!obBeat){ document.getElementById('obOut').textContent='Load a beat first, then record over it.'; return; }
   let au=document.getElementById('obBeatAudio');
-  let startSec=0;
-  if(au && !au.paused && !au.ended){ startSec=au.currentTime; }
-  else if(au){ au.currentTime=0; try{ await au.play(); }catch(e){} startSec=0; }
+  let restarting=!(au && !au.paused && !au.ended);
+  let startSec=restarting?0:(au?au.currentTime:0);
   let stamp=obStamp(startSec);
+  let bars=0; try{ bars=parseInt((document.getElementById('countInBars')||{}).value||'0',10)||0; }catch(e){ bars=0; }
   try{
     let stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    obPendingStream=stream;
     obChunks=[]; obRec=new MediaRecorder(stream);
     obRec.ondataavailable=function(e){ if(e.data.size) obChunks.push(e.data); };
     obRec.onstop=async function(){
       try{ stream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){}
+      obPendingStream=null;
       let blob=new Blob(obChunks,{type:'audio/webm'});
       try{
         let buf=await micCtxFn().decodeAudioData(await blob.arrayBuffer());
@@ -434,12 +438,42 @@ document.getElementById('obRec').onclick=async function(){
       }catch(err){ document.getElementById('obOut').textContent='Take could not be decoded for mixing: '+err.message+' — try recording again.'; }
       document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true;
     };
-    obRec.start();
-    document.getElementById('obRec').disabled=true; document.getElementById('obStopRec').disabled=false;
-    document.getElementById('obOut').textContent='Recording take over the beat… ('+stamp+') Wear headphones. Press Stop take when done.';
-  }catch(err){ document.getElementById('obOut').textContent='Microphone failed: '+err.message+' — allow microphone access in your browser.'; }
+    function beginTake(){
+      try{
+        obCountInTimers=[]; obCountInActive=false;
+        if(restarting && au){ au.currentTime=0; try{ var p=au.play(); if(p&&p.catch) p.catch(function(){}); }catch(e){} }
+        obRec.start();
+        document.getElementById('obRec').disabled=true; document.getElementById('obStopRec').disabled=false;
+        document.getElementById('obOut').textContent='Recording take over the beat… ('+stamp+') Wear headphones. Press Stop take when done.';
+      }catch(err){ document.getElementById('obOut').textContent='Could not start the take: '+err.message; document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true; }
+    }
+    if(restarting && bars>0){
+      let total=bars*4, intervalMs=(60/obBpmVal())*1000;
+      obCountInActive=true;
+      document.getElementById('obRec').disabled=true; document.getElementById('obStopRec').disabled=false;
+      document.getElementById('obOut').textContent='Count-in: '+total+' — get ready… (Stop take cancels)';
+      for(let i=0;i<total;i++){
+        obCountInTimers.push(setTimeout(function(){
+          obClick(i%4===0);
+          document.getElementById('obOut').textContent='Count-in: '+(total-i)+' — get ready… (Stop take cancels)';
+        }, i*intervalMs));
+      }
+      obCountInTimers.push(setTimeout(beginTake, total*intervalMs));
+    } else {
+      beginTake();
+    }
+  }catch(err){ document.getElementById('obOut').textContent='Microphone failed: '+err.message+' — allow microphone access in your browser.'; document.getElementById('obRec').disabled=false; }
 };
-document.getElementById('obStopRec').onclick=function(){ if(obRec) obRec.stop(); document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true; };
+document.getElementById('obStopRec').onclick=function(){
+  obCountInTimers.forEach(function(t){ clearTimeout(t); }); obCountInTimers=[];
+  if(obCountInActive){
+    obCountInActive=false;
+    if(obPendingStream){ try{ obPendingStream.getTracks().forEach(function(tr){ tr.stop(); }); }catch(e){} obPendingStream=null; }
+    obRec=null;
+    document.getElementById('obOut').textContent='Count-in cancelled — press Record take over beat to try again.';
+  } else if(obRec && obRec.state==='recording'){ obRec.stop(); }
+  document.getElementById('obRec').disabled=false; document.getElementById('obStopRec').disabled=true;
+};
 function obActiveTakes(){
   let anySolo=obTakes.some(function(t){ return t.solo; });
   return obTakes.filter(function(t){ if(t.mute) return false; if(anySolo && !t.solo) return false; return true; });
