@@ -220,6 +220,7 @@ document.getElementById('teleScan').onclick=function(){
 <h3>Project — save / load (this browser only)</h3><p>Saved projects live in this browser's localStorage only — they are not sent anywhere and are not on the server.</p>
 <label>Project name</label><input id="projName" placeholder="e.g. Dark Drill Take 1">
 <button id="projSave">Save project locally</button><button id="exportAllProjects" class="secondary">⬇ Export all projects (.JSON)</button><button id="importProjectsBtn" class="secondary">Import projects (.JSON)</button><input type="file" id="importProjectsInput" accept=".json" style="display:none">
+<label style="font-size:12px;color:#9ca3af">Filter saved projects by genre <select id="projGenreFilter" style="width:auto"><option value="">All genres</option></select></label>
 <div id="projList"></div><div class="status" id="projOut"></div></div>
 <div class="card"><h2>4. Lyrics for this beat — never the same twice</h2>
 <p>Generated from your prompt theme, not fixed templates. Full 12's lyric pad was honest about this: it served the <b>same fixed lines every time</b> for only 3 genres. This one does not. It combines a large English vocabulary (adjectives, nouns, verbs, places, rhyme families) with your prompt, seeded by the same fingerprint, and checks every generation against your history — if an exact lyric was already generated, the seed bumps automatically and it regenerates.</p>
@@ -375,12 +376,27 @@ function praimeLoadProject(pr){ if(!pr) return;
   if(pr.steps){ STEP_ROWS.forEach(function(r){ if(pr.steps[r] && pr.steps[r].length===16) stepState[r]=pr.steps[r].slice(); }); }
   if(pr.sections && pr.sections.length){ timelineSections=JSON.parse(JSON.stringify(pr.sections)); window.praimeTimelineSections=timelineSections; }
   renderStepGrid(); renderTimeline(); document.getElementById('projOut').textContent='Loaded project "'+pr.name+'" — step grid, timeline and options restored.'+praimeLyricsRestore(pr)+' Press Render in card 3 to hear it.'; }
-function renderProjList(){ var el=document.getElementById('projList'); if(!el) return; var ps=praimeProjects(); if(!ps.length){ el.innerHTML='<p>No saved projects yet.</p>'; return; }
-  el.innerHTML=ps.map(function(pr,i){ return '<div style="margin:6px 0;padding:8px;border:1px solid rgba(255,255,255,.15);border-radius:10px"><b>'+pr.name.replace(/</g,'&lt;')+'</b> · '+pr.genre+' · '+pr.bpm+' BPM'+(pr.lyrics?' · ✎ lyrics':'')+' · '+pr.savedAt+' <button type="button" data-proj-load="'+i+'">Load</button><button type="button" class="secondary" data-proj-del="'+i+'">Delete</button><button type="button" class="secondary" data-proj-exp="'+i+'">Export</button></div>'; }).join('');
+// ---- Genre filter for the saved-projects list (Gemini 2026-11-13, corrected):
+// the select is rebuilt from the genres actually saved, so a new genre appears
+// as soon as a project of that genre is saved. Filtering keeps each project's
+// ORIGINAL index in the data attributes — Load/Delete/Export index into the
+// full saved array, so a filtered row must never carry its filtered position
+// (Gemini's as-stated "filter the array before looping" would have made
+// Delete/Load hit the wrong project while a filter was on). Genre text is
+// escaped like the project name, since imported files can carry any string.
+function projGenreOf(pr){ return (pr&&typeof pr.genre==='string'&&pr.genre)?pr.genre:'(no genre)'; }
+function renderProjList(){ var el=document.getElementById('projList'); if(!el) return; var ps=praimeProjects();
+  var sel=document.getElementById('projGenreFilter');
+  if(sel){ var cur=sel.value||''; var seen={}, genres=[]; ps.forEach(function(pr){ var g=projGenreOf(pr); if(!seen[g]){ seen[g]=true; genres.push(g); } }); sel.innerHTML=''; var all=document.createElement('option'); all.value=''; all.textContent='All genres'; sel.appendChild(all); genres.forEach(function(g){ var o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o); }); sel.value=(cur===''||genres.indexOf(cur)>=0)?cur:''; }
+  if(!ps.length){ el.innerHTML='<p>No saved projects yet.</p>'; return; }
+  var filt=sel?sel.value:''; var rows=ps.map(function(pr,i){ return {pr:pr, i:i}; }).filter(function(r){ return !filt || projGenreOf(r.pr)===filt; });
+  if(!rows.length){ el.innerHTML='<p>No saved projects match this genre filter.</p>'; return; }
+  el.innerHTML=rows.map(function(r){ var pr=r.pr, i=r.i; return '<div style="margin:6px 0;padding:8px;border:1px solid rgba(255,255,255,.15);border-radius:10px"><b>'+pr.name.replace(/</g,'&lt;')+'</b> · '+projGenreOf(pr).replace(/</g,'&lt;')+' · '+pr.bpm+' BPM'+(pr.lyrics?' · ✎ lyrics':'')+' · '+pr.savedAt+' <button type="button" data-proj-load="'+i+'">Load</button><button type="button" class="secondary" data-proj-del="'+i+'">Delete</button><button type="button" class="secondary" data-proj-exp="'+i+'">Export</button></div>'; }).join('');
   el.querySelectorAll('[data-proj-load]').forEach(function(b){ b.onclick=function(){ praimeLoadProject(praimeProjects()[parseInt(b.getAttribute('data-proj-load'),10)]); }; });
   el.querySelectorAll('[data-proj-del]').forEach(function(b){ b.onclick=function(){ var ps=praimeProjects(); ps.splice(parseInt(b.getAttribute('data-proj-del'),10),1); localStorage.setItem('praime_fullbeat_projects', JSON.stringify(ps)); renderProjList(); }; });
   el.querySelectorAll('[data-proj-exp]').forEach(function(b){ b.onclick=function(){ var pr=praimeProjects()[parseInt(b.getAttribute('data-proj-exp'),10)]; if(!pr) return; var data=Object.assign({format:'praime-fullbeat-project', exportedAt:new Date().toISOString()}, pr); var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-project-'+String(pr.name||'project').replace(/[^a-z0-9-_]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase()+'.json'; a.click(); document.getElementById('projOut').textContent='Exported project "'+pr.name+'" as JSON.'; }; });
 }
+var pgf=document.getElementById('projGenreFilter'); if(pgf) pgf.onchange=function(){ renderProjList(); };
 renderProjList();
 // ---- Hub deep link: ?project=<project name> loads that saved project on
 // arrival. Projects are keyed by name (no id field exists), so the name is
