@@ -58,7 +58,7 @@ a{color:#7ee2ff}
 <label style="display:inline-block"><input id="punchHearOldTake" type="checkbox" checked> Hear original take during pre-roll</label><br>
 <button id="punchRecordBtn">● Record punch</button><button id="punchCancelBtn" disabled class="secondary">■ Stop punch / Cancel</button>
 <span style="font-size:12px;color:#9ca3af">Re-records only the chosen bars of the take; the rest is kept. The splice is done offline with short fades, so the take stays one file for the mix and A/B compare.</span></div>
-<h3>Takes</h3><div class="status" id="obList">No takes yet.</div>
+<h3>Takes</h3><div class="status" id="obTakesSummary">0 takes · 0.0s total</div><div class="status" id="obList">No takes yet.</div>
 <div id="abBar" style="border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:10px;margin:8px 0"><b>A/B compare</b> — tick A/B on two take lanes, then Start A/B to hear beat + one take at a time and flip between them at the same spot in the song. <span class="status" id="abStatus">A/B Compare: pick two takes.</span><br><button id="abStart" disabled>▶ Start A/B</button> <button id="abFlip" disabled class="secondary">⇄ Flip A/B</button> <button id="abStopAB" disabled class="secondary">■ Stop A/B</button></div>
 <p style="font-size:12px;color:#9ca3af">Lane rules: volume and pan apply per take in the mix. Mute removes a take from the mix. If any take is soloed, only soloed takes are mixed (a muted solo take stays out). Beat volume sets the beat's level in the mix (default 100%); it also sets the live Play beat loudness. A/B compare renders one mix per take (beat + that take only) and flips between the two at the same spot, so you hear the same bar with each take. Star one take as Best take — only one at a time, and it is named in the copied mix summary.</p>
 <label>Beat volume in the mix <input id="obBeatVol" type="range" min="0" max="150" value="100" style="width:60%"> <span id="obBeatVolVal">100%</span></label>
@@ -377,6 +377,8 @@ function obStamp(startSec){ let secPerBar=(60/obBpmVal())*4; let bar=Math.floor(
 function drawWaveThumb(buf, cv){ if(!buf||!cv) return; var c2=cv.getContext('2d'); if(!c2) return; var d=buf.getChannelData(0), w=cv.width, h=cv.height; c2.clearRect(0,0,w,h); c2.fillStyle='#07090e'; c2.fillRect(0,0,w,h); c2.fillStyle='#00f3ff'; var per=Math.max(1,Math.floor(d.length/w)); for(var x=0;x<w;x++){ var mn=0,mx=0,s=x*per; for(var i=s;i<Math.min(s+per,d.length);i+=4){ var v=d[i]; if(v<mn)mn=v; if(v>mx)mx=v; } var y1=(1-(mx+1)/2)*h, y2=(1-(mn+1)/2)*h; c2.fillRect(x,y1,1,Math.max(1,y2-y1)); } }
 function obRenderTakes(){
   let el=document.getElementById('obList'); if(!el) return;
+  let sm=document.getElementById('obTakesSummary');
+  if(sm){ let tot=0; obTakes.forEach(function(t){ tot+=t.duration||0; }); sm.textContent=obTakes.length+(obTakes.length===1?' take · ':' takes · ')+tot.toFixed(1)+'s total'; }
   if(!obTakes.length){ el.textContent='No takes yet.'; obABSel=[]; obABRefresh(); return; }
   el.innerHTML='';
   obTakes.forEach(function(t){
