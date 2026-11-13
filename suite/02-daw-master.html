@@ -30,6 +30,7 @@ a{color:#7ee2ff}
 <div style="height:10px;background:#07090e;border-radius:6px;overflow:hidden"><div id="inRmsBar" style="height:100%;width:0%;background:#00f3ff"></div></div>
 <label>Output level (live play) — <span id="outRmsVal">—</span> · Peak <span id="outRmsPeak">—</span></label>
 <div style="height:10px;background:#07090e;border-radius:6px;overflow:hidden"><div id="outRmsBar" style="height:100%;width:0%;background:#f72585"></div></div>
+<p id="tpGuard" style="font-size:12px;color:#9ca3af">True-peak (inter-sample estimate): not measured yet — Render or Preview mastered to measure the peak between samples, which the sample-peak meter above cannot see.</p>
 <button id="resetPeak" class="secondary">Reset peak hold</button>
 <p style="font-size:12px;color:#9ca3af">Raw song level before input gain — the bar moves only while Play live is playing. If it stays pinned at full, the raw song is hot: lower the input gain or run Auto-master. Output level is the mastered signal after EQ, compressor, saturation and limiter — compare it with the input bar to see what the chain is doing.</p>
 <label>Compressor threshold — <span id="compThrVal"></span></label><input type="range" id="compThr" min="-40" max="0" step="1" value="-18">
@@ -72,6 +73,7 @@ function showBus(el){ const b=getBus(); if(el) el.textContent='Prompt: '+(b.prom
 let ctx=null,decoded=null,src=null,analyser=null,inputAn=null,inRmsBuf=null,outRmsBuf=null,raf=null,fileName='praime-mastered.wav';
 let lastRenderedBlob=null,lastRenderedName='';
 let lastReport=null,lastSourceName='';
+let lastTruePeakDb=null;
 // Genre-aware mastering: FAMILY curves only, documented here. This is NOT a
 // proven per-genre multiband engine (the original Master 22 "Active Mastering
 // Curve" was a display-only field). Each family sets compressor threshold /
@@ -108,16 +110,75 @@ function praimeResetPeakHold(){ inPeakDb=null; outPeakDb=null; var a=document.ge
 document.getElementById('resetPeak').onclick=function(){ praimeResetPeakHold(); document.getElementById('out').textContent='Peak hold reset — input/output max cleared.'; };
 document.getElementById('chooseBtn').onclick=()=>document.getElementById('fileInput').click();
 function praimeOutName(){ var el=document.getElementById('outName'); var n=el&&el.value?el.value:''; n=n.replace(/[\\\/:*?"<>|]/g,'').trim(); if(!n) n=fileName; if(!/\.wav$/i.test(n)) n+='.wav'; return n; }
-document.getElementById('fileInput').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume(); decoded=await ctx.decodeAudioData(await f.arrayBuffer()); fileName=f.name.replace(/\.[^.]+$/,'')+'.praime-mastered.wav'; var on=document.getElementById('outName'); if(on) on.value=fileName; lastSourceName=f.name; document.getElementById('fileInfo').textContent=f.name+' — '+decoded.duration.toFixed(1)+'s'; document.getElementById('play').disabled=false; document.getElementById('render').disabled=false; document.getElementById('autoMaster').disabled=false; document.getElementById('previewMasterBtn').disabled=false; document.getElementById('previewOrigBtn').disabled=false; const b=getBus(); document.getElementById('out').textContent='Ready. Bus genre: '+(b.genre||'—')+' BPM: '+(b.bpm||'—'); };
+document.getElementById('fileInput').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; resetTruePeakPill(); if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume(); decoded=await ctx.decodeAudioData(await f.arrayBuffer()); fileName=f.name.replace(/\.[^.]+$/,'')+'.praime-mastered.wav'; var on=document.getElementById('outName'); if(on) on.value=fileName; lastSourceName=f.name; document.getElementById('fileInfo').textContent=f.name+' — '+decoded.duration.toFixed(1)+'s'; document.getElementById('play').disabled=false; document.getElementById('render').disabled=false; document.getElementById('autoMaster').disabled=false; document.getElementById('previewMasterBtn').disabled=false; document.getElementById('previewOrigBtn').disabled=false; const b=getBus(); document.getElementById('out').textContent='Ready. Bus genre: '+(b.genre||'—')+' BPM: '+(b.bpm||'—'); };
 function stopLive(){ try{src.stop();}catch(e){} src=null; if(raf) cancelAnimationFrame(raf); document.getElementById('stop').disabled=true; inputAn=null; analyser=null; praimeShowInputMeter(); praimeShowOutputMeter(); }
 document.getElementById('stop').onclick=stopLive;
 document.getElementById('play').onclick=async ()=>{ stopLive(); praimeResetPeakHold(); await ctx.resume(); src=ctx.createBufferSource(); src.buffer=decoded; const e=effectiveChain(); analyser=chain(ctx,src,e.low,e.peak,e.high,e); src.start(); var mySrc=src; src.onended=function(){ if(src===mySrc){ src=null; document.getElementById('stop').disabled=true; } }; document.getElementById('stop').disabled=false; document.getElementById('out').textContent=(e.bypass?'Playing ORIGINAL (bypass on) — ':'Playing mastered — ')+chainLabel(e); draw(); };
 // Keyboard shortcuts: Space = Play / Stop live, M = toggle Bypass, R = Render & download. Ignored while typing in a field.
 document.addEventListener('keydown',function(e){ var t=e.target||{}; var tag=(t.tagName||'').toUpperCase(); if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA'||t.isContentEditable) return; if(e.metaKey||e.ctrlKey||e.altKey) return; var k=(e.key||'').toLowerCase(); if(k===' '||k==='spacebar'){ e.preventDefault(); var playBtn=document.getElementById('play'); if(src){ stopLive(); } else if(playBtn&&!playBtn.disabled){ playBtn.click(); } else { document.getElementById('out').textContent='No song loaded — load a song first, then Space plays it.'; } } else if(k==='m'){ var bp=document.getElementById('bypass'); if(!bp) return; bp.checked=!bp.checked; document.getElementById('out').textContent='Bypass '+(bp.checked?'ON — Play and Render output the original unmastered song.':'OFF — mastering chain active.'); } else if(k==='r'){ var rBtn=document.getElementById('render'); if(rBtn&&!rBtn.disabled){ rBtn.click(); } } });
 function wav(buf){ const ch=buf.numberOfChannels,sr=buf.sampleRate,len=buf.length*ch,out=new ArrayBuffer(44+len*2),v=new DataView(out); function s(o,t){for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i));} s(0,'RIFF'); v.setUint32(4,36+len*2,true); s(8,'WAVE'); s(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,ch,true); v.setUint32(24,sr,true); v.setUint32(28,sr*ch*2,true); v.setUint16(32,ch*2,true); v.setUint16(34,16,true); s(36,'data'); v.setUint32(40,len*2,true); let o=44; for(let i=0;i<buf.length;i++)for(let c2=0;c2<ch;c2++){let x=Math.max(-1,Math.min(1,buf.getChannelData(c2)[i])); v.setInt16(o,x<0?x*0x8000:x*0x7FFF,true); o+=2;} return new Blob([out],{type:'audio/wav'}); }
-document.getElementById('render').onclick=async ()=>{ fileName=praimeOutName(); const t0=performance.now(); const e=effectiveChain(); const off=new OfflineAudioContext(decoded.numberOfChannels,decoded.length,decoded.sampleRate); const s=off.createBufferSource(); s.buffer=decoded; chain(off,s,e.low,e.peak,e.high,e); s.start(0); const rb=await off.startRendering(); const sec=(performance.now()-t0)/1000; const blob=wav(rb); lastRenderedBlob=blob; lastRenderedName=fileName; lastReport={e:e,sec:sec,dur:decoded.duration,sr:decoded.sampleRate,src:lastSourceName,out:fileName,genre:document.getElementById('masterGenre').value||'None',speed:(decoded.duration/Math.max(sec,0.01))}; document.getElementById('reportBtn').disabled=false; document.getElementById('playLast').disabled=false; const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; a.click(); document.getElementById('out').textContent='Downloaded '+fileName+' — '+decoded.duration.toFixed(1)+'s song rendered in '+sec.toFixed(2)+'s ('+(decoded.duration/Math.max(sec,0.01)).toFixed(1)+'x faster than real-time) — '+chainLabel(e)+'. Play last rendered is now enabled.'; };
+// ---- True-peak guard (Gemini 2026-11-12, narrowed) ----
+// The limiter is a DynamicsCompressor at ratio 20, NOT a brickwall, so the
+// exported WAV can peak above -1 dBFS — and the reconstructed waveform
+// between samples can peak higher still. The sample-peak meter above cannot
+// see those inter-sample peaks. Gemini proposed ISP ~= SamplePeak +
+// 0.5*|x[n]-x[n-1]|; that first-difference formula is too crude (it adds a
+// fixed bump to every steep slope), so this uses the standard cheap
+// estimator instead: a parabola fitted through each sample and its two
+// neighbours, whose vertex is the estimated peak between samples. It is
+// labelled an ESTIMATE everywhere, not a BS.1770 4x-oversampled meter — a
+// real 4x resample of a full song would allocate ~4x the song in memory,
+// which is not safe on a phone. Measured on the rendered buffer, so it
+// describes what Render / Preview mastered actually exports, not live play.
+function truePeakEstimateDb(buf){
+  var peak=0;
+  for(var c=0;c<buf.numberOfChannels;c++){
+    var d=buf.getChannelData(c);
+    for(var i=0;i<d.length;i++){ var a=Math.abs(d[i]); if(a>peak) peak=a; }
+    for(var i=1;i<d.length-1;i++){
+      var y0=d[i-1], y1=d[i], y2=d[i+1];
+      var den=y0-2*y1+y2;
+      if(den===0) continue;
+      var off=0.5*(y0-y2)/den; // vertex offset in samples from i
+      if(off>-1&&off<1){
+        var v=y1-0.25*(y0-y2)*off; // parabola vertex value
+        var av=Math.abs(v); if(av>peak) peak=av;
+      }
+    }
+  }
+  return peak>0?20*Math.log10(peak):-Infinity;
+}
+function tpGuardText(db){
+  if(!isFinite(db)) return {text:'✓ True-peak (inter-sample estimate): silence — nothing to clip.',ok:true};
+  var r=Math.round(db*10)/10; // decide on the displayed (1-decimal) value, so text and verdict never disagree
+  if(r<=-1) return {text:'✓ True-peak (inter-sample estimate): '+r.toFixed(1)+' dBTP — within the −1 dBTP ceiling.',ok:true};
+  return {text:'⚠ True-peak (inter-sample estimate): '+r.toFixed(1)+' dBTP — overshoots the −1 dBTP ceiling by '+(r+1).toFixed(1)+' dB. Lower input gain or saturation drive before export.',ok:false};
+}
+function showTruePeak(db){
+  var pill=document.getElementById('tpGuard'); if(!pill) return;
+  var t=tpGuardText(db); pill.textContent=t.text; pill.style.color=t.ok?'#4ade80':'#fbbf24';
+}
+function tpReportLine(tpDb){
+  if(tpDb==null) return 'True-peak (inter-sample estimate): not measured yet — Render again and wait for the guard to update, then re-download this report.';
+  if(!isFinite(tpDb)) return 'True-peak (inter-sample estimate): silence (no signal to measure).';
+  var r=Math.round(tpDb*10)/10;
+  return 'True-peak (inter-sample estimate): '+r.toFixed(1)+' dBTP — '+(r<=-1?'within the −1 dBTP ceiling.':'OVERSHOOT: '+(r+1).toFixed(1)+' dB above the −1 dBTP ceiling — lower input gain or saturation drive before export.');
+}
+function measureTruePeak(buf,forReport){
+  var db=truePeakEstimateDb(buf);
+  lastTruePeakDb=db;
+  if(forReport&&lastReport) lastReport.tpDb=db;
+  showTruePeak(db);
+  return db;
+}
+function resetTruePeakPill(){
+  lastTruePeakDb=null;
+  var pill=document.getElementById('tpGuard');
+  if(pill){ pill.textContent='True-peak (inter-sample estimate): not measured yet — Render or Preview mastered to measure the peak between samples, which the sample-peak meter above cannot see.'; pill.style.color='#9ca3af'; }
+}
+document.getElementById('render').onclick=async ()=>{ fileName=praimeOutName(); const t0=performance.now(); const e=effectiveChain(); const off=new OfflineAudioContext(decoded.numberOfChannels,decoded.length,decoded.sampleRate); const s=off.createBufferSource(); s.buffer=decoded; chain(off,s,e.low,e.peak,e.high,e); s.start(0); const rb=await off.startRendering(); const sec=(performance.now()-t0)/1000; const blob=wav(rb); lastRenderedBlob=blob; lastRenderedName=fileName; lastReport={e:e,sec:sec,dur:decoded.duration,sr:decoded.sampleRate,src:lastSourceName,out:fileName,genre:document.getElementById('masterGenre').value||'None',speed:(decoded.duration/Math.max(sec,0.01)),tpDb:null}; measureTruePeak(rb,true); document.getElementById('reportBtn').disabled=false; document.getElementById('playLast').disabled=false; const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fileName; a.click(); document.getElementById('out').textContent='Downloaded '+fileName+' — '+decoded.duration.toFixed(1)+'s song rendered in '+sec.toFixed(2)+'s ('+(decoded.duration/Math.max(sec,0.01)).toFixed(1)+'x faster than real-time) — '+chainLabel(e)+'. Play last rendered is now enabled.'; };
 // Mastering report: plain-text audit trail of the last Render pass only (settings as rendered, not live sliders).
-document.getElementById('reportBtn').onclick=()=>{ if(!lastReport){ document.getElementById('out').textContent='No rendered master yet — press Render & download WAV first.'; return; } var r=lastReport,e=r.e; var lines=['PrAIme Productions — DAW & Master Report','========================================','Date/Time: '+new Date().toLocaleString(),'Source file: '+r.src,'Rendered master: '+r.out,'Duration: '+r.dur.toFixed(1)+' s','Sample rate: '+r.sr+' Hz','','--- Applied signal chain ---','Genre profile: '+r.genre+' ('+e.curveLabel+')','Bypass: '+(e.bypass?'Bypassed — output is the original':'Active'),'High-pass: 30 Hz','Low shelf 200 Hz: '+e.low+' dB','Peak 3000 Hz: '+e.peak+' dB','High shelf 10000 Hz: '+e.high+' dB','Input gain: '+e.inGain+' dB (auto-gain: '+autoGainDb.toFixed(1)+' dB)','Compressor: '+e.compThr+' dB / '+e.compRatio+':1 (attack '+(e.attack!==undefined?e.attack*1000:30)+' ms, release '+(e.release!==undefined?e.release*1000:200)+' ms)','Saturation drive: '+e.drive,'Limiter ceiling: -1 dBFS','Render time: '+r.sec.toFixed(2)+' s ('+r.speed.toFixed(1)+'x faster than real-time)']; var blob=new Blob([lines.join('\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=r.out.replace(/\.wav$/,'')+'-report.txt'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); document.getElementById('out').textContent='Downloaded mastering report for '+r.out+'.'; };
+document.getElementById('reportBtn').onclick=()=>{ if(!lastReport){ document.getElementById('out').textContent='No rendered master yet — press Render & download WAV first.'; return; } var r=lastReport,e=r.e; var lines=['PrAIme Productions — DAW & Master Report','========================================','Date/Time: '+new Date().toLocaleString(),'Source file: '+r.src,'Rendered master: '+r.out,'Duration: '+r.dur.toFixed(1)+' s','Sample rate: '+r.sr+' Hz','','--- Applied signal chain ---','Genre profile: '+r.genre+' ('+e.curveLabel+')','Bypass: '+(e.bypass?'Bypassed — output is the original':'Active'),'High-pass: 30 Hz','Low shelf 200 Hz: '+e.low+' dB','Peak 3000 Hz: '+e.peak+' dB','High shelf 10000 Hz: '+e.high+' dB','Input gain: '+e.inGain+' dB (auto-gain: '+autoGainDb.toFixed(1)+' dB)','Compressor: '+e.compThr+' dB / '+e.compRatio+':1 (attack '+(e.attack!==undefined?e.attack*1000:30)+' ms, release '+(e.release!==undefined?e.release*1000:200)+' ms)','Saturation drive: '+e.drive,'Limiter ceiling: -1 dBFS',tpReportLine(r.tpDb),'Render time: '+r.sec.toFixed(2)+' s ('+r.speed.toFixed(1)+'x faster than real-time)']; var blob=new Blob([lines.join('\n')],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=r.out.replace(/\.wav$/,'')+'-report.txt'; a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); },1000); document.getElementById('out').textContent='Downloaded mastering report for '+r.out+'.'; };
 document.getElementById('playLast').onclick=async ()=>{ if(!lastRenderedBlob){ document.getElementById('out').textContent='No rendered file yet — press Render & download WAV first.'; return; } stopLive(); if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); await ctx.resume(); const dec=await ctx.decodeAudioData(await lastRenderedBlob.arrayBuffer()); src=ctx.createBufferSource(); src.buffer=dec; analyser=ctx.createAnalyser(); analyser.fftSize=256; src.connect(analyser); analyser.connect(ctx.destination); src.start(); document.getElementById('stop').disabled=false; document.getElementById('out').textContent='Playing last rendered: '+lastRenderedName; inputAn=null; draw(); };
 // ---- Preview master / original — hear it in the page, NO download ----
 // This is the enticement preview: a visitor hears the mastered song exactly
@@ -133,7 +194,7 @@ async function previewRendered(mastered){
     if(e.bypass){ document.getElementById('previewOut').textContent='Bypass is on, so the mastered preview is the original — turn Bypass off to hear the master.'; }
     var off = new OfflineAudioContext(decoded.numberOfChannels, decoded.length, decoded.sampleRate);
     var s = off.createBufferSource(); s.buffer = decoded; chain(off, s, e.low, e.peak, e.high, e); s.start(0);
-    var rb = await off.startRendering(); blob = wav(rb);
+    var rb = await off.startRendering(); blob = wav(rb); measureTruePeak(rb, false); // guard only; the report belongs to Render, not preview
     lastRenderedBlob = blob; lastRenderedName = fileName; document.getElementById('playLast').disabled = false;
   } else {
     blob = wav(decoded);
