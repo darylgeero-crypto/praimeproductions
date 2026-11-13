@@ -373,6 +373,8 @@ let obABSel=[], obABBufA=null, obABBufB=null, obABActive=null, obABSrc=null, obA
 function obClick(accent){ try{ let c=micCtxFn(); let o=c.createOscillator(), g=c.createGain(); o.type='sine'; o.frequency.value=accent?1000:800; g.gain.setValueAtTime(0.5,c.currentTime); g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.07); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+0.08); }catch(e){} }
 function obBpmVal(){ let v=parseFloat(document.getElementById('obBpm').value); return (v>0)?v:92; }
 function obStamp(startSec){ let secPerBar=(60/obBpmVal())*4; let bar=Math.floor(startSec/secPerBar)+1; let sec=document.getElementById('obSection').value; return sec+' · bar '+bar+' · '+startSec.toFixed(1)+'s into beat'; }
+// ---- Take waveform thumbnail: min/max envelope of the take's decoded buffer, suite cyan, same approach as the Converter waveform ----
+function drawWaveThumb(buf, cv){ if(!buf||!cv) return; var c2=cv.getContext('2d'); if(!c2) return; var d=buf.getChannelData(0), w=cv.width, h=cv.height; c2.clearRect(0,0,w,h); c2.fillStyle='#07090e'; c2.fillRect(0,0,w,h); c2.fillStyle='#00f3ff'; var per=Math.max(1,Math.floor(d.length/w)); for(var x=0;x<w;x++){ var mn=0,mx=0,s=x*per; for(var i=s;i<Math.min(s+per,d.length);i+=4){ var v=d[i]; if(v<mn)mn=v; if(v>mx)mx=v; } var y1=(1-(mx+1)/2)*h, y2=(1-(mn+1)/2)*h; c2.fillRect(x,y1,1,Math.max(1,y2-y1)); } }
 function obRenderTakes(){
   let el=document.getElementById('obList'); if(!el) return;
   if(!obTakes.length){ el.textContent='No takes yet.'; obABSel=[]; obABRefresh(); return; }
@@ -387,6 +389,7 @@ function obRenderTakes(){
     pu.onclick=function(){ obPunchShow(t); };
     row.appendChild(pu);
     let au=document.createElement('audio'); au.controls=true; au.src=t.url; au.style.width='100%'; row.appendChild(au);
+    if(t.buffer){ let cv=document.createElement('canvas'); cv.width=320; cv.height=36; cv.style.cssText='width:100%;height:36px;background:#07090e;border-radius:8px;border:1px solid rgba(255,255,255,.1)'; row.appendChild(cv); drawWaveThumb(t.buffer, cv); }
     let vol=document.createElement('input'); vol.type='range'; vol.min=0; vol.max=100; vol.value=Math.round(t.volume*100);
     vol.oninput=function(){ t.volume=vol.value/100; };
     let volLab=document.createElement('label'); volLab.textContent='Volume'; volLab.appendChild(vol); row.appendChild(volLab);
