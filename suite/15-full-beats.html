@@ -380,8 +380,8 @@ function praimeLoadProject(pr){ if(!pr) return;
 // the select is rebuilt from the genres actually saved, so a new genre appears
 // as soon as a project of that genre is saved. The name search (projNameSearchInput)
 // is display-only and combines with the genre filter; both keep each project's
-// ORIGINAL index in the data attributes — Load/Delete/Rename/Export index into the
-// full saved array, so a filtered row must never carry its filtered position
+// ORIGINAL index in the data attributes — Load/Delete/Rename/Duplicate/Export index into
+// the full saved array, so a filtered row must never carry its filtered position
 // (Gemini's as-stated "filter the array before looping" would have made
 // Delete/Load hit the wrong project while a filter was on). Genre text is
 // escaped like the project name, since imported files can carry any string.
@@ -392,7 +392,7 @@ function renderProjList(){ var el=document.getElementById('projList'); if(!el) r
   if(!ps.length){ el.innerHTML='<p>No saved projects yet.</p>'; return; }
   var filt=sel?sel.value:''; var qEl=document.getElementById('projNameSearchInput'); var q=qEl?(qEl.value||'').toLowerCase():''; var rows=ps.map(function(pr,i){ return {pr:pr, i:i}; }).filter(function(r){ return (!filt || projGenreOf(r.pr)===filt) && (!q || String(r.pr.name||'').toLowerCase().indexOf(q)>=0); });
   if(!rows.length){ el.innerHTML='<p>No saved projects match this filter.</p>'; return; }
-  el.innerHTML=rows.map(function(r){ var pr=r.pr, i=r.i; return '<div style="margin:6px 0;padding:8px;border:1px solid rgba(255,255,255,.15);border-radius:10px"><b>'+pr.name.replace(/</g,'&lt;')+'</b> · '+projGenreOf(pr).replace(/</g,'&lt;')+' · '+pr.bpm+' BPM'+(pr.lyrics?' · ✎ lyrics':'')+' · '+pr.savedAt+' <button type="button" data-proj-load="'+i+'">Load</button><button type="button" class="secondary" data-proj-ren="'+i+'">Rename</button><button type="button" class="secondary" data-proj-del="'+i+'">Delete</button><button type="button" class="secondary" data-proj-exp="'+i+'">Export</button></div>'; }).join('');
+  el.innerHTML=rows.map(function(r){ var pr=r.pr, i=r.i; return '<div style="margin:6px 0;padding:8px;border:1px solid rgba(255,255,255,.15);border-radius:10px"><b>'+pr.name.replace(/</g,'&lt;')+'</b> · '+projGenreOf(pr).replace(/</g,'&lt;')+' · '+pr.bpm+' BPM'+(pr.lyrics?' · ✎ lyrics':'')+' · '+pr.savedAt+' <button type="button" data-proj-load="'+i+'">Load</button><button type="button" class="secondary" data-proj-ren="'+i+'">Rename</button><button type="button" class="secondary" data-proj-dup="'+i+'">Duplicate</button><button type="button" class="secondary" data-proj-del="'+i+'">Delete</button><button type="button" class="secondary" data-proj-exp="'+i+'">Export</button></div>'; }).join('');
   el.querySelectorAll('[data-proj-load]').forEach(function(b){ b.onclick=function(){ praimeLoadProject(praimeProjects()[parseInt(b.getAttribute('data-proj-load'),10)]); }; });
   el.querySelectorAll('[data-proj-del]').forEach(function(b){ b.onclick=function(){ var ps=praimeProjects(); ps.splice(parseInt(b.getAttribute('data-proj-del'),10),1); localStorage.setItem('praime_fullbeat_projects', JSON.stringify(ps)); renderProjList(); }; });
   el.querySelectorAll('[data-proj-exp]').forEach(function(b){ b.onclick=function(){ var pr=praimeProjects()[parseInt(b.getAttribute('data-proj-exp'),10)]; if(!pr) return; var data=Object.assign({format:'praime-fullbeat-project', exportedAt:new Date().toISOString()}, pr); var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-project-'+String(pr.name||'project').replace(/[^a-z0-9-_]+/gi,'-').replace(/^-+|-+$/g,'').toLowerCase()+'.json'; a.click(); document.getElementById('projOut').textContent='Exported project "'+pr.name+'" as JSON.'; }; });
@@ -401,6 +401,14 @@ function renderProjList(){ var el=document.getElementById('projList'); if(!el) r
   // name), otherwise update the stored name and re-render. Status via
   // textContent, so a name with markup can never inject HTML.
   el.querySelectorAll('[data-proj-ren]').forEach(function(b){ b.onclick=function(){ var idx=parseInt(b.getAttribute('data-proj-ren'),10); var ps=praimeProjects(); var pr=ps[idx]; var out=document.getElementById('projOut'); if(!pr) return; var nn=null; try{ nn=window.prompt('Enter new project name:', pr.name); }catch(e){ nn=null; } if(nn===null){ out.textContent='Rename cancelled.'; return; } nn=String(nn).trim(); if(!nn){ out.textContent='Rename cancelled — name cannot be empty.'; return; } if(nn===pr.name){ out.textContent='Name unchanged.'; return; } var dup=ps.some(function(x,j){ return j!==idx && x && x.name===nn; }); if(dup){ out.textContent='Rename failed — a project named "'+nn+'" already exists.'; return; } pr.name=nn; try{ localStorage.setItem('praime_fullbeat_projects', JSON.stringify(ps)); }catch(e){ out.textContent='Could not rename (storage error): '+e.message; return; } renderProjList(); out.textContent='Renamed project to "'+nn+'".'; }; });
+  // ---- Duplicate (Gemini 2026-11-13): deep-clone the project, give the copy
+  // a unique name ("Name (copy)", then "(copy 2)", "(copy 3)" ...), stamp a
+  // fresh savedAt, and save it as a new row. Uses the ORIGINAL index like
+  // Rename (see above), so duplicating while a filter is on copies the right
+  // project. Projects are keyed by name, so the copy gets its own Hub
+  // ?project= deep link automatically. Status via textContent, so a name
+  // with markup can never inject HTML.
+  el.querySelectorAll('[data-proj-dup]').forEach(function(b){ b.onclick=function(){ var idx=parseInt(b.getAttribute('data-proj-dup'),10); var ps=praimeProjects(); var pr=ps[idx]; var out=document.getElementById('projOut'); if(!pr) return; var clone=JSON.parse(JSON.stringify(pr)); var base=String(pr.name||'Project'); var nn=base+' (copy)'; var n=2; var taken=function(x){ return ps.some(function(y){ return y && y.name===x; }); }; while(taken(nn)){ nn=base+' (copy '+n+')'; n++; } clone.name=nn; clone.savedAt=new Date().toISOString(); ps.push(clone); try{ localStorage.setItem('praime_fullbeat_projects', JSON.stringify(ps)); }catch(e){ out.textContent='Could not duplicate (storage error): '+e.message; return; } renderProjList(); out.textContent='Duplicated project as "'+nn+'".'; }; });
 }
 var pgf=document.getElementById('projGenreFilter'); if(pgf) pgf.onchange=function(){ renderProjList(); };
 var pns=document.getElementById('projNameSearchInput'); if(pns) pns.addEventListener('input',function(){ renderProjList(); });
