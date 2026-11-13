@@ -49,7 +49,7 @@ a{color:#7ee2ff}
 <label>Song masters this month (0–10): <span id="estSongVal">0</span></label><input type="range" id="estSong" min="0" max="10" step="1" value="0">
 <label>Vocal masters this month (0–10): <span id="estVocalVal">0</span></label><input type="range" id="estVocal" min="0" max="10" step="1" value="0">
 <label>Video renders this month (0–5): <span id="estVideoVal">0</span></label><input type="range" id="estVideo" min="0" max="5" step="1" value="0">
-<div class="status" id="estOut">Estimated pay-per-use total: $0.00 — within your free tier.</div></div>
+<div class="status" id="estOut">Estimated pay-per-use total: $0.00 — within your free tier.</div><button id="copyEstBtn" class="secondary">⧉ Copy estimate as text</button><span class="status" id="estCopyStatus"></span></div>
 <script>
 (function(){
   var CFG={beat:{el:'estBeats',val:'estBeatsVal',price:9.99,free:3,max:10,label:'beat'},song:{el:'estSong',val:'estSongVal',price:2.99,free:3,max:10,label:'song master'},vocal:{el:'estVocal',val:'estVocalVal',price:1.99,free:3,max:10,label:'vocal master'},video:{el:'estVideo',val:'estVideoVal',price:1.99,free:0,max:5,label:'video render'}};
@@ -76,6 +76,19 @@ a{color:#7ee2ff}
   for(var k4 in CFG){ document.getElementById(CFG[k4].el).addEventListener('input', calc); }
   calc();
 })();
+</script>
+<script>
+// ---- Copy project cost estimate as text (Gemini 2026-11-13: copies the live #estOut line + slider counts; #estOut itself is never overwritten) ----
+document.getElementById('copyEstBtn').onclick=function(){
+  var out=document.getElementById('estCopyStatus');
+  var est=document.getElementById('estOut');
+  if(!est){ if(out) out.textContent='No estimate to copy yet.'; return; }
+  function v(id){ var el=document.getElementById(id); return el?el.value:'0'; }
+  var text='PrAIme Productions \u2014 Cost Estimate\n----------------------------------\nBeats: '+v('estBeats')+' | Song Masters: '+v('estSong')+' | Vocal Masters: '+v('estVocal')+' | Video Renders: '+v('estVideo')+'\n'+est.textContent;
+  function done(ok){ if(out) out.textContent=ok?'Estimate copied \u2014 paste it into a chat, log or notes.':'Copy failed in this browser \u2014 the estimate is still shown above.'; }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ done(true); },function(){ fallback(); }); } else fallback();
+  function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); done(!!ok); }catch(e){ done(false); } }
+};
 </script>
 
 <div class="card"><h2>Pay per use — no subscription required</h2>
