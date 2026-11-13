@@ -24,7 +24,7 @@ a{color:#7ee2ff}
 <div id="beats"></div><p><small>Lease tiers: every beat starts as the $9.99 MP3 lease — change the tier in your cart (WAV $19.99, Trackout $49.99, Unlimited $99.99). Exclusive $199 needs a contract, so it stays on the Pricing page.</small></p>
 <div class="card"><h2>Soundkits — real sounds, for purchase</h2>
 <p>PrAIme-curated kits, now built from the full live library — 1,103 real CC0 melodic OGG sounds plus real drum WAVs, all wired in and live on this site. <b>Not</b> repackaged free packs sold as-is: each kit is a curated PrAIme selection with a demo preview, and the buyer gets a licence to use the sounds in tracks, NOT ownership of the kit and NOT the right to resell/redistribute the raw sounds. Family kits undercut typical $30-$50 kits; All-In is the full library at $49.99. Checkout is with Live PayPal, same cart as beats.</p>
-<div id="soundkits"></div><p id="kitOut"></p></div>
+<label>Sort soundkits</label><select id="sortKits"><option value="default">Default order</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option><option value="name-asc">Name: A–Z</option></select><div id="soundkits"></div><p id="kitOut"></p></div>
 <script>
 (function(){
   var DRUMS=['samples/trap-kick.wav','samples/trap-snare.wav','samples/trap-hat.wav','samples/trap-bass.wav','samples/house-kick.wav','samples/house-clap.wav','samples/house-hat.wav','samples/house-perc.wav','samples/lofi-kick.wav','samples/lofi-snare.wav','samples/lofi-hat.wav','samples/lofi-clap.wav','samples/instruments/synth-dark.wav','samples/instruments/synth-crisp.wav'];
@@ -82,7 +82,9 @@ a{color:#7ee2ff}
   }
   window.praimeRefreshKitStates=refreshKitStates;
   document.addEventListener('DOMContentLoaded', refreshKitStates);
-  div.innerHTML=kits.map(function(k,i){ return '<div class="card"><b>'+k.name+'</b> — $'+k.price+'<br>'+k.desc+' <button data-kit="'+i+'">Add to cart — Live PayPal</button> <button data-prev="'+i+'">▶ Preview kit</button> <button data-kitlink="'+i+'" class="secondary">⧉ Copy kit link</button></div>'; }).join('');
+  // ---- Soundkit sort: renderKits(order) takes original array indices in display order, so data-kit / data-prev / data-kitlink always point at the right kit after sorting; prices, cart and PayPal payloads are untouched, only display order changes. ----
+  function renderKits(order){
+  div.innerHTML=order.map(function(i){ var k=kits[i]; return '<div class="card"><b>'+k.name+'</b> — $'+k.price+'<br>'+k.desc+' <button data-kit="'+i+'">Add to cart — Live PayPal</button> <button data-prev="'+i+'">▶ Preview kit</button> <button data-kitlink="'+i+'" class="secondary">⧉ Copy kit link</button></div>'; }).join('');
   div.querySelectorAll('[data-kit]').forEach(function(btn){ btn.onclick=function(){
     var k=kits[parseInt(btn.dataset.kit)];
     if(!k) return;
@@ -112,7 +114,13 @@ a{color:#7ee2ff}
     function fail(){ out.textContent='Copy failed — clipboard is not available in this browser. The kit link is '+link+'.'; }
     function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); if(ok) done(); else fail(); }catch(e){ fail(); } }
     if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(link).then(done,fallback); } else fallback();
-  };});})();
+  };});
+  try{ refreshKitStates(); }catch(e){} // cart is declared in the later beats script, so at first render it may not exist yet; DOMContentLoaded refreshes then, and later sorts refresh here.
+  }
+  renderKits(kits.map(function(k,i){ return i; }));
+  var sortKits=document.getElementById('sortKits');
+  if(sortKits) sortKits.onchange=function(){ var order=kits.map(function(k,i){ return i; }); var v=sortKits.value; if(v==='price-asc') order.sort(function(a,b){ return kits[a].price-kits[b].price; }); else if(v==='price-desc') order.sort(function(a,b){ return kits[b].price-kits[a].price; }); else if(v==='name-asc') order.sort(function(a,b){ return kits[a].name.localeCompare(kits[b].name); }); renderKits(order); };
+})();
 </script>
 <h3>Cart</h3><div id="cart"></div><p id="total"></p>
 <label>PayPal merchant email / ID (required for real checkout)</label><input id="merchant" placeholder="merchant@example.com" value="9S45E2JXMWG3A">
