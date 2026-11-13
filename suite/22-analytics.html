@@ -84,6 +84,12 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 <button id="saveAnalytics">Save my numbers</button>
 <p id="analyticsStatus" class="status">Not saved yet on this device.</p></div>
 
+<div class="card"><h2>Growth check-ins — dated snapshots</h2>
+<p>Stamp today's numbers as a dated check-in, then stamp again next time you update them — each row below shows exactly how much each number moved since the previous check-in. Deltas are plain subtraction of numbers you entered yourself; nothing is fetched, projected, or averaged, and check-ins stay in this browser only.</p>
+<button id="saveSnapshotBtn">📸 Save dated snapshot</button>
+<p id="snapshotStatus" class="status">No check-ins saved yet on this device.</p>
+<div id="snapshotHistory"></div></div>
+
 <div class="card"><h2>This device</h2>
 <p id="localStatus" class="status"></p>
 <p><small>Terms accepted on this device: shown below if the first-run popup has been accepted here. Clearing browser data resets it, and the Terms popup will show again on first run.</small></p></div>
@@ -127,11 +133,11 @@ document.getElementById('healthBtn').onclick=loadHealth; loadHealth();
   var tbl=document.getElementById('adTable');
   ads.forEach(function(name,i){
     var row=document.createElement('div');
-    row.innerHTML='<label>'+name+' — views</label><input id="adV'+i+'" type="number" placeholder="0"><label>'+name+' — link clicks</label><input id="adC'+i+'" type="number" placeholder="0"><label>'+name+' — sales from this ad</label><input id="adS'+i+'" type="number" placeholder="0">';
+    row.innerHTML='<label>'+name+' — views</label><input id="adV'+i+'" type="number" placeholder="0"><label>'+name+' — link clicks</label><input id="adC'+i+'" type="number" placeholder="0"><label>'+name+' — sales from this ad</label><input id="adS'+i+'" type="number" placeholder="0"><p class="status" id="adConv'+i+'"></p>';
     tbl.appendChild(row);
-    ['V','C','S'].forEach(function(t){ var v=localStorage.getItem('praime_ad_'+t+i); if(v!==null) document.getElementById('ad'+t+i).value=v; });
+    ['V','C','S'].forEach(function(t){ var v=localStorage.getItem('praime_ad_'+t+i); if(v!==null) document.getElementById('ad'+t+i).value=v; var el=document.getElementById('ad'+t+i); if(el) el.addEventListener('input', totals); });
   });
-  function totals(){ var v=0,c=0,s=0; ads.forEach(function(_,i){ v+=parseInt(document.getElementById('adV'+i).value||'0',10); c+=parseInt(document.getElementById('adC'+i).value||'0',10); s+=parseInt(document.getElementById('adS'+i).value||'0',10); }); document.getElementById('adTotals').textContent='Totals — views: '+v+' · link clicks: '+c+' · sales: '+s+(c? ' · click-to-sale: '+(s/c*100).toFixed(1)+'%':''); }
+  function totals(){ var v=0,c=0,s=0; ads.forEach(function(_,i){ var vv=parseInt(document.getElementById('adV'+i).value||'0',10)||0; var cc=parseInt(document.getElementById('adC'+i).value||'0',10)||0; var ss=parseInt(document.getElementById('adS'+i).value||'0',10)||0; v+=vv; c+=cc; s+=ss; var conv=document.getElementById('adConv'+i); if(conv) conv.textContent='Click-to-sale for this ad: '+(cc>0 ? (ss/cc*100).toFixed(1)+'%' : '— (no clicks entered yet)'); }); document.getElementById('adTotals').textContent='Totals — views: '+v+' · link clicks: '+c+' · sales: '+s+(c? ' · click-to-sale: '+(s/c*100).toFixed(1)+'%':''); }
   document.getElementById('saveAds').onclick=function(){ ads.forEach(function(_,i){ ['V','C','S'].forEach(function(t){ localStorage.setItem('praime_ad_'+t+i, document.getElementById('ad'+t+i).value||'0'); }); }); totals(); };
   // Copy ad numbers: per-ad views/clicks/sales plus totals as plain text (copy only — nothing saved, published or sent), mirroring copyMusicStats.
   document.getElementById('copyAds').onclick=function(){ var v=0,c=0,s=0; var lines=['PrAIme — Ad impact (your content only)']; ads.forEach(function(name,i){ var vv=parseInt(document.getElementById('adV'+i).value||'0',10)||0; var cc=parseInt(document.getElementById('adC'+i).value||'0',10)||0; var ss=parseInt(document.getElementById('adS'+i).value||'0',10)||0; v+=vv; c+=cc; s+=ss; lines.push(name+' — views '+vv+' · clicks '+cc+' · sales '+ss); }); lines.push('Totals — views '+v+' · link clicks '+c+' · sales '+s); var text=lines.join('\n'); function done(ok){ document.getElementById('adTotals').textContent=ok?('Copied ad numbers (views '+v+' · clicks '+c+' · sales '+s+') — paste them into a log, message or notes.'):('Copy failed in this browser — totals: views '+v+' · clicks '+c+' · sales '+s+'.'); } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } };
@@ -144,6 +150,71 @@ try{
   var tos=localStorage.getItem('praime_tos_accepted'), at=localStorage.getItem('praime_tos_accepted_at');
   document.getElementById('localStatus').textContent='Terms accepted on this device: '+(tos==='1' ? 'Yes'+(at ? ' ('+at+')' : '') : 'No — the Terms popup will show on first run.')+'\nAnalytics visits on this device: '+(function(){ var n=parseInt(localStorage.getItem('praime_analytics_visits')||'0',10)+1; localStorage.setItem('praime_analytics_visits', String(n)); return n; })();
 }catch(e){ document.getElementById('localStatus').textContent='Local storage is not available in this browser, so manual numbers cannot be saved here.'; }
+// Growth check-ins: dated snapshots of the numbers you entered, with exact deltas vs the previous check-in. Local only — plain subtraction of your own entered numbers, no fetching, no projections, no averages. Owner music totals are included only when the owner card is visible on this device.
+(function(){
+  var KEY='praime_analytics_snapshots', MAX=10;
+  var FIELDS=[
+    {k:'ig',label:'Instagram',money:false},
+    {k:'x',label:'X',money:false},
+    {k:'fb',label:'Facebook',money:false},
+    {k:'tt',label:'TikTok',money:false},
+    {k:'sales',label:'Beat / kit sales',money:false},
+    {k:'rev',label:'Sales value (USD)',money:true}
+  ];
+  var MUSIC=[
+    {k:'musicSC',label:'SoundCloud',money:false},
+    {k:'musicSClick',label:'SoundClick',money:false},
+    {k:'musicRN',label:'ReverbNation',money:false},
+    {k:'musicYT',label:'YouTube',money:false},
+    {k:'musicSP',label:'Spotify',money:false}
+  ];
+  function num(id,money){ var el=document.getElementById(id); if(!el) return 0; var v=money?parseFloat(el.value||'0'):parseInt(el.value||'0',10); return isNaN(v)?0:v; }
+  function ownerVisible(){ var c=document.getElementById('musicStatsCard'); return !!(c && c.style.display!=='none'); }
+  function fields(){ return ownerVisible()?FIELDS.concat(MUSIC):FIELDS; }
+  function readCurrent(){ var o={}; fields().forEach(function(f){ o[f.k]=num(f.k,f.money); }); return o; }
+  function load(){ try{ var a=JSON.parse(localStorage.getItem(KEY)||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){} }
+  function fmt(f,v){ return f.money ? '$'+v.toFixed(2) : String(v); }
+  function deltaText(f,cur,prev){
+    var d=cur-prev; if(d===0) return null;
+    var s=f.label+' '+(d>0?'+':'-')+fmt(f,Math.abs(d));
+    if(prev>0){ var pc=d/prev*100; s+=' ('+(pc>0?'+':'')+pc.toFixed(1)+'%)'; }
+    return s;
+  }
+  function sameAs(a,b){ var ka=Object.keys(a), kb=Object.keys(b); if(ka.length!==kb.length) return false; for(var i=0;i<ka.length;i++){ if(a[ka[i]]!==b[ka[i]]) return false; } return true; }
+  function render(){
+    var hist=document.getElementById('snapshotHistory'); if(!hist) return;
+    var st=document.getElementById('snapshotStatus');
+    var snaps=load(); hist.innerHTML='';
+    if(!snaps.length){ if(st) st.textContent='No check-ins saved yet on this device.'; return; }
+    if(st) st.textContent=snaps.length+' check-in'+(snaps.length>1?'s':'')+' saved on this device (newest last). Deltas are vs the previous check-in.';
+    snaps.forEach(function(snap,i){
+      var row=document.createElement('div'); row.className='stat'; row.style.margin='8px 0';
+      var line='<b>'+snap.date+'</b>';
+      if(i===0){ line+='<br><small>First check-in — baseline, no previous numbers to compare.</small>'; }
+      else {
+        var parts=[]; fields().forEach(function(f){ if(snap.values.hasOwnProperty(f.k) && snaps[i-1].values.hasOwnProperty(f.k)){ var t=deltaText(f, snap.values[f.k], snaps[i-1].values[f.k]); if(t) parts.push(t); } });
+        line+= parts.length ? '<br>'+parts.join(' · ') : '<br><small>No change since the previous check-in.</small>';
+      }
+      line+=' <button class="secondary" data-del="'+i+'" style="padding:4px 10px;margin:2px 0 0 8px">✕ Delete</button>';
+      row.innerHTML=line;
+      hist.appendChild(row);
+    });
+    hist.querySelectorAll('[data-del]').forEach(function(b){ b.onclick=function(){ var a=load(); a.splice(parseInt(b.getAttribute('data-del'),10),1); save(a); render(); }; });
+  }
+  var btn=document.getElementById('saveSnapshotBtn');
+  if(btn) btn.onclick=function(){
+    var st=document.getElementById('snapshotStatus');
+    var cur=readCurrent(); var snaps=load();
+    if(snaps.length && sameAs(cur, snaps[snaps.length-1].values)){ if(st) st.textContent='Nothing changed since the last check-in ('+snaps[snaps.length-1].date+') — no duplicate snapshot saved.'; return; }
+    var _d=new Date(); var today=_d.getFullYear()+'-'+('0'+(_d.getMonth()+1)).slice(-2)+'-'+('0'+_d.getDate()).slice(-2);
+    snaps.push({date:today, values:cur});
+    while(snaps.length>MAX) snaps.shift();
+    save(snaps); render();
+    if(st) st.textContent='Saved check-in for '+today+'.';
+  };
+  render();
+})();
 (function(){
   var btn=document.getElementById('rokBtn'), panel=document.getElementById('rokPanel'), log=document.getElementById('rokLog');
   if(!btn||!panel) return; btn.onclick=function(){ panel.style.display = panel.style.display==='block' ? 'none' : 'block'; };
