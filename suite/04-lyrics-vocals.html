@@ -20,12 +20,25 @@ a{color:#7ee2ff}
 #rokPanel{position:fixed;right:16px;bottom:92px;z-index:9999;width:min(360px,92vw);max-height:70vh;overflow:auto;background:rgba(15,20,32,.97);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:14px;display:none}
 #rokLog{white-space:pre-wrap;font-size:14px;line-height:1.45;max-height:260px;overflow:auto;background:#07090e;border-radius:12px;padding:10px}
 #rokPanel input{margin-top:8px}
+#prompterOverlay{position:fixed;inset:0;z-index:10000;background:#05070c;color:#f3f4f6;display:none}
+.prompter-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:rgba(15,20,32,.95);border-bottom:1px solid rgba(255,255,255,.12)}
+.prompter-bar select{width:auto;margin:0}
+.prompter-bar button{margin:0}
+.prompter-bar label{margin:0;font-weight:600;font-size:13px}
+#prompterStatus{font-size:13px;color:#9ca3af;flex:1;min-width:140px}
+.prompter-goldline{position:fixed;left:0;right:0;top:calc(50% + 32px);border-top:2px solid #d4af37;opacity:.85;pointer-events:none;z-index:1}
+#prompterLines{height:calc(100vh - 61px);overflow-y:auto;scroll-behavior:smooth;padding:46vh 24px;font-size:36px;line-height:1.6;text-align:center}
+.prompter-line{padding:10px 8px;color:#6b7280;cursor:pointer}
+.prompter-line.prompter-current{color:#fff;font-weight:700;text-shadow:0 0 24px rgba(212,175,55,.45)}
+.prompter-empty{color:#9ca3af;font-size:24px}
+@media print{#prompterOverlay{display:none!important}}
 </style></head><body><header><div class="hi"><div class="logo">◉</div><div><b>Pr<span class="grad">AI</span>me™</b> <span class="badge">Studio v3.5 visual</span></div><nav><a href="index.html">Hub</a><a href="02-daw-master.html">DAW</a><a href="03-freestyle.html">Freestyle</a><a href="04-lyrics-vocals.html">Lyrics</a><a href="05-video.html">Video</a><a href="06-converter.html">Converter</a><a href="07-commander.html">Commander</a><a href="08-search.html">Search</a><a href="09-beat-store.html">Beat Store</a><a href="10-ads.html">Ads</a><a href="11-rokdabus.html">Rokdabus</a><a href="12-colab.html">Co-Lab</a><a href="13-separate-rebeat.html">Separate &amp; Re-Beat</a><a href="14-live-dj.html">Live DJ</a><a href="15-full-beats.html">Full Beats</a><a href="16-launch.html">Launch</a><a href="17-taste.html">My Taste</a><a href="18-tos.html">Terms</a><a href="19-styles.html">Styles</a><a href="20-pricing.html">Pricing</a><a href="21-tokens.html">Tokens</a></nav></div></header><main><h1>Lyrics & Vocals</h1><p><span class="badge">Separate page 4 of 10</span></p><div class="card"><h2>Lyrics notepad — saved</h2><p>Lyrics are saved to localStorage and to the bus, so Freestyle can add words here and you can download them as a real TXT file, or print them (Save as PDF in the print dialog).</p>
 <div style="display:flex;gap:8px;align-items:center;margin:10px 0 6px"><input type="text" id="rhymeQuery" placeholder="Type a word to find rhymes..." style="flex:1"><button id="findRhymesBtn" class="secondary">Find rhymes</button></div>
 <div class="status" id="rhymeResults"></div>
 <textarea id="lyrics" rows="12" placeholder="Write lyrics here..."></textarea>
-<button id="save">Save lyrics</button><button id="dl">Download lyrics .TXT</button><button id="load" class="secondary">Load saved lyrics</button><button id="importLyrics" class="secondary">⬆ Import lyrics .TXT</button><input type="file" id="importLyricsFile" accept=".txt,text/plain" style="display:none"><button id="printLyrics" class="secondary">🖨 Print lyrics / PDF</button><button id="dictateLyrics" class="secondary">🎤 Dictate lyrics</button>
+<button id="save">Save lyrics</button><button id="dl">Download lyrics .TXT</button><button id="load" class="secondary">Load saved lyrics</button><button id="importLyrics" class="secondary">⬆ Import lyrics .TXT</button><input type="file" id="importLyricsFile" accept=".txt,text/plain" style="display:none"><button id="printLyrics" class="secondary">🖨 Print lyrics / PDF</button><button id="dictateLyrics" class="secondary">🎤 Dictate lyrics</button><button id="prompterBtn" class="secondary">📺 Prompter mode</button>
 <div class="status" id="out"></div></div>
+<div id="prompterOverlay"><div class="prompter-bar"><b>📺 Prompter</b><span id="prompterStatus"></span><button id="prompterPlay" class="secondary">▶ Play</button><label>Speed <select id="prompterSpeed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><label>Text <select id="prompterSize"><option value="28">Small</option><option value="36" selected>Medium</option><option value="48">Large</option><option value="64">Huge</option></select></label><button id="prompterStep" class="secondary">↓ Step line</button><button id="prompterClose" class="secondary">✕ Close</button></div><div class="prompter-goldline"></div><div id="prompterLines"></div><p style="padding:0 16px 12px;font-size:12px;color:#9ca3af">Pace: 1 line per bar at the over-beat BPM below (4 beats a bar) — press Play when the beat starts, or step lines by hand with the button, Spacebar, or by tapping a line. Close with ✕ or Escape.</p></div>
 <div class="card"><h2>Vocal recording — real microphone</h2><p>Press Record, allow microphone access, sing/rap, press Stop. The recording plays back here and downloads as a WebM audio file. It is not a fake "take recorded" alert.</p>
 <button id="rec">● Record vocal</button><button id="stopRec" disabled class="secondary">■ Stop &amp; download</button>
 <audio id="player" controls style="width:100%;margin-top:12px"></audio><div class="status" id="recOut"></div></div>
@@ -116,6 +129,73 @@ document.getElementById('importLyricsFile').onchange=function(e){ var f=(e.targe
 document.getElementById('printLyrics').onclick=()=>{ document.getElementById('out').textContent='Print dialog opened — choose Save as PDF in the print dialog to keep a PDF copy.'; window.print(); };
 // ---- Dictate lyrics into the notepad (SpeechRecognition; same API as the Rokdabus voice panel and Search voice search) ----
 document.getElementById('dictateLyrics').onclick=function(){ var SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR){ document.getElementById('out').textContent='Voice dictation needs Chrome on Android with SpeechRecognition. In this browser it is not available, so type your lyrics instead.'; return; } var rec=new SR(); rec.lang='en-US'; rec.interimResults=false; rec.maxAlternatives=1; rec.onresult=function(ev){ var t=ev.results[0][0].transcript; if(!t) return; ta.value=ta.value?(ta.value.replace(/\s+$/,'')+' '+t):t; ta.dispatchEvent(new Event('input')); document.getElementById('out').textContent='Dictated: "'+t+'" — auto-save will pick it up.'; }; rec.onerror=function(ev){ document.getElementById('out').textContent='Dictation failed: '+(ev.error||'unknown error')+' — type your lyrics instead.'; }; rec.start(); document.getElementById('out').textContent='Listening… speak your lyrics now.'; };
+// ---- Prompter Mode: large-text scrolling teleprompter for the notepad lyrics, paced by the over-beat BPM (Gemini 2026-11-12, narrowed) ----
+// Pace rule, stated on the overlay: 1 line per bar at the over-beat BPM (4 beats a bar), so line time = 240 / BPM seconds at 1x.
+// Manual toggle only — it does NOT auto-open when a take starts recording, so the recording flow is untouched.
+// Spacebar steps one line, Escape closes; tapping a line jumps to it. Empty notepad shows a message, Play does nothing.
+(function(){
+  var overlay=document.getElementById('prompterOverlay'), linesEl=document.getElementById('prompterLines'), statusEl=document.getElementById('prompterStatus'), playBtn=document.getElementById('prompterPlay');
+  var lines=[], cur=-1, timer=null, playing=false;
+  function bpmVal(){ return (typeof obBpmVal==='function') ? obBpmVal() : 92; }
+  function barSec(){ return 240/bpmVal(); }
+  function speedVal(){ var s=parseFloat(document.getElementById('prompterSpeed').value); return (s>0)?s:1; }
+  function lineMs(){ return barSec()*1000/speedVal(); }
+  function lineEls(){ return linesEl.querySelectorAll('.prompter-line'); }
+  function updateStatus(){
+    if(!lines.length){ statusEl.textContent='No lyrics loaded.'; return; }
+    statusEl.textContent='Line '+(cur+1)+' of '+lines.length+' · 1 bar per line at '+bpmVal()+' BPM ('+barSec().toFixed(2)+'s per line) · '+speedVal()+'×';
+  }
+  function setCurrent(i){
+    if(!lines.length) return;
+    if(i<0) i=0; if(i>=lines.length) i=lines.length-1;
+    var kids=lineEls();
+    if(cur>=0 && kids[cur]) kids[cur].classList.remove('prompter-current');
+    cur=i;
+    var el=kids[cur];
+    el.classList.add('prompter-current');
+    linesEl.scrollTop=el.offsetTop-linesEl.clientHeight/2+el.offsetHeight/2;
+    updateStatus();
+  }
+  function tick(){ if(cur+1>=lines.length){ stopScroll(true); return; } setCurrent(cur+1); }
+  function startScroll(){
+    if(!lines.length) return;
+    if(cur<0) setCurrent(0);
+    playing=true; playBtn.textContent='⏸ Pause';
+    clearInterval(timer); timer=setInterval(tick, lineMs());
+  }
+  function stopScroll(done){
+    playing=false; clearInterval(timer); timer=null; playBtn.textContent='▶ Play';
+    if(done) statusEl.textContent='End of lyrics — '+lines.length+' lines.';
+    else updateStatus();
+  }
+  function renderLines(){
+    var text=(document.getElementById('lyrics').value||'');
+    lines=text.split('\n').filter(function(l){ return l.trim().length>0; });
+    linesEl.innerHTML='';
+    lines.forEach(function(l,i){
+      var d=document.createElement('div');
+      d.className='prompter-line'; d.textContent=l;
+      d.onclick=function(){ setCurrent(i); };
+      linesEl.appendChild(d);
+    });
+    cur=-1;
+    if(!lines.length){ linesEl.innerHTML='<div class="prompter-line prompter-empty">No lyrics yet — write or load lyrics first, then open Prompter mode.</div>'; }
+    updateStatus();
+  }
+  function openPrompter(){ renderLines(); overlay.style.display='block'; document.body.style.overflow='hidden'; }
+  function closePrompter(){ stopScroll(false); overlay.style.display='none'; document.body.style.overflow=''; }
+  document.getElementById('prompterBtn').onclick=openPrompter;
+  document.getElementById('prompterClose').onclick=closePrompter;
+  playBtn.onclick=function(){ if(playing) stopScroll(false); else startScroll(); };
+  document.getElementById('prompterStep').onclick=function(){ if(!lines.length) return; if(cur+1<lines.length) setCurrent(cur+1); else stopScroll(true); };
+  document.getElementById('prompterSize').onchange=function(){ linesEl.style.fontSize=document.getElementById('prompterSize').value+'px'; };
+  document.getElementById('prompterSpeed').onchange=function(){ if(playing){ clearInterval(timer); timer=setInterval(tick, lineMs()); } updateStatus(); };
+  document.addEventListener('keydown',function(ev){
+    if(overlay.style.display!=='block') return;
+    if(ev.code==='Space'){ ev.preventDefault(); document.getElementById('prompterStep').click(); }
+    if(ev.key==='Escape'){ closePrompter(); }
+  });
+})();
 let rec=null,chunks=[];
 document.getElementById('rec').onclick=async ()=>{ try{ const stream=await navigator.mediaDevices.getUserMedia({audio:true}); rec=new MediaRecorder(stream); chunks=[]; rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);}; rec.onstop=()=>{ const blob=new Blob(chunks,{type:'audio/webm'}); window.praimeLastVocalBlob=blob; var ml=document.getElementById('micUseLast'); if(ml) ml.disabled=false; const url=URL.createObjectURL(blob); document.getElementById('player').src=url; const a=document.createElement('a'); a.href=url; a.download='praime-vocal.webm'; a.click(); document.getElementById('recOut').textContent='Vocal downloaded as praime-vocal.webm and loaded for playback.'; }; rec.start(); document.getElementById('rec').disabled=true; document.getElementById('stopRec').disabled=false; document.getElementById('recOut').textContent='Recording…'; }catch(err){ document.getElementById('recOut').textContent='Microphone failed: '+err.message+' — allow microphone access in your browser.'; } };
 document.getElementById('stopRec').onclick=()=>{ if(rec) rec.stop(); document.getElementById('rec').disabled=false; document.getElementById('stopRec').disabled=true; };
