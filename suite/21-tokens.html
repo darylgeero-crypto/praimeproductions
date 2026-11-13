@@ -51,7 +51,7 @@ a{color:#7ee2ff}
 <div class="status" id="verifyOut"></div>
 <label>Transfer a token</label><input id="transferToken" placeholder="Paste the current token">
 <input id="transferTo" placeholder="New holder email">
-<button id="doTransferLocal">Transfer token (old token revoked, new token issued)</button>
+<button id="doTransferLocal">Transfer token (old token revoked, new token issued)</button><button id="copyTransferToken" disabled class="secondary">⧉ Copy transferred token</button><span id="copyTransferStatus" style="font-size:12px;color:#9ca3af;margin-left:8px"></span>
 <div class="status" id="transferOut"></div>
 <h3>Ledger (hashes only, plain tokens are never stored)</h3>
 <div class="status" id="ledgerOut"></div>
@@ -302,6 +302,10 @@ document.getElementById('verifyCodeBtn').onclick=async function(){
 };
 // ---- Copy the just-issued server token: copies the token stored at issue time, never parses #serverOut (which also holds error/status text). Disabled until a token is issued; a fresh page load starts disabled with no token stored. ----
 var lastServerToken=null;
+var lastTransferToken=null;
+// ---- Copy the just-issued transferred token: copies the token stored at transfer time, never parses #transferOut (which also holds error/status text). Disabled until a transfer issues a token; a fresh page load starts disabled with no token stored. Mirrors the claim-flow copyServerToken handler (same status wording, same execCommand fallback, no setTimeout status clear). ----
+// Gemini's as-stated handler is corrected here: it used let/arrow functions (this page is var/function style), referenced a fallbackCopy() helper that does not exist on this page (the fallback is inlined, as in copyServerToken), and cleared the status after 2.5 s (this page's copy status is persistent).
+document.getElementById('copyTransferToken').onclick=function(){ var out=document.getElementById('copyTransferStatus'); if(!lastTransferToken){ out.textContent='No transfer issued yet — transfer a token first.'; return; } function done(ok){ out.textContent=ok?('Transferred token copied — paste it somewhere safe now, it is shown once.'):('Copy failed — clipboard is not available in this browser. The token is still shown above.'); } function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=lastTransferToken; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(lastTransferToken).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); };
 document.getElementById('copyServerToken').onclick=function(){ var out=document.getElementById('copyServerTokenOut'); if(!lastServerToken){ out.textContent='No server token issued yet — claim one first.'; return; } function done(ok){ out.textContent=ok?('Server token copied — paste it somewhere safe now, it is shown once.'):('Copy failed — clipboard is not available in this browser. The token is still shown above.'); } function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=lastServerToken; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(lastServerToken).then(function(){ done(true); },function(){ fallback(); }); } else fallback(); };
 document.getElementById('claimLocal').onclick=async function(){
   var s=loadLocal();
@@ -325,7 +329,7 @@ document.getElementById('doTransferLocal').onclick=async function(){
   if(!tok || !to){ document.getElementById('transferOut').textContent='Paste the current token and give the new holder email.'; return; }
   // Try server transfer first
   try{ var d=await postJson('/api/token/transfer', {token:tok, email:(document.getElementById('serverEmail')?document.getElementById('serverEmail').value.trim():''), newEmail:to});
-    if(d.ok){ document.getElementById('transferOut').textContent='TRANSFERRED (live server) — NEW TOKEN, COPY IT NOW (old token is revoked and will no longer verify):\n'+d.token+'\nFounder #'+d.number; return; }
+    if(d.ok){ document.getElementById('transferOut').textContent='TRANSFERRED (live server) — NEW TOKEN, COPY IT NOW (old token is revoked and will no longer verify):\n'+d.token+'\nFounder #'+d.number; lastTransferToken=d.token; document.getElementById('copyTransferToken').disabled=false; return; }
     // If server says invalid, still try local below; if server was reachable but token is local-only, local check will decide
     document.getElementById('transferOut').textContent='Server transfer: '+(d.error||'failed')+' — trying local transfer…\n';
   }catch(e){ document.getElementById('transferOut').textContent='Server not reachable — trying local transfer…\n'; }
@@ -335,7 +339,7 @@ document.getElementById('doTransferLocal').onclick=async function(){
   var newToken='PRAIME-F-'+pad3(t.number)+'-'+randomHex32(); var nh=await sha256Hex(newToken);
   s.tokens.push({number:t.number, tokenHash:nh, holder:to, issuedAt:t.issuedAt, transferredAt:new Date().toISOString(), active:true});
   await appendChain(s, 'transfer', t.number, nh, to, h); saveLocal(s); showLedger(); refreshChainNote();
-  document.getElementById('transferOut').textContent+='TRANSFERRED (local) — NEW TOKEN, COPY IT NOW. The old token is revoked and will no longer verify:\n'+newToken+'\nFounder #'+pad3(t.number)+' — '+to;
+  document.getElementById('transferOut').textContent+='TRANSFERRED (local) — NEW TOKEN, COPY IT NOW. The old token is revoked and will no longer verify:\n'+newToken+'\nFounder #'+pad3(t.number)+' — '+to; lastTransferToken=newToken; document.getElementById('copyTransferToken').disabled=false;
 };
 document.getElementById('exportLedger').onclick=function(){
   var s=loadLocal(); var blob=new Blob([JSON.stringify(s,null,2)], {type:'application/json'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-founder-ledger-hashes-only.json'; a.click();

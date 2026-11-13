@@ -86,7 +86,7 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 
 <div class="card"><h2>Growth check-ins — dated snapshots</h2>
 <p>Stamp today's numbers as a dated check-in, then stamp again next time you update them — each row below shows exactly how much each number moved since the previous check-in. Deltas are plain subtraction of numbers you entered yourself; nothing is fetched, projected, or averaged, and check-ins stay in this browser only.</p>
-<button id="saveSnapshotBtn">📸 Save dated snapshot</button><button id="dlCheckinsBtn" class="secondary">⬇ Download check-ins (.JSON)</button>
+<button id="saveSnapshotBtn">📸 Save dated snapshot</button><button id="dlCheckinsBtn" class="secondary">⬇ Download check-ins (.JSON)</button><button id="copySnapshotHistory" class="secondary">⧉ Copy snapshot history as text</button>
 <p id="snapshotStatus" class="status">No check-ins saved yet on this device.</p>
 <div id="snapshotHistory"></div></div>
 
@@ -236,6 +236,29 @@ try{
     var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-growth-checkins.json'; a.click();
     setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
     if(st) st.textContent='Exported '+snaps.length+' check-in'+(snaps.length>1?'s':'')+' as praime-growth-checkins.json.';
+  };
+  // ---- Copy snapshot history as text (Gemini 2026-11-13, corrected): the same
+  // dated check-in lines render() shows, as plain text for pasting into notes
+  // or chats. Reuses load()/fields()/deltaText() (Gemini's as-stated
+  // formatSnapshotDeltas() helper does not exist on this page); status stays in
+  // #snapshotStatus like the save/download buttons (no setTimeout clear, which
+  // would blank the saved-count line); the execCommand fallback runs when
+  // navigator.clipboard is absent too (Gemini's code had no else branch and
+  // would do nothing there). Empty state returns before any clipboard call.
+  var copyBtn=document.getElementById('copySnapshotHistory');
+  if(copyBtn) copyBtn.onclick=function(){
+    var st=document.getElementById('snapshotStatus');
+    var snaps=load();
+    if(!snaps.length){ if(st) st.textContent='No check-ins saved yet on this device.'; return; }
+    var lines=['PrAIme Growth Check-Ins'];
+    snaps.forEach(function(snap,i){
+      if(i===0){ lines.push(snap.date+': First check-in — baseline, no previous numbers to compare.'); }
+      else { var parts=[]; fields().forEach(function(f){ if(snap.values.hasOwnProperty(f.k) && snaps[i-1].values.hasOwnProperty(f.k)){ var t=deltaText(f, snap.values[f.k], snaps[i-1].values[f.k]); if(t) parts.push(t); } }); lines.push(snap.date+': '+(parts.length ? parts.join(' · ') : 'No change since the previous check-in.')); }
+    });
+    var payload=lines.join('\n');
+    function done(ok){ if(st) st.textContent=ok?('Copied '+snaps.length+' check-in'+(snaps.length>1?'s':'')+' to clipboard.'):('Copy failed — clipboard is not available in this browser.'); }
+    function fallback(){ try{ var ta=document.createElement('textarea'); ta.value=payload; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } }
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(payload).then(function(){ done(true); },function(){ fallback(); }); } else fallback();
   };
   render();
 })();
