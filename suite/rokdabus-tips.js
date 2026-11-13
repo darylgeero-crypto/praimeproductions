@@ -139,7 +139,7 @@
     var b = document.createElement('div');
     b.id = 'rokTipBubble';
     b.style.cssText = 'position:fixed;right:92px;bottom:24px;z-index:9998;width:min(300px,72vw);background:rgba(15,20,32,.97);border:1px solid #00f3ff;border-radius:16px;padding:12px 14px;color:#fff;font-size:14px;line-height:1.45;box-shadow:0 0 20px rgba(0,243,255,.35)';
-    b.innerHTML = '<div style="font-weight:700;margin-bottom:4px">🐙 Rokdabus says:</div><div>' + tip.replace(/</g,'&lt;') + '</div><div style="margin-top:8px;display:flex;gap:8px"><button id="rokTipNext" style="flex:1">↻ Next tip</button><button id="rokTipClose" style="flex:0 0 auto">✕</button></div>';
+    b.innerHTML = '<div style="font-weight:700;margin-bottom:4px">🐙 Rokdabus says:</div><div>' + tip.replace(/</g,'&lt;') + '</div><div style="margin-top:8px;display:flex;gap:8px"><button id="rokTipNext" style="flex:1">↻ Next tip</button><button id="copyRokTipBtn" style="flex:1">⧉ Copy tip</button><button id="rokTipClose" style="flex:0 0 auto">✕</button></div><div id="rokTipStatus" style="margin-top:6px;font-size:12px;color:#9ca3af"></div>';
     document.body.appendChild(b);
     var close = function(){ if(b.parentNode) b.parentNode.removeChild(b); };
     document.getElementById('rokTipClose').onclick = close;
@@ -148,11 +148,27 @@
       try{ localStorage.setItem(key, String((next + 1) % list.length)); }catch(e){}
       var t2 = list[next];
       b.querySelector('div:nth-child(2)').textContent = t2;
+      var st0 = document.getElementById('rokTipStatus'); if(st0) st0.textContent = '';
       if(log){ try{ log.textContent = 'Rokdabus tip: ' + t2.replace(/^[^:]+ tip: /, '') + '\n\n' + (log.textContent || ''); }catch(e){} }
       next = (next + 1) % list.length;
     };
+    // ---- Copy the tip currently shown in the bubble (Gemini 2026-11-13, narrowed):
+    // reads the live tip text (div:nth-child(2)), so Next tip changes what is copied.
+    // Clipboard with textarea fallback, persistent status in #rokTipStatus (the bubble
+    // closes with its own 12 s timer, so the status never outlives the tip). The bubble's
+    // own click handler below must also exclude this button, or tapping Copy would open
+    // the Rokdabus panel and close the bubble.
+    document.getElementById('copyRokTipBtn').onclick = function(){
+      var st = document.getElementById('rokTipStatus');
+      var tipEl = b.querySelector('div:nth-child(2)');
+      var txt = tipEl ? tipEl.textContent.trim() : '';
+      if(!txt){ if(st) st.textContent = 'No active tip to copy.'; return; }
+      function done(ok){ if(st) st.textContent = ok ? 'Tip copied — paste it into a lyric pad, message or notes.' : 'Copy failed in this browser — the tip is still shown above.'; }
+      function fallback(){ try{ var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); var ok = document.execCommand('copy'); ta.remove(); done(!!ok); }catch(e){ done(false); } }
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ done(true); }, function(){ fallback(); }); } else fallback();
+    };
     b.onclick = function(e){
-      if(e.target && (e.target.id === 'rokTipNext' || e.target.id === 'rokTipClose')) return;
+      if(e.target && (e.target.id === 'rokTipNext' || e.target.id === 'rokTipClose' || e.target.id === 'copyRokTipBtn')) return;
       var panel = document.getElementById('rokPanel');
       if(panel) panel.style.display = 'block';
       close();
