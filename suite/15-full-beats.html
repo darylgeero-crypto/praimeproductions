@@ -60,6 +60,98 @@ a{color:#7ee2ff}
 <button id="playBtn" disabled>▶ Play rendered beat</button><button id="dlBtn" disabled>Download full beat WAV</button><label>Playback EQ — check how the rendered beat translates (player only, the WAV file is unchanged)</label><select id="playEq"><option value="flat">Flat — no EQ</option><option value="phone">Phone speaker — lows cut, highs lifted</option><option value="earbuds">Cheap earbuds — mids pushed</option><option value="club">Club system — lows boosted</option><option value="soft">Soft highs — top end cut for long listening</option></select><button id="tasteLike" class="secondary">👍 Like this beat</button><button id="tasteDislike" class="secondary">👎 Dislike</button><button id="printSummary" class="secondary">🖨 Print render summary</button><button id="copyStruct" class="secondary">⧉ Copy beat structure</button>
 <div class="status" id="renderOut"></div><div id="structOut"></div></div>
 
+<div class="card" id="teleCard"><h2>Master Mix Telemetry — check the rendered beat</h2>
+<p>After you Render in card 3, scan the rendered WAV in this browser: real peak, estimated loudness and crest factor, computed from the actual samples — nothing uploaded, nothing guessed. <b>Honest labels:</b> Peak is the <b>sample</b> peak, not true peak (true peak measures between samples, which this scan does not do). Loudness is an <b>estimate</b> — K-weighting approximation with absolute + relative gating, not a certified EBU R128 measurement. The Rokdabus guide on this page suggests about −14 LUFS and a peak below −1 dBFS for streaming — this scan lets you check your rendered beat against those targets. Only the card-3 Render is scanned (its buffer is kept in this page's memory); SuperBeat renders are not scanned here.</p>
+<button id="teleScan">Scan rendered mix</button>
+<div class="status" id="teleOut">No scan yet — render a beat in card 3 first, then press Scan rendered mix.</div>
+<p>Peak: <b id="telePeak">—</b> · Estimated loudness: <b id="teleLufs">—</b> · Crest factor: <b id="teleCrest">—</b></p></div>
+<script>
+// ---- Master Mix Telemetry: scan the card-3 rendered buffer (window.praimeRenderedBuf).
+// Peak = max |sample| across channels (sample peak, dBFS). Loudness = K-weighted
+// (BS.1770 two-stage filters, coefficients computed from the buffer's sample rate),
+// 400 ms blocks, 75% overlap, absolute gate -70 LUFS, relative gate -10 LU, with the
+// standard -0.691 offset. Crest factor = peak dBFS minus integrated loudness.
+// All computed locally from the rendered samples; nothing is uploaded or invented.
+function teleDb(x){ return x<=0 ? -Infinity : 20*Math.log10(x); }
+function teleBiquad(type, f0, Q, gainDb, sr){
+  var w0=2*Math.PI*f0/sr, cw=Math.cos(w0), alpha=Math.sin(w0)/(2*Q), A=Math.pow(10, gainDb/40);
+  var b0,b1,b2,a0,a1,a2;
+  if(type==='highshelf'){ b0=A*((A+1)+(A-1)*cw+2*Math.sqrt(A)*alpha); b1=-2*A*((A-1)+(A+1)*cw); b2=A*((A+1)+(A-1)*cw-2*Math.sqrt(A)*alpha); a0=(A+1)-(A-1)*cw+2*Math.sqrt(A)*alpha; a1=2*((A-1)-(A+1)*cw); a2=(A+1)-(A-1)*cw-2*Math.sqrt(A)*alpha; }
+  else { b0=(1+cw)/2; b1=-(1+cw); b2=(1+cw)/2; a0=1+alpha; a1=-2*cw; a2=1-alpha; }
+  return {b:[b0/a0,b1/a0,b2/a0], a:[1,a1/a0,a2/a0]};
+}
+function teleFilter(x, c){
+  var y=new Float64Array(x.length), x1=0, x2=0, y1=0, y2=0;
+  for(var i=0;i<x.length;i++){ var xi=x[i]; var yi=c.b[0]*xi+c.b[1]*x1+c.b[2]*x2-c.a[1]*y1-c.a[2]*y2; y[i]=yi; x2=x1; x1=xi; y2=y1; y1=yi; }
+  return y;
+}
+function teleScanBuf(buf){
+  if(!buf || !buf.numberOfChannels || !buf.length) return null;
+  var chs=buf.numberOfChannels, sr=buf.sampleRate, len=buf.length;
+  var peak=0;
+  for(var c=0;c<chs;c++){ var d=buf.getChannelData(c); for(var i=0;i<len;i++){ var v=Math.abs(d[i]); if(v>peak) peak=v; } }
+  var shelf=teleBiquad('highshelf',1681.974450955533,0.7071752369554196,3.999843853973347,sr);
+  var hp=teleBiquad('highpass',38.13547087602444,0.5003270373238773,0,sr);
+  var block=Math.min(len, Math.max(1, Math.round(sr*0.4)));
+  var hop=Math.max(1, Math.round(sr*0.1));
+  // Filter each channel once, then block mean-squares via cumulative sums.
+  var cum=[];
+  for(var c2=0;c2<chs;c2++){
+    var w=teleFilter(teleFilter(buf.getChannelData(c2), shelf), hp);
+    var cs=new Float64Array(len+1); cs[0]=0;
+    for(var j=0;j<len;j++){ cs[j+1]=cs[j]+w[j]*w[j]; }
+    cum.push(cs);
+  }
+  var blocks=[];
+  for(var start=0; start+block<=len; start+=hop){
+    var ms=0;
+    for(var c3=0;c3<chs;c3++){ ms+=(cum[c3][start+block]-cum[c3][start])/block; }
+    blocks.push(ms/chs);
+  }
+  if(!blocks.length){ // shorter than one 400 ms block: whole buffer as one block
+    var ms2=0;
+    for(var c4=0;c4<chs;c4++){ ms2+=(cum[c4][len]-cum[c4][0])/len; }
+    blocks.push(ms2/chs);
+  }
+  var absThr=Math.pow(10,-70/10);
+  var gated=blocks.filter(function(m){ return m>absThr; });
+  if(!gated.length) return {peak:peak, lufs:-Infinity, crest:null, silent:true};
+  function integ(list){ var s=0; for(var k=0;k<list.length;k++) s+=list[k]; return -0.691+10*Math.log10(s/list.length); }
+  var ungated=integ(gated);
+  var relThr=Math.pow(10,(ungated-10)/10);
+  var rel=gated.filter(function(m){ return m>relThr; });
+  var lufs=integ(rel.length?rel:gated);
+  if(lufs===0) lufs=0; // avoid "-0.0 LUFS" display
+  var peakDb=teleDb(peak);
+  if(peakDb===0) peakDb=0; // avoid "-0.0 dBFS" display
+  var crest=(isFinite(lufs)?peakDb-lufs:null);
+  if(crest===0) crest=0;
+  return {peak:peak, peakDb:peakDb, lufs:lufs, crest:crest, silent:false};
+}
+function teleFmt(x){ var v=Math.round(x*10)/10; if(v===0) v=0; return v.toFixed(1); } // rounds first, so -0.00005 dBFS displays as "0.0", never "-0.0"
+document.getElementById('teleScan').onclick=function(){
+  var out=document.getElementById('teleOut');
+  var buf=window.praimeRenderedBuf||null;
+  if(!buf){ out.textContent='No rendered beat yet — press Render in card 3 first, then scan.'; return; }
+  out.textContent='Scanning '+buf.length+' samples ('+(buf.length/buf.sampleRate).toFixed(1)+' s)…';
+  setTimeout(function(){
+    var r=teleScanBuf(buf);
+    if(!r){ out.textContent='Scan failed — the rendered buffer could not be read.'; return; }
+    var peakTxt=r.peak>0 ? teleFmt(r.peakDb)+' dBFS (sample peak)' : 'silent';
+    var lufsTxt=r.silent ? 'no signal' : teleFmt(r.lufs)+' LUFS (approx.)';
+    var crestTxt=(r.crest===null||!isFinite(r.crest)) ? '—' : teleFmt(r.crest)+' dB';
+    document.getElementById('telePeak').textContent=peakTxt;
+    document.getElementById('teleLufs').textContent=lufsTxt;
+    document.getElementById('teleCrest').textContent=crestTxt;
+    if(r.silent){ out.textContent='The rendered buffer is silent — check the step grid and timeline, then render again.'; return; }
+    if(r.peakDb>-1){ out.textContent='Hot — peak '+teleFmt(r.peakDb)+' dBFS is above −1 dBFS and may clip on export or streaming. Lower section energy or Humanize velocity, then render again.'; }
+    else if(r.lufs>=-16 && r.lufs<=-12){ out.textContent='In the streaming loudness zone (approx.): peak '+teleFmt(r.peakDb)+' dBFS is below −1 dBFS and loudness is '+teleFmt(r.lufs)+' LUFS, near the −14 LUFS target.'; }
+    else if(r.lufs>-12){ out.textContent='Loud (approx. '+teleFmt(r.lufs)+' LUFS) but the peak is safe at '+teleFmt(r.peakDb)+' dBFS — streaming services will turn it down, and dynamics may be limited.'; }
+    else { out.textContent='Quiet (approx. '+teleFmt(r.lufs)+' LUFS) — below the −14 LUFS streaming target, so the beat may sound soft next to commercial tracks. Peak '+teleFmt(r.peakDb)+' dBFS is safe.'; }
+  }, 10);
+};
+</script>
+
 <div class="card"><h2>Step Editor + Timeline — restored</h2>
 <p>Restored from Full 12: a 16-step editor, a section timeline, and project save/load. <b>Honest wiring:</b> this grid drives the card-3 Render (the page's own offline render) when "Use step pattern in Render" is checked — what you toggle is what you hear in that render. The separate SuperBeat generator below takes a prompt only and does <b>not</b> read this grid.</p>
 <label><input type="checkbox" id="stepUse" checked> Use step pattern in Render (card 3) — when unchecked, Render uses its genre template pattern instead</label>
@@ -261,7 +353,7 @@ document.getElementById('renderBtn').onclick=function(){ parsePrompt(); let fp=f
     } barIdx++; if(barIdx>=totalBars) break; } if(barIdx>=totalBars) break; }
   document.getElementById('structOut').innerHTML='<p>'+structLines.join(' · ')+'</p><p>Total '+barIdx+' bars · '+dur.toFixed(1)+'s at '+bpm+' BPM · '+genre+' · '+mood+' · template '+templateFor(genre)+' · fingerprint seed '+fp.seed+' · hash '+fp.hash+'</p>';
   document.getElementById('renderOut').textContent='Rendering '+barIdx+' bars offline…';
-  off.startRendering().then(function(buf){ renderedBuf=buf; try{ hist.push(fp.hash); localStorage.setItem('praime_fullbeat_history', JSON.stringify(hist.slice(-200))); }catch(e){} document.getElementById('renderOut').textContent='Rendered: '+genre+' · '+bpm+' BPM · '+barIdx+' bars · '+dur.toFixed(1)+'s · fingerprint '+fp.hash+' · history now '+hist.length+' beats, no exact repeat.'; document.getElementById('playBtn').disabled=false; document.getElementById('dlBtn').disabled=false; }); };
+  off.startRendering().then(function(buf){ renderedBuf=buf; window.praimeRenderedBuf=buf; try{ hist.push(fp.hash); localStorage.setItem('praime_fullbeat_history', JSON.stringify(hist.slice(-200))); }catch(e){} document.getElementById('renderOut').textContent='Rendered: '+genre+' · '+bpm+' BPM · '+barIdx+' bars · '+dur.toFixed(1)+'s · fingerprint '+fp.hash+' · history now '+hist.length+' beats, no exact repeat.'; document.getElementById('playBtn').disabled=false; document.getElementById('dlBtn').disabled=false; }); };
 document.getElementById('playBtn').onclick=function(){ if(!renderedBuf) return; if(renderedSrc){ try{renderedSrc.stop();}catch(e){} } let c=new (window.AudioContext||window.webkitAudioContext)(); let s=c.createBufferSource(); s.buffer=renderedBuf; var eqMap={flat:[0,0,0],phone:[-8,0,2],earbuds:[1,3,1],club:[4,-1,1],soft:[0,0,-6]}; var eq=(eqMap[(document.getElementById('playEq')||{}).value]||eqMap.flat); var lo=c.createBiquadFilter(); lo.type='lowshelf'; lo.frequency.value=200; lo.gain.value=eq[0]; var pk=c.createBiquadFilter(); pk.type='peaking'; pk.frequency.value=3000; pk.gain.value=eq[1]; var hi=c.createBiquadFilter(); hi.type='highshelf'; hi.frequency.value=10000; hi.gain.value=eq[2]; s.connect(lo); lo.connect(pk); pk.connect(hi); hi.connect(c.destination); renderedEq={lo:lo,pk:pk,hi:hi}; s.start(); renderedSrc=s; };
 function applyPlayEqLive(){ if(!renderedEq) return; var eqMap={flat:[0,0,0],phone:[-8,0,2],earbuds:[1,3,1],club:[4,-1,1],soft:[0,0,-6]}; var eq=(eqMap[(document.getElementById('playEq')||{}).value]||eqMap.flat); try{ renderedEq.lo.gain.value=eq[0]; renderedEq.pk.gain.value=eq[1]; renderedEq.hi.gain.value=eq[2]; }catch(e){} }
 try{ var _pe2=document.getElementById('playEq'); if(_pe2){ try{ var _savedEq=localStorage.getItem('praime_fullbeats_play_eq'); if(_savedEq) _pe2.value=_savedEq; }catch(e){} _pe2.onchange=function(){ try{ localStorage.setItem('praime_fullbeats_play_eq',_pe2.value); }catch(e){} applyPlayEqLive(); }; } }catch(e){}
