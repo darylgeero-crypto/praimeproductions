@@ -86,7 +86,7 @@ Song Master $2.99 · Vocal Master $1.99 · Separate $2.99 · Re-Beat $19.99 · V
 
 <div class="card"><h2>Growth check-ins — dated snapshots</h2>
 <p>Stamp today's numbers as a dated check-in, then stamp again next time you update them — each row below shows exactly how much each number moved since the previous check-in. Deltas are plain subtraction of numbers you entered yourself; nothing is fetched, projected, or averaged, and check-ins stay in this browser only.</p>
-<button id="saveSnapshotBtn">📸 Save dated snapshot</button>
+<button id="saveSnapshotBtn">📸 Save dated snapshot</button><button id="dlCheckinsBtn" class="secondary">⬇ Download check-ins (.JSON)</button>
 <p id="snapshotStatus" class="status">No check-ins saved yet on this device.</p>
 <div id="snapshotHistory"></div></div>
 
@@ -214,6 +214,28 @@ try{
     while(snaps.length>MAX) snaps.shift();
     save(snaps); render();
     if(st) st.textContent='Saved check-in for '+today+'.';
+  };
+  // ---- Download check-ins as JSON (Gemini 2026-11-13, corrected): the dated
+  // snapshot array as a backup file — the existing "Download your numbers"
+  // exports only the CURRENT numbers, not this dated history. Reuses load()
+  // (bad stored JSON reads as empty) and the existing #snapshotStatus line
+  // (Gemini's as-stated new #snapshotExportStatus element is not needed —
+  // the save button already reports in #snapshotStatus). Empty state returns
+  // before any Blob/click. Wrapped with format/count like the Full Beats
+  // export-all (a bare array has no format marker); MIME follows this
+  // page's own exports ('application/json'), and the object URL is revoked
+  // after 1 s like the Ads campaign download (immediate revoke can abort
+  // the download in some browsers).
+  var dlBtn=document.getElementById('dlCheckinsBtn');
+  if(dlBtn) dlBtn.onclick=function(){
+    var st=document.getElementById('snapshotStatus');
+    var snaps=load();
+    if(!snaps.length){ if(st) st.textContent='No growth check-ins saved yet — save a dated snapshot first.'; return; }
+    var data={format:'praime-growth-checkins', exportedAt:new Date().toISOString(), count:snaps.length, checkins:snaps};
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='praime-growth-checkins.json'; a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+    if(st) st.textContent='Exported '+snaps.length+' check-in'+(snaps.length>1?'s':'')+' as praime-growth-checkins.json.';
   };
   render();
 })();
