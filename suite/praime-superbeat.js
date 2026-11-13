@@ -27,6 +27,14 @@
   // Not trap/lofi/house binary. Each genre gets its own curve: swing, drum density, bass style, melody voice, hat pattern.
   // All five fields are consumed in render(): swing (swingOff), density (hat gain), bassStyle (bass length/gain), melodyVoice (melPrefix), hat (hatHit pattern).
   // Derived from genre family, with explicit overrides for signature genres. BPM already comes from GENRE_BPM.
+  // SEEDED RNG (2026-11-13, narrowed from Gemini's "Seed-Recipe" idea — assessed):
+  // render() accepts an optional seed so the same prompt + seed rebuilds the same
+  // beat. Without a seed the old unseeded Math.random() path is kept, so existing
+  // calls are unchanged. Gemini assumed SuperBeat was already deterministic — it
+  // was not: jitter/velocity used unseeded Math.random(). This makes the page's
+  // "same prompt + same options = same fingerprint, rebuild it exactly" claim
+  // true for SuperBeat too. mulberry32 matches the page's own seeded RNG.
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
   function genreCurve(genre){
     var g=genre||'HipHop';
     var c={swing:0.08, density:0.85, bassStyle:'short', melodyVoice:'piano', hat:'straight'};
@@ -101,8 +109,11 @@
     genreCurve: genreCurve,
     // Render a full beat in-browser using real samples, with humanisation + mastering chain.
     // Returns a Promise<Blob> (WAV). Caller must provide AudioContext; this is the in-app path.
-    render: async function(ctx, prompt){
+    // Optional 3rd arg seed (integer): when given, jitter/velocity come from a seeded
+    // RNG so the same prompt + seed renders the same beat; without it, Math.random().
+    render: async function(ctx, prompt, seed){
       var cfg=parsePrompt(prompt);
+      var rng=(typeof seed==='number'&&isFinite(seed))?mulberry32(seed):Math.random;
       var secs=structureFor(cfg), totalBars=secs.reduce(function(s,x){return s+x[1];},0);
       var beatDur=60/cfg.bpm, barDur=beatDur*4, totalDur=totalBars*barDur;
       var off=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(1, Math.ceil(totalDur*ctx.sampleRate), ctx.sampleRate);
@@ -143,10 +154,10 @@
           var density = (isIntro||isOutro||isBridge ? 0.6 : isHook ? 1.0 : curve.density); // genre curve density
           // Drums, 16 steps, with swing + jitter + velocity variation + fill on last bar of section
           for(var step=0; step<16; step++){
-            var jitter=(Math.random()-0.5)*0.024; // +-12ms humanisation
+            var jitter=(rng()-0.5)*0.024; // +-12ms humanisation
             var swingOff = (step%2===1) ? swing*beatDur/4 : 0;
             var t=Math.max(0, barStart + step*beatDur/4 + swingOff + jitter); // clamp: never negative (was -0.000249s error)
-            var vel=0.75+Math.random()*0.25;
+            var vel=0.75+rng()*0.25;
             if(step%4===0) play(kick, t, 0.70*vel);
             if(step===4||step===12) play(snare, t, 0.55*vel);
             var hatPat = curve.hat||'straight';
@@ -209,7 +220,7 @@
       function str(off,s){ for(var i=0;i<s.length;i++) v.setUint8(off+i, s.charCodeAt(i)); }
       str(0,'RIFF'); v.setUint32(4,36+ch.length*2,true); str(8,'WAVE'); str(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,rendered.sampleRate,true); v.setUint32(28,rendered.sampleRate*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); str(36,'data'); v.setUint32(40,ch.length*2,true);
       for(var i=0;i<ch.length;i++) v.setInt16(44+i*2, Math.max(-32767,Math.min(32767,Math.round(ch[i]*scale*32767))), true);
-      return {blob:new Blob([wav],{type:'audio/wav'}), config:cfg, totalBars:totalBars, duration:totalDur, structure:secs};
+      return {blob:new Blob([wav],{type:'audio/wav'}), config:cfg, totalBars:totalBars, duration:totalDur, structure:secs, seed:(typeof seed==='number'&&isFinite(seed))?(seed|0):null};
     }
   };
 })();

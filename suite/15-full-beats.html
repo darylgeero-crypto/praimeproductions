@@ -240,7 +240,7 @@ document.getElementById('teleScan').onclick=function(){
 <div style="font-size:12px;color:#9ca3af">If Ollama is running in Termux (ollama serve, model pulled), I will try it first for text advice. If it is not reachable, I use my built-in PrAIme + music-theory knowledge below — I never fake an Ollama answer. Ollama text models cannot hear audio, so auto-master levels are always calculated in the browser from your actual song, then Ollama can explain them if it is connected.</div>
 </div><div class="card"><h2>Pay with Live PayPal</h2><p>Full Beat — MP3 lease — $9.99. Add to the Beat Store cart and check out with Live PayPal (same Live ID as the Beat Store, not Sandbox). Server verification is required before delivering the paid file — do not deliver on client capture alone.</p><button id="praimeAddCart">Add Full Beat — MP3 lease ($9.99) to Live PayPal cart</button><p id="praimeCartOut"></p></div><script>document.getElementById("praimeAddCart").onclick=function(){ PraimeCart.add("Full Beat — MP3 lease", 9.99); document.getElementById("praimeCartOut").textContent="Full Beat — MP3 lease added. Go to Beat Store to pay with Live PayPal."; };</script>
 <div class="card"><h2>SuperBeat — prompt-based, full-length, in-app</h2>
-<p>Supercomplex, human-sounding, industry-standard structure, real sounds only, mastered on export. Type a prompt (genre, mood, BPM), press Generate SuperBeat, listen, then Render &amp; Download WAV. The app does this itself — no manual Python export. You must hear it and approve it before it is listed for sale.</p>
+<p>Supercomplex, human-sounding, industry-standard structure, real sounds only, mastered on export. Type a prompt (genre, mood, BPM), press Generate SuperBeat, listen, then Render &amp; Download WAV. The app does this itself — no manual Python export. Seed comes from card 1 (or its fingerprint when blank), so the same seed rebuilds the same SuperBeat. You must hear it and approve it before it is listed for sale.</p>
 <label>Prompt</label><input id="superPrompt" placeholder="e.g. dark HipHop 92 BPM, aggressive, piano melody, heavy bass hook" style="width:100%">
 <button id="superGen">Generate SuperBeat (in-app)</button>
 <p id="superOut"></p><audio id="superAudio" controls style="width:100%"></audio><button id="superDl" class="secondary">Download SuperBeat WAV</button></div>
@@ -249,10 +249,15 @@ document.getElementById('superGen').onclick=async function(){
   var out=document.getElementById('superOut'); out.textContent='Generating SuperBeat in-app with real sounds — this renders offline, please wait…';
   try{
     var ctx=new (window.AudioContext||window.webkitAudioContext)();
-    var res=await window.PraimeSuperBeat.render(ctx, document.getElementById('superPrompt').value);
+    // Seeded SuperBeat (2026-11-13): pass card 1's seed (or its fingerprint seed when
+    // blank) so the same seed rebuilds the same SuperBeat — jitter/velocity are
+    // seeded in praime-superbeat.js render(ctx, prompt, seed).
+    var seedVal=parseInt(((document.getElementById('seed')||{}).value||''),10);
+    if(!isFinite(seedVal)){ try{ seedVal=fingerprint().seed; }catch(e){ seedVal=null; } }
+    var res=await window.PraimeSuperBeat.render(ctx, document.getElementById('superPrompt').value, seedVal);
     var url=URL.createObjectURL(res.blob); document.getElementById('superAudio').src=url;
     document.getElementById('superDl').onclick=function(){ var a=document.createElement('a'); a.href=url; a.download='Praime_SuperBeat_'+res.config.genre+'_'+res.config.bpm+'BPM.wav'; a.click(); };
-    out.textContent='SuperBeat done: '+res.config.genre+' '+res.config.bpm+' BPM, '+res.config.mood+', '+res.totalBars+' bars, '+Math.round(res.duration)+'s, structure '+res.structure.map(function(s){return s[0]+' '+s[1];}).join(' → ')+'. Mastered: HP 30Hz, EQ, comp, saturation, limiter -1dB. Listen and approve before sale — do not list automatically.';
+    out.textContent='SuperBeat done: '+res.config.genre+' '+res.config.bpm+' BPM, '+res.config.mood+', seed '+(res.seed===null?'random':res.seed)+', '+res.totalBars+' bars, '+Math.round(res.duration)+'s, structure '+res.structure.map(function(s){return s[0]+' '+s[1];}).join(' → ')+'. Mastered: HP 30Hz, EQ, comp, saturation, limiter -1dB. Listen and approve before sale — do not list automatically.';
   }catch(e){ out.textContent='SuperBeat failed: '+e.message+' — check that real-sounds.js and samples/ are loaded on this page.'; }
 };
 </script>
